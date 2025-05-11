@@ -411,7 +411,7 @@ def run_review(
             timeout=timeout,
         )
         output = result.stdout
-        
+
         # Debug output
         if verbose:
             print(f"Command exit code: {result.returncode}")
@@ -447,7 +447,7 @@ def run_review(
             print(f"\nPreview of review:\n{preview}")
         return True
     except subprocess.TimeoutExpired:
-        print(f"Error: Claude review process timed out after 20 minutes")
+        print(f"Error: Claude review process timed out after {timeout // 60} minutes")
         return False
     except subprocess.CalledProcessError as e:
         print(f"Error running Claude: {e}")
