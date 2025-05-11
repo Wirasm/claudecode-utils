@@ -5,6 +5,7 @@ A utility package for Claude code generation.
 ## Features
 
 - Command-line interface
+- [Simple Review](library/simple_review/README.md): A tool that uses Claude to generate comprehensive code reviews for git branches or specific commits
 
 ## Installation
 
