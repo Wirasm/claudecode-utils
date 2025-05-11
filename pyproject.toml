@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claudecode-utility-library"
+version = "0.1.0"
+description = "A utility package for Claude code generation"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [
+    {name = "Rasmus Widing", email = "rasmus.widing@gmail.com"}
+]
+
+dependencies = [
+    "requests>=2.32.3",
+]
+
+[tool.setuptools]
+packages = ["library", "library.cc_review", "library.cc_review.tests"]
+
+[project.scripts]
+claudecode = "library.cc_review.main:main"
+cc-review = "library.cc_review.main:main"
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "mypy>=1.15.0",
+    "pytest>=8.3.5",
+    "ruff>=0.11.9",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
