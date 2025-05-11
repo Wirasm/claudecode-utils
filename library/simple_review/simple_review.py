@@ -394,7 +394,11 @@ def run_review(
             print(f"Reviewing all changes between {default_branch} and {branch_name}")
     # Create reviewer prompt using the template
     # Use a safer approach by formatting the template with validated values
-    reviewer_prompt = REVIEWER_PROMPT_TEMPLATE.format(review_target=review_target, compare_cmd=compare_cmd)
+    reviewer_prompt = REVIEWER_PROMPT_TEMPLATE.format(
+        review_target=review_target, 
+        compare_cmd=compare_cmd, 
+        commits_back=commits_back
+    )
     # Run Claude with the prompt
     if verbose:
         print("Running Claude with review prompt...")
