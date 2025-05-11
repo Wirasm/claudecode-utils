@@ -7,13 +7,13 @@ This script runs a Claude instance to validate fixes implemented based on a code
 
 Usage:
     # Validate fixes with default options
-    uv run python scripts/simple_validator.py <review_file> <dev_report_file> [--output <output_file>] [--verbose]
+    uv run python library/simple_validator/simple_validator_poc.py <review_file> <dev_report_file> [--output <output_file>] [--verbose]
 
     # Validate fixes for a specific branch
-    uv run python scripts/simple_validator.py <review_file> <dev_report_file> --branch <branch_name> [--output <output_file>] [--verbose]
+    uv run python library/simple_validator/simple_validator_poc.py <review_file> <dev_report_file> --branch <branch_name> [--output <output_file>] [--verbose]
 
     # Validate only the latest commit
-    uv run python scripts/simple_validator.py <review_file> <dev_report_file> --latest-commit [--branch <branch_name>] [--output <output_file>] [--verbose]
+    uv run python library/simple_validator/simple_validator_poc.py <review_file> <dev_report_file> --latest-commit [--branch <branch_name>] [--output <output_file>] [--verbose]
 
 Arguments:
     review_file             Path to the review file containing issues (required)
@@ -25,15 +25,15 @@ Arguments:
 
 Examples:
     # Validate fixes from review and dev report files with default branch
-    uv run python scripts/simple_validator.py tmp/review_latest_commit.md tmp/dev_report_latest_commit.md
+    uv run python library/simple_validator/simple_validator_poc.py tmp/review_latest_commit.md tmp/dev_report_latest_commit.md
 
     # Validate fixes for a specific branch with verbose output
-    uv run python scripts/simple_validator.py tmp/review.md tmp/dev_report.md --branch feature-branch --verbose
+    uv run python library/simple_validator/simple_validator_poc.py tmp/review.md tmp/dev_report.md --branch feature-branch --verbose
 
     # Complete workflow example (review, implement, validate)
-    uv run python scripts/simple_review.py development-wip --output tmp/review.md
-    uv run python scripts/simple_dev.py tmp/review.md --output tmp/dev_report.md
-    uv run python scripts/simple_validator.py tmp/review.md tmp/dev_report.md --output tmp/validation.md
+    uv run python library/simple_review/simple_review_poc.py development-wip --output tmp/review.md
+    uv run python library/simple_dev/simple_dev_poc.py tmp/review.md --output tmp/dev_report.md
+    uv run python library/simple_validator/simple_validator_poc.py tmp/review.md tmp/dev_report.md --output tmp/validation.md
 
 Notes:
     - The validator checks if all CRITICAL and HIGH issues from the review have been fixed
