@@ -321,6 +321,9 @@ def run_review(
         output_file: Path to save the review
         verbose: Enable detailed progress output
         latest_commit: Review only the latest commit instead of all branch changes
+        base_branch: Base branch to compare against (default: auto-detected)
+        timeout: Timeout in seconds for the Claude process
+        commits_back: When using latest_commit, compare HEAD to HEAD~commits_back (default: 1)
 
     Returns:
         bool: True if the review was successful, False otherwise
