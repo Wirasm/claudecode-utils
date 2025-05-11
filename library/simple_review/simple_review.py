@@ -11,6 +11,9 @@ Usage:
     # Review only the latest commit in a branch
     uv run python library/simple_review/simple_review.py <branch_name> --latest-commit [OPTIONS]
 
+    # Review latest commit compared to N commits back
+    uv run python library/simple_review/simple_review.py <branch_name> --latest-commit --commits-back N [OPTIONS]
+
     # Review changes compared to a specific base branch
     uv run python library/simple_review/simple_review.py <branch_name> --base-branch <base_branch> [OPTIONS]
 
@@ -21,6 +24,7 @@ Options:
     --output OUTPUT         Path to save the review (default: tmp/review_<branch>.md or tmp/review_latest_commit.md)
     --verbose               Enable detailed progress output
     --latest-commit         Review only the latest commit instead of all branch changes
+    --commits-back N        When using --latest-commit, compare HEAD to HEAD~N (default: 1)
     --base-branch BASE      Base branch to compare against (default: auto-detected, usually 'main' or 'master')
     --timeout SECONDS       Timeout in seconds for the Claude process (default: 1200, which is 20 minutes)
 
@@ -30,6 +34,9 @@ Examples:
 
     # Review only the latest commit in development branch
     uv run python library/simple_review/simple_review.py development --latest-commit
+
+    # Review latest commit compared to 2 commits back
+    uv run python library/simple_review/simple_review.py development --latest-commit --commits-back 2
 
     # Compare development branch to a specific base branch
     uv run python library/simple_review/simple_review.py development --base-branch main
@@ -72,49 +79,47 @@ Think hard about this task.
 You are a senior code reviewer examining ONLY the changes in {review_target}.
 Your task is to provide a thorough, critical review STRICTLY LIMITED to these specific changes.
 
-Focus your review on these aspects:
-1. Consistency with vertical slice architecture patterns
-2. API error handling completeness
-3. Input/output validation in models
-4. Proper use of shared utilities (ID conversion, response formatting)
-5. Security issues
-6. Performance concerns
-7. Test coverage and quality
-
-For each issue found:
-1. Mark as CRITICAL, HIGH, MEDIUM, or LOW priority
-2. Provide the file path and line number (preferably of changed code)
-3. Clearly indicate if the issue is in changed code or in related context
-4. Explain the issue with technical reasoning
-5. Suggest a specific, actionable fix
-
-First run:
-1. 'git diff {compare_cmd} --name-only' to see which files were changed
-2. 'git diff {compare_cmd}' to see the actual line-by-line changes
-
-Focus primarily on reviewing the changed lines and files, as these are what need to be evaluated for the PR/diff.
-
-You may examine related files and code when necessary to understand the context of changes, but:
-1. Your feedback should focus on issues in the changed code
-2. Only mention issues in unchanged code if they directly impact the changes being reviewed
-3. Always prioritize reviewing the actual diff changes first
-
-Your primary job is to review what changed in the diff, while having the freedom to explore context when it helps your analysis.
-
-Start by running these commands to understand what has changed:
+First run these commands to understand what has changed:
 ```bash
 git diff {compare_cmd} --name-only   # Lists all changed files
 git diff {compare_cmd} --stat        # Shows a summary of changes
+git diff {compare_cmd}               # See the actual changes
 ```
 
 Then examine the specific changes in each file before writing your review.
 
-Write your review in markdown format with the following sections:
-1. Summary (overall assessment and key themes)
-2. Issue List (all issues categorized by priority)
-   - 2.1 Issues in Changed Code
-   - 2.2 Context-Related Issues (if any)
-3. Recommendations (strategic suggestions beyond specific fixes)
+Your review must include these clearly separated sections:
+
+## 1. Summary
+Brief overall assessment of the changes.
+
+## 2. Changes Made
+Describe what was actually implemented or fixed in these changes. Be specific about what functionality was added, modified, or removed. DO NOT include issues that need fixing in this section.
+
+## 3. Issues to Fix
+List problems that need to be addressed, categorized by priority. For each issue:
+1. Mark as CRITICAL, HIGH, MEDIUM, or LOW priority
+2. Provide the file path and line number
+3. Explain the issue with technical reasoning
+4. Suggest a specific, actionable fix
+
+Focus your review on these aspects:
+1. Consistency with architecture patterns
+2. Error handling completeness
+3. Input/output validation
+4. Security issues
+5. Performance concerns
+6. Test coverage and quality
+7. Code style and maintainability
+
+IMPORTANT: Do not confuse what was fixed with what needs fixing. The "Changes Made" section should only describe what the code changes accomplished, while the "Issues to Fix" section should only list problems that still need to be addressed.
+
+You may examine related files and code when necessary to understand the context of changes, but your feedback should focus on the changed code.
+
+Be specific, actionable, and thorough in your review.
+
+## 4. Recommendations
+Provide strategic suggestions beyond specific fixes that could improve the codebase.
 
 Your review will be automatically saved to a file, so focus on creating a detailed, helpful review.
 """
@@ -305,6 +310,7 @@ def run_review(
     latest_commit=False,
     base_branch=None,
     timeout=TIMEOUT_SECONDS,
+    commits_back=1,
 ):
     """Run Claude to review code and generate a report.
 
@@ -347,10 +353,10 @@ def run_review(
         print(f"Output will be saved to: {output_file}")
     # Determine what to review
     if latest_commit:
-        review_target = f"the latest commit in branch '{branch_name}'"
-        compare_cmd = "HEAD~1...HEAD"
+        review_target = f"the latest commit in branch '{branch_name}' compared to {commits_back} commit(s) back"
+        compare_cmd = f"HEAD~{commits_back}...HEAD"
         if verbose:
-            print("Reviewing only the latest commit")
+            print(f"Reviewing latest commit compared to {commits_back} commit(s) back")
     else:
         # Use the provided base_branch or detect the default branch
         default_branch = base_branch or get_default_branch()
@@ -446,7 +452,13 @@ def main():
     parser.add_argument(
         "--latest-commit",
         action="store_true",
-        help="Review only the latest commit (HEAD vs HEAD~1)",
+        help="Review only the latest commit (HEAD vs HEAD~N)",
+    )
+    parser.add_argument(
+        "--commits-back",
+        type=int,
+        default=1,
+        help="When using --latest-commit, compare HEAD to HEAD~N (default: 1)",
     )
     parser.add_argument(
         "--base-branch",
@@ -472,12 +484,13 @@ def main():
             output_file = f"tmp/review_{args.branch}.md"
     # Run the review
     success = run_review(
-        branch_name=args.branch,
-        output_file=output_file,
+        args.branch,
+        output_file,
         verbose=args.verbose,
         latest_commit=args.latest_commit,
         base_branch=args.base_branch,
         timeout=args.timeout,
+        commits_back=args.commits_back,
     )
     sys.exit(0 if success else 1)
 
