@@ -64,9 +64,7 @@ class TestBranchValidation:
             "branch\nrm file",
         ]
         for name in invalid_names:
-            assert not validate_branch_name(name), (
-                f"Branch name '{name}' should be invalid"
-            )
+            assert not validate_branch_name(name), f"Branch name '{name}' should be invalid"
 
 
 class TestGitOperations:

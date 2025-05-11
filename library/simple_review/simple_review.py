@@ -49,7 +49,8 @@ Examples:
 
 Notes:
     - The review focuses on code quality, architecture patterns, and best practices
-    - By default compares branch to auto-detected base branch; with --latest-commit compares HEAD to HEAD~1
+    - By default compares branch to auto-detected base branch; \
+      with --latest-commit compares HEAD to HEAD~1
     - Generates a markdown report with prioritized issues and recommendations
     - Has a configurable timeout (default: 20 minutes) for complex codebases
     - Use --verbose flag to see progress and a preview of the review
@@ -84,6 +85,11 @@ First run these commands to understand what has changed:
 git diff {compare_cmd} --name-only   # Lists all changed files
 git diff {compare_cmd} --stat        # Shows a summary of changes
 git diff {compare_cmd}               # See the actual changes
+
+# If using --latest-commit with --commits-back N, compare to N commits back
+git diff {compare_cmd} --name-only   # Lists all changed files (comparing to {commits_back} commit(s) back)
+git diff {compare_cmd} --stat        # Shows a summary of changes (comparing to {commits_back} commit(s) back)
+git diff {compare_cmd}               # See the actual changes (comparing to {commits_back} commit(s) back)
 ```
 
 Then examine the specific changes in each file before writing your review.
@@ -94,7 +100,9 @@ Your review must include these clearly separated sections:
 Brief overall assessment of the changes.
 
 ## 2. Changes Made
-Describe what was actually implemented or fixed in these changes. Be specific about what functionality was added, modified, or removed. DO NOT include issues that need fixing in this section.
+Describe what was actually implemented or fixed in these changes. Be specific about what
+functionality was added, modified, or removed. DO NOT include issues that need fixing in
+this section.
 
 ## 3. Issues to Fix
 List problems that need to be addressed, categorized by priority. For each issue:
@@ -112,9 +120,12 @@ Focus your review on these aspects:
 6. Test coverage and quality
 7. Code style and maintainability
 
-IMPORTANT: Do not confuse what was fixed with what needs fixing. The "Changes Made" section should only describe what the code changes accomplished, while the "Issues to Fix" section should only list problems that still need to be addressed.
+IMPORTANT: Do not confuse what was fixed with what needs fixing. The "Changes Made"
+section should only describe what the code changes accomplished, while the "Issues to Fix"
+section should only list problems that still need to be addressed.
 
-You may examine related files and code when necessary to understand the context of changes, but your feedback should focus on the changed code.
+You may examine related files and code when necessary to understand the context of changes,
+but your feedback should focus on the changed code.
 
 Be specific, actionable, and thorough in your review.
 
@@ -323,7 +334,7 @@ def run_review(
         latest_commit: Review only the latest commit instead of all branch changes
         base_branch: Base branch to compare against (default: auto-detected)
         timeout: Timeout in seconds for the Claude process
-        commits_back: When using latest_commit, compare HEAD to HEAD~commits_back (default: 1)
+        commits_back: When using latest_commit, compare HEAD to HEAD~N (default: 1)
 
     Returns:
         bool: True if the review was successful, False otherwise
@@ -383,9 +394,7 @@ def run_review(
             print(f"Reviewing all changes between {default_branch} and {branch_name}")
     # Create reviewer prompt using the template
     # Use a safer approach by formatting the template with validated values
-    reviewer_prompt = REVIEWER_PROMPT_TEMPLATE.format(
-        review_target=review_target, compare_cmd=compare_cmd
-    )
+    reviewer_prompt = REVIEWER_PROMPT_TEMPLATE.format(review_target=review_target, compare_cmd=compare_cmd)
     # Run Claude with the prompt
     if verbose:
         print("Running Claude with review prompt...")
@@ -460,12 +469,8 @@ def run_review(
 
 def main():
     parser = argparse.ArgumentParser(description="Run code review with Claude")
-    parser.add_argument(
-        "branch", help="Git branch to review (compared to the base branch by default)"
-    )
-    parser.add_argument(
-        "--output", help="Output file path for the review (default: review_<branch>.md)"
-    )
+    parser.add_argument("branch", help="Git branch to review (compared to the base branch by default)")
+    parser.add_argument("--output", help="Output file path for the review (default: review_<branch>.md)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument(
         "--latest-commit",
@@ -497,7 +502,7 @@ def main():
         output_file = args.output
     else:
         if args.latest_commit:
-            output_file = f"tmp/review_latest_commit.md"
+            output_file = "tmp/review_latest_commit.md"
         else:
             output_file = f"tmp/review_{args.branch}.md"
     # Run the review
