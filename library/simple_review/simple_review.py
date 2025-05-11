@@ -42,6 +42,8 @@ from pathlib import Path
 TIMEOUT_SECONDS = 1200  # 20 minute timeout
 # Regex pattern for valid git branch names
 VALID_BRANCH_PATTERN = re.compile(r'^[\w\-\./]+$')
+# Default branch name if detection fails
+DEFAULT_BRANCH_NAME = "main"
 
 def validate_branch_name(branch_name):
     """Validate that a branch name is safe to use in shell commands.
@@ -70,6 +72,38 @@ def check_git_repo():
         return True
     except subprocess.CalledProcessError:
         return False
+
+def get_default_branch():
+    """Detect the default branch name from the git repository.
+    
+    Returns:
+        str: The name of the default branch (e.g., 'main' or 'master')
+    """
+    try:
+        # Try to get the default branch from the remote origin HEAD
+        result = subprocess.run(
+            ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        # Extract the branch name from refs/remotes/origin/HEAD
+        default_branch = result.stdout.strip().split('/')[-1]
+        return default_branch
+    except subprocess.CalledProcessError:
+        # If that fails, try to get the current branch
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout.strip()
+        except subprocess.CalledProcessError:
+            # Fallback to default if all detection methods fail
+            return DEFAULT_BRANCH_NAME
+
 
 def check_branch_exists(branch_name):
     """Check if a branch exists.
@@ -113,7 +147,7 @@ def get_unique_filename(output_file):
     return new_filename
 
 
-def run_review(branch_name, output_file, verbose=False, latest_commit=False):
+def run_review(branch_name, output_file, verbose=False, latest_commit=False, base_branch=None):
     """Run Claude to review code and generate a report.
     
     Args:
@@ -154,11 +188,15 @@ def run_review(branch_name, output_file, verbose=False, latest_commit=False):
         if verbose:
             print("Reviewing only the latest commit")
     else:
-        review_target = f"branch '{branch_name}' compared to main"
-        # Use array form for safety instead of string interpolation
-        compare_cmd = f"main...{branch_name}"
+        # Use the provided base_branch or detect the default branch
+        default_branch = base_branch or get_default_branch()
+        
+        review_target = f"branch '{branch_name}' compared to {default_branch}"
+        # Create a safe comparison command
+        compare_cmd = f"{default_branch}...{branch_name}"
+        
         if verbose:
-            print(f"Reviewing all changes between main and {branch_name}")
+            print(f"Reviewing all changes between {default_branch} and {branch_name}")
     # Create reviewer prompt
     reviewer_prompt = f"""
 Think hard about this task.
@@ -258,7 +296,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run code review with Claude")
     parser.add_argument(
         "branch",
-        help="Git branch to review (compared to main by default)"
+        help="Git branch to review (compared to the base branch by default)"
     )
     parser.add_argument(
         "--output",
@@ -273,6 +311,10 @@ def main():
         "--latest-commit",
         action="store_true",
         help="Review only the latest commit (HEAD vs HEAD~1)"
+    )
+    parser.add_argument(
+        "--base-branch",
+        help="Base branch to compare against (default: auto-detected, usually 'main' or 'master')"
     )
     args = parser.parse_args()
     # Always create tmp directory
@@ -291,7 +333,8 @@ def main():
         branch_name=args.branch,
         output_file=output_file,
         verbose=args.verbose,
-        latest_commit=args.latest_commit
+        latest_commit=args.latest_commit,
+        base_branch=args.base_branch
     )
     sys.exit(0 if success else 1)
 
