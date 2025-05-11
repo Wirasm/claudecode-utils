@@ -122,6 +122,8 @@ Be specific, actionable, and thorough in your review.
 Provide strategic suggestions beyond specific fixes that could improve the codebase.
 
 Your review will be automatically saved to a file, so focus on creating a detailed, helpful review.
+
+Just write the report file, dont include any other text.
 """
 
 
@@ -396,6 +398,8 @@ def run_review(
             "text",
         ]
         # Run Claude and capture output
+        if verbose:
+            print(f"Running command: {' '.join(cmd)}")
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -404,6 +408,17 @@ def run_review(
             timeout=timeout,
         )
         output = result.stdout
+        
+        # Debug output
+        if verbose:
+            print(f"Command exit code: {result.returncode}")
+            print(f"Output length: {len(output)}")
+            if len(output) > 0:
+                print(f"Output preview: {output[:100]}...")
+            else:
+                print("Output is empty")
+            if result.stderr:
+                print(f"Error output: {result.stderr}")
         # Get a unique filename if the file already exists
         unique_output_file = get_unique_filename(output_file)
 
