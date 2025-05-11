@@ -7,6 +7,20 @@ A utility package for Claude code generation.
 - Command-line interface
 - [Simple Review](library/simple_review/README.md): A tool that uses Claude to generate comprehensive code reviews for git branches or specific commits
 
+The Simple Review tool is the starting point for the utility library. It uses Claude to generate a comprehensive code review for a git branch or specific commit. The review is then saved to a file and can be used as input for the Simple Validator tool.
+
+The simple_review_poc.py is a proof of concept for the Simple Review tool.
+
+the simple_review.py is an example of n runs of the Simple Review tool in combination with the developer to implement the suggestions from the review.
+
+# (WIP)
+
+- [Simple Dev](library/simple_dev/README.md): A tool that uses Claude to generate development reports based on a code review.
+- [Simple Validator](library/simple_validator/README.md): A tool that uses Claude to validate fixes implemented based on a code review.
+- [Simple PR](library/simple_pr/README.md): A tool that uses Claude to create or update a pull request based on validated changes.
+
+# Ignore below for now
+
 ## Installation
 
 This project uses [uv](https://github.com/astral-sh/uv) for Python package management.
@@ -70,16 +84,6 @@ cc-review
 
 # Running the module directly (works without installation)
 uv run python -m library.cc_review
-```
-
-### As a Library
-
-```python
-from library.cc_review.utils.helpers import fetch_json_data
-
-# Fetch data from an API
-data = fetch_json_data("https://api.example.com/data", {"param": "value"})
-print(data)
 ```
 
 ## License
