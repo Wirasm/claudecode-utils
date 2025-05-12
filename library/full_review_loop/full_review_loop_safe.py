@@ -71,6 +71,94 @@ from enum import Enum
 from pathlib import Path
 
 
+def validate_git_branch_name(branch_name):
+    """
+    Validate that a branch name follows Git's branch naming rules.
+    Git branch names cannot:
+    - Contain control characters or spaces
+    - Begin or end with a slash
+    - Contain two consecutive dots (..)
+    - Contain the sequence @{
+    - Begin with a dash or contain multiple consecutive dashes
+    - End with .lock
+    - Contain a backslash or control characters
+
+    Args:
+        branch_name (str): The branch name to validate
+
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    if not branch_name or not isinstance(branch_name, str):
+        return False
+
+    # Check for common Git branch name restrictions
+    invalid_patterns = [
+        r'^\s',         # Leading whitespace
+        r'\s$',         # Trailing whitespace
+        r'\s',          # Spaces
+        r'\.{2,}',      # Two or more consecutive dots
+        r'@\{',         # The sequence @{
+        r'^-',          # Beginning with a dash
+        r'--+',         # Two or more consecutive dashes
+        r'\.lock$',     # Ending with .lock
+        r'[\x00-\x1F]', # Control characters
+        r'[~^:?*[\]]',  # Special Git chars
+        r'\\',          # Backslash
+    ]
+
+    for pattern in invalid_patterns:
+        if re.search(pattern, branch_name):
+            return False
+
+    # Final check: branch name cannot begin or end with slash or contain consecutive slashes
+    if branch_name.startswith('/') or branch_name.endswith('/') or '//' in branch_name:
+        return False
+
+    return True
+
+
+def validate_directory_path(path):
+    """
+    Validate that a directory path is safe to use.
+    Path should:
+    - Be a string or Path object
+    - Not contain null bytes
+    - Not contain path traversal attempts
+    - Exist and be a directory if already on the filesystem
+
+    Args:
+        path: The path to validate (string or Path object)
+
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    if path is None:
+        return False
+
+    # Convert to string if it's a Path object
+    path_str = str(path) if isinstance(path, Path) else path
+
+    # Check that it's a string
+    if not isinstance(path_str, str):
+        return False
+
+    # Check for null bytes
+    if '\0' in path_str:
+        return False
+
+    # Check for path traversal attempts
+    normalized = os.path.normpath(path_str)
+    if '../' in normalized or normalized.startswith('..'):
+        return False
+
+    # If the path exists, make sure it's a directory
+    if os.path.exists(path_str) and not os.path.isdir(path_str):
+        return False
+
+    return True
+
+
 class AgentRole(Enum):
     """Roles for the different agents in the loop"""
 
@@ -103,6 +191,13 @@ class AgenticReviewLoop:
         """Initialize the agentic review loop."""
         # --- Basic Config ---
         self.latest_commit = latest_commit
+
+        # Validate branch names before assigning
+        if branch and not validate_git_branch_name(branch):
+            sys.exit(f"Error: Invalid source branch name '{branch}'. Branch names must follow Git naming rules.")
+        if not validate_git_branch_name(base_branch):
+            sys.exit(f"Error: Invalid base branch name '{base_branch}'. Branch names must follow Git naming rules.")
+
         self.source_branch = branch  # The branch to start FROM
         self.base_branch = base_branch  # The branch to compare AGAINST and PR INTO
         self.use_worktree = use_worktree
@@ -160,6 +255,17 @@ class AgenticReviewLoop:
             # If cwd_for_tasks is not set yet (during initialization)
             effective_cwd = os.getcwd()
 
+        # Validate the directory path before using it
+        if not validate_directory_path(effective_cwd):
+            sys.exit(f"Error: Invalid directory path '{effective_cwd}' for git command execution.")
+
+        # Ensure effective_cwd actually exists
+        effective_cwd_path = Path(effective_cwd)
+        if not effective_cwd_path.exists():
+            sys.exit(f"Error: Directory '{effective_cwd}' does not exist for git command execution.")
+        if not effective_cwd_path.is_dir():
+            sys.exit(f"Error: Path '{effective_cwd}' is not a directory for git command execution.")
+
         if hasattr(self, "debug"):
             self.debug(f"Running git command in '{effective_cwd}': {' '.join(command)}")
         try:
@@ -202,7 +308,12 @@ class AgenticReviewLoop:
             source_desc = "latest commit"
         else:
             # Use specified branch or default to current branch if none specified
-            self.source_branch = self.source_branch or self.original_branch
+            if not self.source_branch:
+                self.source_branch = self.original_branch
+                # Validate the original branch name too when using it
+                if not validate_git_branch_name(self.source_branch):
+                    sys.exit(f"Error: Invalid original branch name '{self.source_branch}'. Branch names must follow Git naming rules.")
+
             # Verify source branch exists
             if not self._run_git_command(
                 ["show-ref", "--verify", "--quiet", f"refs/heads/{self.source_branch}"], check=False
@@ -217,19 +328,71 @@ class AgenticReviewLoop:
         self.log(f"Creating temporary work branch '{self.work_branch}' from {source_desc}")
 
         # 3. Create the Branch
-        self._run_git_command(["branch", self.work_branch, starting_point])
+        # Check if branch already exists
+        if self._run_git_command(
+            ["show-ref", "--verify", "--quiet", f"refs/heads/{self.work_branch}"], check=False
+        ):
+            self.log(f"Warning: Work branch '{self.work_branch}' already exists")
+            # Delete the existing branch forcefully if it's not checked out
+            current_branch = self._get_current_branch()
+            if current_branch != self.work_branch:
+                self.log(f"Deleting existing work branch '{self.work_branch}'")
+                self._run_git_command(["branch", "-D", self.work_branch], check=False)
+                # Now create the branch
+                self._run_git_command(["branch", self.work_branch, starting_point])
+            else:
+                sys.exit(f"Error: Cannot delete work branch '{self.work_branch}' because it is currently checked out.")
+        else:
+            # Branch doesn't exist, create it
+            self._run_git_command(["branch", self.work_branch, starting_point])
 
         # 4. Setup Worktree OR Checkout
         if self.use_worktree:
             self.worktree_path = self.output_dir / "worktree"
             self.log(f"Setting up worktree at: {self.worktree_path}")
+
+            # First check if the worktree path is already registered
+            worktree_list = self._run_git_command(["worktree", "list", "--porcelain"], capture=True, cwd=self.repo_root)
+            if str(self.worktree_path) in worktree_list:
+                self.log(f"Worktree already exists at {self.worktree_path}, attempting to remove...")
+
             # Remove existing worktree if present (e.g., from failed previous run)
-            self._run_git_command(
+            remove_result = self._run_git_command(
                 ["worktree", "remove", "--force", str(self.worktree_path)], check=False, cwd=self.repo_root
             )
+
+            # If worktree removal fails, try pruning first, then removing again
+            if remove_result is None:
+                self.log("Pruning defunct worktrees and trying removal again...")
+                self._run_git_command(["worktree", "prune"], check=False, cwd=self.repo_root)
+                time.sleep(0.5)  # Short pause sometimes helps git release locks
+                remove_result = self._run_git_command(
+                    ["worktree", "remove", "--force", str(self.worktree_path)], check=False, cwd=self.repo_root
+                )
+
+                # If still fails, try manual directory removal if the directory exists
+                if remove_result is None and self.worktree_path.exists():
+                    self.log(f"Git worktree remove failed, trying manual directory removal of {self.worktree_path}")
+                    try:
+                        shutil.rmtree(self.worktree_path)
+                    except OSError as e:
+                        self.log(f"Warning: Manual directory removal failed: {e}")
+                        # Continue anyway - git worktree add might still work
+
+            # Make sure the parent directory exists
+            self.worktree_path.parent.mkdir(parents=True, exist_ok=True)
+
             # Add the new worktree
-            self._run_git_command(["worktree", "add", str(self.worktree_path), self.work_branch], cwd=self.repo_root)
-            self.cwd_for_tasks = self.worktree_path  # Set CWD for subsequent tasks
+            try:
+                self._run_git_command(["worktree", "add", str(self.worktree_path), self.work_branch], cwd=self.repo_root)
+                self.cwd_for_tasks = self.worktree_path  # Set CWD for subsequent tasks
+            except subprocess.CalledProcessError as e:
+                self.log(f"Error creating worktree: {e}")
+                # Fallback to using the main repo checkout if worktree fails
+                self.log("Falling back to using main repository checkout")
+                self._run_git_command(["checkout", self.work_branch], cwd=self.repo_root)
+                self.cwd_for_tasks = self.repo_root
+                self.use_worktree = False  # Update flag to reflect actual state
         else:
             self.log(f"Checking out temporary branch '{self.work_branch}' in main directory")
             self._run_git_command(["checkout", self.work_branch], cwd=self.repo_root)
@@ -304,18 +467,54 @@ class AgenticReviewLoop:
         prompt_file_path = None  # Keep track of path for cleanup
         prompt_content = ""  # To store the prompt read from file
         try:
-            # Create a temporary file and write the prompt to it
-            # We still do this in case the prompt is very long,
-            # but we'll read it back immediately.
-            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt", dir=self.output_dir) as f:
-                prompt_file_path = f.name  # Store the path
-                f.write(prompt)
-            self.debug(f"Wrote prompt to temporary file: {prompt_file_path}")
+            # Validate the output directory path before using it
+            if not validate_directory_path(self.output_dir):
+                raise ValueError(f"Invalid output directory path: {self.output_dir}")
 
-            # Read the content back from the file
-            with open(prompt_file_path, "r") as f:
-                prompt_content = f.read()
-            self.debug(f"Read {len(prompt_content)} chars from prompt file for -p argument.")
+            # Make sure the directory exists
+            output_dir_path = Path(self.output_dir)
+            if not output_dir_path.exists():
+                raise ValueError(f"Output directory does not exist: {self.output_dir}")
+            if not output_dir_path.is_dir():
+                raise ValueError(f"Output path is not a directory: {self.output_dir}")
+
+            # Use mkstemp for more secure temporary file creation
+            fd, prompt_file_path = tempfile.mkstemp(suffix=".txt", dir=self.output_dir)
+            try:
+                # Close the file descriptor returned by mkstemp
+                os.close(fd)
+                # Write the prompt to the temporary file
+                with open(prompt_file_path, "w") as f:
+                    f.write(prompt)
+                self.debug(f"Wrote prompt to temporary file: {prompt_file_path}")
+
+                # Read the content back from the file
+                with open(prompt_file_path, "r") as f:
+                    prompt_content = f.read()
+                self.debug(f"Read {len(prompt_content)} chars from prompt file for -p argument.")
+            except Exception:
+                # Clean up the file if any error occurs during writing/reading
+                if prompt_file_path and os.path.exists(prompt_file_path):
+                    os.unlink(prompt_file_path)
+                raise
+
+            # Check if 'claude' command exists before trying to run it
+            try:
+                # Test if claude is available by running 'claude --version'
+                version_check = subprocess.run(
+                    ["claude", "--version"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=5  # Short timeout for version check
+                )
+                if version_check.returncode != 0:
+                    raise ValueError(f"Claude command check failed: {version_check.stderr.strip()}")
+                self.debug(f"Claude command is available: {version_check.stdout.strip()}")
+            except FileNotFoundError:
+                raise ValueError("Error: 'claude' command not found. Please ensure Claude CLI is installed and in your PATH.")
+            except subprocess.TimeoutExpired:
+                raise ValueError("Error: 'claude --version' command timed out. Check if Claude CLI is functioning properly.")
 
             # --- Build Claude command using -p and the content read from the file ---
             cmd = [
@@ -334,6 +533,10 @@ class AgenticReviewLoop:
             # Truncate the command log in debug to avoid printing huge prompts
             self.debug(f"Running command in '{self.cwd_for_tasks}': {' '.join(cmd[:4])}...")
 
+            # Make sure the working directory exists
+            if not os.path.exists(self.cwd_for_tasks) or not os.path.isdir(self.cwd_for_tasks):
+                raise ValueError(f"Invalid working directory for Claude command: {self.cwd_for_tasks}")
+
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -343,6 +546,16 @@ class AgenticReviewLoop:
                 cwd=self.cwd_for_tasks,  # IMPORTANT: Run in the correct directory
             )
             output = result.stdout
+
+            # Validate the output
+            if not output:
+                raise ValueError("Claude returned empty output")
+
+            # Check for common error patterns in the output
+            error_indicators = ["API Error:", "Failed to run: claude", "Error: Unable to connect"]
+            for indicator in error_indicators:
+                if indicator in output[:200]:  # Check just the beginning of the output
+                    raise ValueError(f"Claude command might have failed: {output[:200]}")
 
             if not output.strip():
                 self.log(f"Warning: Empty output from {role.value} agent")
@@ -381,7 +594,18 @@ class AgenticReviewLoop:
         """Run the Reviewer agent."""
         phase = "Re-Review" if is_rereview else "Review"
         self.log(f"Starting {phase} phase (Iteration {self.iteration})...")
-        self.review_file = self.output_dir / f"review_iter_{self.iteration}.md"  # Iteration specific
+
+        # Validate the output directory before creating file paths
+        if not validate_directory_path(self.output_dir):
+            sys.exit(f"Error: Invalid output directory path: {self.output_dir}")
+
+        # Create a safe file path for the review file
+        review_filename = f"review_iter_{self.iteration}.md"
+        # Ensure the filename does not contain path traversal attempts
+        if ".." in review_filename or "/" in review_filename or "\\" in review_filename:
+            sys.exit(f"Error: Invalid review filename: {review_filename}")
+
+        self.review_file = self.output_dir / review_filename  # Iteration specific
 
         prompt = f"""
 Think hard about this task. You are Iteration #{self.iteration}.
@@ -445,15 +669,33 @@ IMPORTANT:
 - If this is a re-review (Iteration > 1), pay close attention to whether previous CRITICAL/HIGH issues were properly addressed and if any new issues were introduced.
 """
         output = self.run_claude(prompt, AgentRole.REVIEWER)
-        with open(self.review_file, "w") as f:
-            f.write(output)
-        self.log(f"{phase} report saved to {self.review_file}")
+
+        # Use a try-except block to catch any file errors
+        try:
+            with open(self.review_file, "w") as f:
+                f.write(output)
+            self.log(f"{phase} report saved to {self.review_file}")
+        except IOError as e:
+            self.log(f"Error writing to review file {self.review_file}: {e}")
+            return False
+
         return len(output.strip()) > 0 and "Error:" not in output[:100]  # Basic success check
 
     def run_developer(self):
         """Run the Developer agent."""
         self.log(f"Starting Development phase (Iteration {self.iteration})...")
-        self.dev_report_file = self.output_dir / f"dev_report_iter_{self.iteration}.md"  # Iteration specific
+
+        # Validate the output directory before creating file paths
+        if not validate_directory_path(self.output_dir):
+            sys.exit(f"Error: Invalid output directory path: {self.output_dir}")
+
+        # Create a safe file path for the dev report file
+        dev_report_filename = f"dev_report_iter_{self.iteration}.md"
+        # Ensure the filename does not contain path traversal attempts
+        if ".." in dev_report_filename or "/" in dev_report_filename or "\\" in dev_report_filename:
+            sys.exit(f"Error: Invalid dev report filename: {dev_report_filename}")
+
+        self.dev_report_file = self.output_dir / dev_report_filename  # Iteration specific
 
         # Check required input files
         if not self.review_file or not self.review_file.exists():
@@ -517,15 +759,33 @@ IMPORTANT:
 - Focus on high-quality fixes that will pass validation. Your work will be re-reviewed and validated.
 """
         output = self.run_claude(prompt, AgentRole.DEVELOPER)
-        with open(self.dev_report_file, "w") as f:
-            f.write(output)
-        self.log(f"Development report saved to {self.dev_report_file}")
+
+        # Use a try-except block to catch any file errors
+        try:
+            with open(self.dev_report_file, "w") as f:
+                f.write(output)
+            self.log(f"Development report saved to {self.dev_report_file}")
+        except IOError as e:
+            self.log(f"Error writing to development report file {self.dev_report_file}: {e}")
+            return False
+
         return len(output.strip()) > 0 and "Error:" not in output[:100]
 
     def run_validator(self):
         """Run the Validator agent."""
         self.log(f"Starting Validation phase (Iteration {self.iteration})...")
-        self.validation_file = self.output_dir / f"validation_iter_{self.iteration}.md"  # Iteration specific
+
+        # Validate the output directory before creating file paths
+        if not validate_directory_path(self.output_dir):
+            sys.exit(f"Error: Invalid output directory path: {self.output_dir}")
+
+        # Create a safe file path for the validation file
+        validation_filename = f"validation_iter_{self.iteration}.md"
+        # Ensure the filename does not contain path traversal attempts
+        if ".." in validation_filename or "/" in validation_filename or "\\" in validation_filename:
+            sys.exit(f"Error: Invalid validation filename: {validation_filename}")
+
+        self.validation_file = self.output_dir / validation_filename  # Iteration specific
 
         # Check required input files
         if not self.review_file or not self.review_file.exists():
@@ -588,9 +848,16 @@ IMPORTANT:
 - Provide specific evidence (file paths, line numbers, reasoning) for your conclusions.
 """
         output = self.run_claude(prompt, AgentRole.VALIDATOR)
-        with open(self.validation_file, "w") as f:
-            f.write(output)
-        self.log(f"Validation report saved to {self.validation_file}")
+
+        # Use a try-except block to catch any file errors
+        try:
+            with open(self.validation_file, "w") as f:
+                f.write(output)
+            self.log(f"Validation report saved to {self.validation_file}")
+        except IOError as e:
+            self.log(f"Error writing to validation file {self.validation_file}: {e}")
+            return False, False
+
         validation_passed = "VALIDATION: PASSED" in output.splitlines()[-1]  # Check last line
         self.log(f"Validation Result: {'PASSED' if validation_passed else 'FAILED'}")
         success = len(output.strip()) > 0 and "Error:" not in output[:100]
@@ -600,11 +867,27 @@ IMPORTANT:
         """Run the PR Manager agent."""
         self.log(f"Starting PR creation phase...")
 
+        # Validate the output directory before creating file paths
+        if not validate_directory_path(self.output_dir):
+            sys.exit(f"Error: Invalid output directory path: {self.output_dir}")
+
+        # Make sure self.pr_file has a safe path
+        if not hasattr(self, 'pr_file') or self.pr_file is None:
+            pr_filename = "pr_report.md"
+            # Ensure the filename does not contain path traversal attempts
+            if ".." in pr_filename or "/" in pr_filename or "\\" in pr_filename:
+                sys.exit(f"Error: Invalid PR filename: {pr_filename}")
+            self.pr_file = self.output_dir / pr_filename
+
         if self.skip_pr:
             self.log("PR creation skipped due to --no-pr flag.")
             # Create a dummy PR report indicating skip
-            with open(self.pr_file, "w") as f:
-                f.write("# PR Report\n\nPR creation was skipped via the --no-pr flag.")
+            try:
+                with open(self.pr_file, "w") as f:
+                    f.write("# PR Report\n\nPR creation was skipped via the --no-pr flag.")
+                self.log(f"PR skip note saved to {self.pr_file}")
+            except IOError as e:
+                self.log(f"Error writing PR skip note to {self.pr_file}: {e}")
             return False  # Indicate PR wasn't created
 
         # Check required input files from the final successful iteration
@@ -691,9 +974,16 @@ IMPORTANT:
 - The content you generate will be saved as the final PR report.
 """
         output = self.run_claude(prompt, AgentRole.PR_MANAGER)
-        with open(self.pr_file, "w") as f:
-            f.write(output)
-        self.log(f"PR report saved to {self.pr_file}")
+
+        # Use a try-except block to catch any file errors
+        try:
+            with open(self.pr_file, "w") as f:
+                f.write(output)
+            self.log(f"PR report saved to {self.pr_file}")
+        except IOError as e:
+            self.log(f"Error writing to PR file {self.pr_file}: {e}")
+            return False
+
         # Check if PR URL exists in the output
         pr_url_match = re.search(r"https://github\.com/[^/]+/[^/]+/pull/\d+", output)
         if pr_url_match:
