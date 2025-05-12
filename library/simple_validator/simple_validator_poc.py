@@ -51,7 +51,12 @@ from pathlib import Path
 
 
 def run_validation(
-    review_file, dev_report_file, output_file, branch_name="development-wip", verbose=False, latest_commit=False
+    review_file,
+    dev_report_file,
+    output_file,
+    branch_name="development-wip",
+    verbose=False,
+    latest_commit=False,
 ):
     """Run Claude to validate fixes and generate a validation report"""
     # Validate that input files exist
@@ -225,12 +230,21 @@ def main():
     parser = argparse.ArgumentParser(description="Run code validation with Claude")
     parser.add_argument("review", help="Path to the review file")
     parser.add_argument("dev_report", help="Path to the development report file")
-    parser.add_argument("--branch", default="development-wip", help="Git branch to validate (default: development-wip)")
     parser.add_argument(
-        "--output", help="Output file path for the validation report (default: tmp/validation_<branch>.md)"
+        "--branch",
+        default="development-wip",
+        help="Git branch to validate (default: development-wip)",
+    )
+    parser.add_argument(
+        "--output",
+        help="Output file path for the validation report (default: tmp/validation_<branch>.md)",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--latest-commit", action="store_true", help="Validate only the latest commit (HEAD vs HEAD~1)")
+    parser.add_argument(
+        "--latest-commit",
+        action="store_true",
+        help="Validate only the latest commit (HEAD vs HEAD~1)",
+    )
 
     args = parser.parse_args()
 

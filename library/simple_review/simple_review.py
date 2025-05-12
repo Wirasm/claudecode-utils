@@ -369,7 +369,9 @@ def run_review(
         print(f"Output will be saved to: {output_file}")
     # Determine what to review
     if latest_commit:
-        review_target = f"the latest commit in branch '{branch_name}' compared to {commits_back} commit(s) back"
+        review_target = (
+            f"the latest commit in branch '{branch_name}' compared to {commits_back} commit(s) back"
+        )
         compare_cmd = f"HEAD~{commits_back}...HEAD"
         if verbose:
             print(f"Reviewing latest commit compared to {commits_back} commit(s) back")
@@ -395,9 +397,7 @@ def run_review(
     # Create reviewer prompt using the template
     # Use a safer approach by formatting the template with validated values
     reviewer_prompt = REVIEWER_PROMPT_TEMPLATE.format(
-        review_target=review_target, 
-        compare_cmd=compare_cmd, 
-        commits_back=commits_back
+        review_target=review_target, compare_cmd=compare_cmd, commits_back=commits_back
     )
     # Run Claude with the prompt
     if verbose:
@@ -473,8 +473,12 @@ def run_review(
 
 def main():
     parser = argparse.ArgumentParser(description="Run code review with Claude")
-    parser.add_argument("branch", help="Git branch to review (compared to the base branch by default)")
-    parser.add_argument("--output", help="Output file path for the review (default: review_<branch>.md)")
+    parser.add_argument(
+        "branch", help="Git branch to review (compared to the base branch by default)"
+    )
+    parser.add_argument(
+        "--output", help="Output file path for the review (default: review_<branch>.md)"
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument(
         "--latest-commit",

@@ -237,8 +237,8 @@ class AgenticReviewLoop:
         self.compare_desc = f"temp branch '{self.work_branch}' vs base '{self.base_branch}'"
 
         # --- Output Files (will be iteration-specific later) ---
-        self.review_file = None       # For initial reviews
-        self.rereview_file = None     # For re-reviews (after development)
+        self.review_file = None  # For initial reviews
+        self.rereview_file = None  # For re-reviews (after development)
         self.dev_report_file = None
         self.validation_file = None
         self.pr_file = self.output_dir / "pr_report.md"  # PR report is final
@@ -748,7 +748,12 @@ IMPORTANT:
 
         # Check required input files - we need the most recent review
         # Use either the initial review or the re-review from a previous iteration
-        if self.iteration > 1 and hasattr(self, 'rereview_file') and self.rereview_file and self.rereview_file.exists():
+        if (
+            self.iteration > 1
+            and hasattr(self, "rereview_file")
+            and self.rereview_file
+            and self.rereview_file.exists()
+        ):
             # For iteration > 1, we should have a re-review from previous iteration
             prev_rereview_file = self.output_dir / f"rereview_iter_{self.iteration-1}.md"
             if prev_rereview_file.exists():
@@ -858,7 +863,9 @@ IMPORTANT:
 
         # Check required input files - validator needs the rereview (post-development review)
         if not self.rereview_file or not self.rereview_file.exists():
-            self.log(f"Error: Latest re-review file ({self.rereview_file}) not found for Validator.")
+            self.log(
+                f"Error: Latest re-review file ({self.rereview_file}) not found for Validator."
+            )
             return False, False
         if not self.dev_report_file or not self.dev_report_file.exists():
             self.log(

@@ -175,9 +175,15 @@ Your review will be automatically saved to a file, so focus on creating a detail
 def main():
     parser = argparse.ArgumentParser(description="Run code review with Claude")
     parser.add_argument("branch", help="Git branch to review (compared to main by default)")
-    parser.add_argument("--output", help="Output file path for the review (default: review_<branch>.md)")
+    parser.add_argument(
+        "--output", help="Output file path for the review (default: review_<branch>.md)"
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--latest-commit", action="store_true", help="Review only the latest commit (HEAD vs HEAD~1)")
+    parser.add_argument(
+        "--latest-commit",
+        action="store_true",
+        help="Review only the latest commit (HEAD vs HEAD~1)",
+    )
 
     args = parser.parse_args()
 

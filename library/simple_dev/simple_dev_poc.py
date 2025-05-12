@@ -199,12 +199,21 @@ Your report will be automatically saved to a file, so focus on implementing high
 def main():
     parser = argparse.ArgumentParser(description="Run code development process with Claude")
     parser.add_argument("review", help="Path to the review file to use as input")
-    parser.add_argument("--branch", default="development-wip", help="Git branch to work on (default: development-wip)")
     parser.add_argument(
-        "--output", help="Output file path for the development report (default: dev_report_<branch>.md)"
+        "--branch",
+        default="development-wip",
+        help="Git branch to work on (default: development-wip)",
+    )
+    parser.add_argument(
+        "--output",
+        help="Output file path for the development report (default: dev_report_<branch>.md)",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--latest-commit", action="store_true", help="Work on only the latest commit (HEAD vs HEAD~1)")
+    parser.add_argument(
+        "--latest-commit",
+        action="store_true",
+        help="Work on only the latest commit (HEAD vs HEAD~1)",
+    )
 
     args = parser.parse_args()
 
@@ -221,7 +230,9 @@ def main():
             output_file = f"tmp/dev_report_{args.branch}.md"
 
     # Run the development process
-    success = run_development(args.review, output_file, args.branch, args.verbose, args.latest_commit)
+    success = run_development(
+        args.review, output_file, args.branch, args.verbose, args.latest_commit
+    )
 
     sys.exit(0 if success else 1)
 
