@@ -490,8 +490,8 @@ Then thoroughly analyze the current state of the code to determine if ALL issues
                     title = subprocess.check_output(
                         ["git", "log", "-1", "--pretty=%s"], text=True
                     ).strip()
-                except:
-                    title = f"Changes from latest commit"
+                except subprocess.SubprocessError:
+                    title = "Changes from latest commit"
             else:
                 # Use branch name with formatting
                 clean_branch = self.branch.replace("-", " ").title()
