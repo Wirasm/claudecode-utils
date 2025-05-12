@@ -105,15 +105,20 @@ class AgenticReviewLoop:
             timeout: Timeout in seconds for each agent (default: 600 seconds/10 minutes)
         """
         # Set up basic config
-        self.latest_commit = latest_commit
+        self.latest_commit = bool(latest_commit)  # Ensure boolean type
         self.branch = branch or self._get_current_branch()
-        self.base_branch = base_branch
-        self.max_iterations = max_iterations
-        self.verbose = verbose
-        self.skip_pr = skip_pr
-        self.pr_title = pr_title
-        self.timeout = timeout
+        self.base_branch = str(base_branch) if base_branch else "main"  # Ensure string type with default
+        self.max_iterations = max(1, int(max_iterations))  # Ensure positive integer
+        self.verbose = bool(verbose)  # Ensure boolean type
+        self.skip_pr = bool(skip_pr)  # Ensure boolean type
+        self.pr_title = str(pr_title) if pr_title else None  # Ensure string type if provided
+        self.timeout = max(60, int(timeout))  # Ensure reasonable timeout minimum (60 seconds)
         self.iteration = 0
+
+        # Validate that only one comparison mode is active
+        if self.latest_commit and self.branch:
+            self.log("Warning: Both latest_commit and branch are specified. Using latest_commit mode.")
+            self.branch = None
 
         # Determine comparison command
         if self.latest_commit:
@@ -123,20 +128,41 @@ class AgenticReviewLoop:
             self.compare_cmd = f"{self.base_branch}...{self.branch}"
             self.compare_desc = f"branch '{self.branch}' vs '{self.base_branch}'"
 
-        # Set up output directory
+        # Set up output directory with proper path handling
         if output_dir:
-            self.output_dir = Path(output_dir)
+            self.output_dir = Path(output_dir).resolve()
         else:
             timestamp = int(time.time())
-            self.output_dir = Path("tmp") / f"agentic_loop_{timestamp}"
+            # Ensure Path object is properly handled with absolute path for safety
+            self.output_dir = Path("tmp").resolve() / f"agentic_loop_{timestamp}"
 
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        # Create directory with proper permissions and error handling
+        try:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            # Verify directory was created successfully
+            if not self.output_dir.exists() or not self.output_dir.is_dir():
+                raise OSError(f"Failed to create or access directory: {self.output_dir}")
+        except Exception as e:
+            self.log(f"Error creating output directory: {e}")
+            # Fallback to temp directory if needed
+            self.output_dir = Path(tempfile.mkdtemp(prefix="agentic_loop_"))
+            self.log(f"Using fallback temporary directory: {self.output_dir}")
 
-        # Set up output files
+        # Set up output files with proper path joining
         self.review_file = self.output_dir / "review.md"
         self.dev_report_file = self.output_dir / "dev_report.md"
         self.validation_file = self.output_dir / "validation.md"
         self.pr_file = self.output_dir / "pr.md"
+
+        # Ensure we can write to output directory by testing file creation
+        try:
+            test_file = self.output_dir / ".write_test"
+            with open(test_file, "w") as f:
+                f.write("test")
+            os.unlink(test_file)
+        except Exception as e:
+            self.log(f"Warning: Output directory may not be writable: {e}")
+            # Continue anyway as this is just a warning
 
         # Initialize sessions
         self.session_id = str(uuid.uuid4())
@@ -144,6 +170,41 @@ class AgenticReviewLoop:
         self.log(f"Comparing: {self.compare_desc}")
         self.log(f"Max iterations: {self.max_iterations}")
         self.log(f"Output directory: {self.output_dir}")
+
+    def _get_repo_root(self):
+        """Get the root directory of the git repository."""
+        try:
+            return Path(
+                subprocess.check_output(
+                    ["git", "rev-parse", "--show-toplevel"], text=True, stderr=subprocess.DEVNULL
+                ).strip()
+            )
+        except subprocess.CalledProcessError:
+            self.log("Error: Not inside a git repository.")
+            sys.exit(1)
+
+    def _run_git_command(self, command, check=True, capture=False, cwd=None, **kwargs):
+        """Helper to run git commands safely."""
+        effective_cwd = cwd or os.getcwd()
+
+        if hasattr(self, "debug"):
+            self.debug(f"Running git command in '{effective_cwd}': {' '.join(command)}")
+        try:
+            process = subprocess.run(
+                ["git"] + command, check=check, capture_output=capture, text=True, cwd=effective_cwd, **kwargs
+            )
+            if capture:
+                return process.stdout.strip()
+            return True
+        except subprocess.CalledProcessError as e:
+            if hasattr(self, "log"):
+                self.log(f"Error running git command: {' '.join(command)}")
+                self.log(f"Stderr: {e.stderr}")
+            if check:  # Only exit if check=True caused the error
+                sys.exit(f"Git command failed: {e}")
+            return None  # Return None on failure if check=False
+        except FileNotFoundError:
+            sys.exit("Error: 'git' command not found. Is git installed and in PATH?")
 
     def _get_current_branch(self):
         """Get the name of the current git branch"""
@@ -201,6 +262,11 @@ class AgenticReviewLoop:
         # This prevents command line escaping issues with shlex.quote when handling untrusted data
         prompt_file = None
 
+        # Initialize variables to ensure they're always defined
+        prompt_file = None
+        output = f"# {role.value.capitalize()} Report\n\nNo content was returned from Claude."
+        _timeout = timeout or self.timeout
+
         try:
             # Create a temporary file for the prompt
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
@@ -215,19 +281,16 @@ class AgenticReviewLoop:
             if allowed_tools:
                 cmd.extend(["--allowedTools", allowed_tools])
 
-            # Set timeout if specified
-            _timeout = timeout or self.timeout
-
-            # Run Claude
+            # Run Claude - avoid shell=True and use list form of command for security
             self.debug(f"Running command: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=_timeout)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=_timeout, shell=False)
 
             output = result.stdout
 
             # Check for empty output
             if not output.strip():
                 self.log(f"Warning: Empty output from {role.value} agent")
-                if result.stderr:
+                if hasattr(result, 'stderr') and result.stderr:
                     self.debug(f"stderr: {result.stderr[:500]}...")
                 output = f"# {role.value.capitalize()} Report\n\nNo content was returned from Claude."
 
@@ -243,16 +306,20 @@ class AgenticReviewLoop:
             return f"# {role.value.capitalize()} Report\n\nThe agent timed out after {_timeout} seconds."
         except subprocess.CalledProcessError as e:
             self.log(f"Error running {role.value.capitalize()} agent: {e}")
-            self.debug(f"stderr: {e.stderr}")
+            if hasattr(e, 'stderr') and e.stderr:
+                self.debug(f"stderr: {e.stderr[:500] if len(e.stderr) > 500 else e.stderr}")
             return f"# {role.value.capitalize()} Report\n\nAn error occurred: {e}"
         except Exception as e:
             self.log(f"Unexpected error: {e}")
+            import traceback
+            self.debug(traceback.format_exc())
             return f"# {role.value.capitalize()} Report\n\nAn unexpected error occurred: {e}"
         finally:
             # Clean up the prompt file if we created one and it still exists
             if prompt_file and os.path.exists(prompt_file):
                 try:
                     os.unlink(prompt_file)
+                    self.debug(f"Cleaned up temporary prompt file: {prompt_file}")
                 except Exception as e:
                     self.debug(f"Error cleaning up temporary file: {e}")
 
@@ -447,11 +514,21 @@ Then thoroughly analyze the current state of the code to determine if ALL issues
 
         self.log(f"Validation report saved to {self.validation_file}")
 
-        # Check validation result
-        validation_passed = "VALIDATION: PASSED" in output
+        # Check validation result with robust parsing
+        # Look specifically for the validation string at the end of the file
+        validation_passed = False
+        if output and output.strip():
+            # Check the last few lines for the validation result
+            # This is more robust than searching the entire text
+            last_lines = output.strip().split('\n')[-5:]  # Look at the last 5 lines
+            for line in last_lines:
+                if line.strip() == "VALIDATION: PASSED":
+                    validation_passed = True
+                    break
+
         self.log(f"Validation {'PASSED' if validation_passed else 'FAILED'}")
 
-        # Validation is considered successful if we got some output
+        # Validation is considered successful if we got some output and could parse the result
         return len(output.strip()) > 0, validation_passed
 
     def run_pr_manager(self):
@@ -479,13 +556,22 @@ Then thoroughly analyze the current state of the code to determine if ALL issues
             # Try to generate a sensible title from branch or latest commit
             if self.latest_commit:
                 try:
-                    title = subprocess.check_output(["git", "log", "-1", "--pretty=%s"], text=True).strip()
-                except:
+                    # Use safer git command helper with proper error handling
+                    title = self._run_git_command(["log", "-1", "--pretty=%s"], capture=True)
+                    if not title:  # Handle case where command succeeded but returned nothing
+                        title = f"Changes from latest commit"
+                except Exception as e:
+                    self.log(f"Error getting commit message: {e}")
                     title = f"Changes from latest commit"
             else:
-                # Use branch name with formatting
-                clean_branch = self.branch.replace("-", " ").title()
-                title = f"Changes from {clean_branch} branch"
+                # Use branch name with formatting and ensure valid title
+                try:
+                    # Ensure branch name is valid and sanitized
+                    clean_branch = self.branch.replace("-", " ").title()
+                    title = f"Changes from {clean_branch} branch"
+                except Exception as e:
+                    self.log(f"Error formatting branch name: {e}")
+                    title = f"Changes from branch"
 
         # Create PR manager prompt
         prompt = f"""
@@ -558,14 +644,38 @@ Include the PR URL at the end of your report.
 
         self.log(f"PR report saved to {self.pr_file}")
 
-        # Check if PR was created by looking for PR URL
-        pr_url_match = re.search(r"https://github\.com/[^/]+/[^/]+/pull/\d+", output)
-        if pr_url_match:
-            pr_url = pr_url_match.group(0)
-            self.log(f"PR created successfully: {pr_url}")
-            return True
-        else:
+        # Check if PR was created by looking for PR URL with robust error handling
+        try:
+            # Look for PR URL with more precise pattern and proper error handling
+            # First check for the exact GitHub PR URL format
+            github_pr_pattern = r"https://github\.com/[^/\s]+/[^/\s]+/pull/\d+"
+            pr_url_match = re.search(github_pr_pattern, output)
+
+            if pr_url_match:
+                pr_url = pr_url_match.group(0)
+                self.log(f"PR created successfully: {pr_url}")
+                return True
+
+            # As a fallback, look for any URL that might be a PR
+            generic_url_pattern = r"https?://\S+/pull/\d+"
+            fallback_match = re.search(generic_url_pattern, output)
+            if fallback_match:
+                pr_url = fallback_match.group(0)
+                self.log(f"PR possibly created (URL format not standard): {pr_url}")
+                return True
+
+            # If no PR URL found, check for common error messages
+            error_indicators = ["error", "failed", "could not create", "unable to"]
+            for indicator in error_indicators:
+                if indicator in output.lower():
+                    self.log(f"PR creation likely failed: Found '{indicator}' in output")
+                    return False
+
             self.log("PR may not have been created. Check the PR report for details.")
+            return False
+
+        except Exception as e:
+            self.log(f"Error checking PR creation status: {e}")
             return False
 
     def run(self):

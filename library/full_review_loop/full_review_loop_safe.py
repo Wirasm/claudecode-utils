@@ -102,18 +102,23 @@ class AgenticReviewLoop:
     ):
         """Initialize the agentic review loop."""
         # --- Basic Config ---
-        self.latest_commit = latest_commit
+        self.latest_commit = bool(latest_commit)  # Ensure boolean type
         self.source_branch = branch  # The branch to start FROM
-        self.base_branch = base_branch  # The branch to compare AGAINST and PR INTO
-        self.use_worktree = use_worktree
-        self.keep_branch = keep_branch
-        self.max_iterations = max_iterations
-        self.verbose = verbose
-        self.skip_pr = skip_pr
-        self.pr_title = pr_title
-        self.timeout = timeout
+        self.base_branch = str(base_branch) if base_branch else "main"  # Ensure string type with default
+        self.use_worktree = bool(use_worktree)  # Ensure boolean type
+        self.keep_branch = bool(keep_branch)  # Ensure boolean type
+        self.max_iterations = max(1, int(max_iterations))  # Ensure positive integer
+        self.verbose = bool(verbose)  # Ensure boolean type
+        self.skip_pr = bool(skip_pr)  # Ensure boolean type
+        self.pr_title = str(pr_title) if pr_title else None  # Ensure string type if provided
+        self.timeout = max(60, int(timeout))  # Ensure reasonable timeout minimum (60 seconds)
         self.iteration = 0
         self.session_id = str(uuid.uuid4())[:8]  # Short UUID for names
+
+        # Validate that only one comparison mode is active
+        if self.latest_commit and self.source_branch:
+            self.log("Warning: Both latest_commit and branch are specified. Using latest_commit mode.")
+            self.source_branch = None
 
         # --- Output Directory ---
         if output_dir:
