@@ -751,7 +751,15 @@ IMPORTANT:
         if self.iteration > 1 and hasattr(self, 'rereview_file') and self.rereview_file and self.rereview_file.exists():
             # For iteration > 1, we should have a re-review from previous iteration
             prev_rereview_file = self.output_dir / f"rereview_iter_{self.iteration-1}.md"
-            review_to_use = prev_rereview_file if prev_rereview_file.exists() else self.review_file
+            if prev_rereview_file.exists():
+                review_to_use = prev_rereview_file
+            else:
+                # Fall back to the initial review from the current iteration
+                review_to_use = self.review_file
+        elif self.iteration > 1:
+            # This might be an upgrade case where only review files exist from previous iterations
+            prev_review_file = self.output_dir / f"review_iter_{self.iteration-1}.md"
+            review_to_use = prev_review_file if prev_review_file.exists() else self.review_file
         else:
             # For iteration 1, use the initial review
             review_to_use = self.review_file
