@@ -237,7 +237,8 @@ class AgenticReviewLoop:
         self.compare_desc = f"temp branch '{self.work_branch}' vs base '{self.base_branch}'"
 
         # --- Output Files (will be iteration-specific later) ---
-        self.review_file = None
+        self.review_file = None       # For initial reviews
+        self.rereview_file = None     # For re-reviews (after development)
         self.dev_report_file = None
         self.validation_file = None
         self.pr_file = self.output_dir / "pr_report.md"  # PR report is final
@@ -637,13 +638,23 @@ class AgenticReviewLoop:
         if not validate_directory_path(self.output_dir):
             sys.exit(f"Error: Invalid output directory path: {self.output_dir}")
 
-        # Create a safe file path for the review file
-        review_filename = f"review_iter_{self.iteration}.md"
-        # Ensure the filename does not contain path traversal attempts
-        if ".." in review_filename or "/" in review_filename or "\\" in review_filename:
-            sys.exit(f"Error: Invalid review filename: {review_filename}")
+        # Create different filenames for initial review vs re-review
+        if is_rereview:
+            file_prefix = "rereview"
+            target_file_attr = "rereview_file"
+        else:
+            file_prefix = "review"
+            target_file_attr = "review_file"
 
-        self.review_file = self.output_dir / review_filename  # Iteration specific
+        # Create a safe file path for the review file
+        filename = f"{file_prefix}_iter_{self.iteration}.md"
+        # Ensure the filename does not contain path traversal attempts
+        if ".." in filename or "/" in filename or "\\" in filename:
+            sys.exit(f"Error: Invalid review filename: {filename}")
+
+        # Store in the appropriate attribute based on type
+        setattr(self, target_file_attr, self.output_dir / filename)
+        target_file = getattr(self, target_file_attr)  # Get the file path we'll write to
 
         prompt = f"""
 Think hard about this task. You are Iteration #{self.iteration}.
@@ -710,11 +721,11 @@ IMPORTANT:
 
         # Use a try-except block to catch any file errors
         try:
-            with open(self.review_file, "w") as f:
+            with open(target_file, "w") as f:
                 f.write(output)
-            self.log(f"{phase} report saved to {self.review_file}")
+            self.log(f"{phase} report saved to {target_file}")
         except IOError as e:
-            self.log(f"Error writing to review file {self.review_file}: {e}")
+            self.log(f"Error writing to {phase.lower()} file {target_file}: {e}")
             return False
 
         return len(output.strip()) > 0 and "Error:" not in output[:100]  # Basic success check
@@ -735,10 +746,22 @@ IMPORTANT:
 
         self.dev_report_file = self.output_dir / dev_report_filename  # Iteration specific
 
-        # Check required input files
-        if not self.review_file or not self.review_file.exists():
-            self.log(f"Error: Review file ({self.review_file}) not found for Developer.")
+        # Check required input files - we need the most recent review
+        # Use either the initial review or the re-review from a previous iteration
+        if self.iteration > 1 and hasattr(self, 'rereview_file') and self.rereview_file and self.rereview_file.exists():
+            # For iteration > 1, we should have a re-review from previous iteration
+            prev_rereview_file = self.output_dir / f"rereview_iter_{self.iteration-1}.md"
+            review_to_use = prev_rereview_file if prev_rereview_file.exists() else self.review_file
+        else:
+            # For iteration 1, use the initial review
+            review_to_use = self.review_file
+
+        if not review_to_use or not review_to_use.exists():
+            self.log(f"Error: Review file ({review_to_use}) not found for Developer.")
             return False
+
+        # Store the review file we're actually using
+        self.current_review_for_dev = review_to_use
 
         # Check for previous failed validation report (for iterations > 1)
         previous_validation_file = self.output_dir / f"validation_iter_{self.iteration - 1}.md"
@@ -752,11 +775,11 @@ You are working in the directory: {self.cwd_for_tasks} on branch '{self.work_bra
 Your task is to address all CRITICAL and HIGH priority issues identified in the latest code review.
 
 Input Sources:
-1. Latest Code Review: {self.review_file}
+1. Latest Code Review: {self.current_review_for_dev}
 {"2. Previous Failed Validation Report: " + str(previous_validation_file) if has_validation_feedback else ""}
 
 Your Process:
-1. Carefully analyze the latest review ({self.review_file}).
+1. Carefully analyze the latest review ({self.current_review_for_dev}).
 {"2. Study the previous failed validation report (" + str(previous_validation_file) + ") and prioritize fixing the issues IT identified." if has_validation_feedback else ""}
 3. Assess the current code state by running: git diff {self.compare_cmd}
 4. Create a systematic plan to address all CRITICAL and HIGH priority issues from the review {"paying special attention to the feedback in the validation report" if has_validation_feedback else ""}.
@@ -825,15 +848,18 @@ IMPORTANT:
 
         self.validation_file = self.output_dir / validation_filename  # Iteration specific
 
-        # Check required input files
-        if not self.review_file or not self.review_file.exists():
-            self.log(f"Error: Latest review file ({self.review_file}) not found for Validator.")
+        # Check required input files - validator needs the rereview (post-development review)
+        if not self.rereview_file or not self.rereview_file.exists():
+            self.log(f"Error: Latest re-review file ({self.rereview_file}) not found for Validator.")
             return False, False
         if not self.dev_report_file or not self.dev_report_file.exists():
             self.log(
                 f"Error: Latest dev report file ({self.dev_report_file}) not found for Validator."
             )
             return False, False
+
+        # Also check if we have the initial review for reference
+        initial_review_exists = self.review_file and self.review_file.exists()
 
         prompt = f"""
 Think hard about this task. You are Iteration #{self.iteration}.
@@ -842,11 +868,12 @@ You are a quality validator ensuring code standards after development changes on
 Your task is to verify that all critical issues have been properly addressed, and no new issues were introduced.
 
 Input Sources:
-1. Latest Code Review: {self.review_file} (This review was done AFTER the latest development attempt)
+1. Latest Re-Review: {self.rereview_file} (This review was done AFTER the development attempt)
 2. Latest Development Report: {self.dev_report_file}
+{f"3. Initial Review: {self.review_file} (For reference to see original issues)" if initial_review_exists else ""}
 
 Your Process:
-1. Carefully study both the review ({self.review_file}) and dev report ({self.dev_report_file}).
+1. Carefully study both the re-review ({self.rereview_file}) and dev report ({self.dev_report_file}).
 2. Examine the current code changes: git diff {self.compare_cmd}
 3. Verify if EVERY CRITICAL and HIGH priority issue mentioned in the latest review has been properly addressed by the developer.
 4. Check if any NEW issues (especially CRITICAL/HIGH) were introduced during the fix process.
@@ -936,11 +963,15 @@ IMPORTANT:
                 f"Error: Final validation file ({self.validation_file}) not found for PR Manager."
             )
             return False
+
         # Find the reports from the last iteration
         final_review_file = self.output_dir / f"review_iter_{self.iteration}.md"
+        final_rereview_file = self.output_dir / f"rereview_iter_{self.iteration}.md"
         final_dev_report_file = self.output_dir / f"dev_report_iter_{self.iteration}.md"
-        if not final_review_file.exists() or not final_dev_report_file.exists():
-            self.log("Error: Could not find final review/dev reports for PR description.")
+
+        # We need at least the re-review (which contains the post-fix assessment) and the dev report
+        if not final_rereview_file.exists() or not final_dev_report_file.exists():
+            self.log("Error: Could not find final re-review/dev reports for PR description.")
             return False
 
         # Generate PR title if needed
@@ -961,9 +992,10 @@ You are a PR manager preparing a high-quality pull request for branch '{self.wor
 Validation has passed according to the final validation report, and your task is to create a comprehensive PR.
 
 Input Sources:
-1. Final Code Review: {final_review_file}
-2. Final Development Report: {final_dev_report_file}
-3. Final Validation Report: {self.validation_file} (Should confirm PASSED)
+1. Initial Review: {final_review_file if final_review_file.exists() else "Not available"}
+2. Final Re-Review: {final_rereview_file}
+3. Final Development Report: {final_dev_report_file}
+4. Final Validation Report: {self.validation_file} (Should confirm PASSED)
 
 Your Process:
 1. Read all final reports to gather complete context.
@@ -1069,13 +1101,14 @@ IMPORTANT:
                     break
 
                 # --- Step 3: Re-Review (Review the developer's changes) ---
+                # This creates a separate rereview_file, distinct from the initial review_file
                 rereview_success = self.run_reviewer(is_rereview=True)
                 if not rereview_success:
                     self.log(
                         f"Re-Review phase failed on iteration {self.iteration}. Stopping loop."
                     )
                     break
-                # Note: The validation step will use the report from this re-review
+                # Note: The validation step will use the report from this re-review (stored in rereview_file)
 
                 # --- Step 4: Validate ---
                 # Validator uses the latest (re-review) report and the latest dev report
@@ -1126,8 +1159,9 @@ IMPORTANT:
         self.log(f"Output artifacts are in: {self.output_dir}")
         self.log("Artifacts Summary:")
         for i in range(1, self.iteration + 1):
-            self.log(f"  Iter {i}: Review: review_iter_{i}.md")
-            self.log(f"  Iter {i}: Dev Report: dev_report_iter_{i}.md")
+            self.log(f"  Iter {i}: Initial Review: review_iter_{i}.md")
+            self.log(f"  Iter {i}: Development: dev_report_iter_{i}.md")
+            self.log(f"  Iter {i}: Re-Review: rereview_iter_{i}.md")
             self.log(f"  Iter {i}: Validation: validation_iter_{i}.md")
         if self.pr_file.exists():
             self.log(f"  PR Report: {self.pr_file.name}")
