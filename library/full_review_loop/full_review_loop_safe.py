@@ -94,17 +94,17 @@ def validate_git_branch_name(branch_name):
 
     # Check for common Git branch name restrictions
     invalid_patterns = [
-        r'^\s',         # Leading whitespace
-        r'\s$',         # Trailing whitespace
-        r'\s',          # Spaces
-        r'\.{2,}',      # Two or more consecutive dots
-        r'@\{',         # The sequence @{
-        r'^-',          # Beginning with a dash
-        r'--+',         # Two or more consecutive dashes
-        r'\.lock$',     # Ending with .lock
-        r'[\x00-\x1F]', # Control characters
-        r'[~^:?*[\]]',  # Special Git chars
-        r'\\',          # Backslash
+        r"^\s",  # Leading whitespace
+        r"\s$",  # Trailing whitespace
+        r"\s",  # Spaces
+        r"\.{2,}",  # Two or more consecutive dots
+        r"@\{",  # The sequence @{
+        r"^-",  # Beginning with a dash
+        r"--+",  # Two or more consecutive dashes
+        r"\.lock$",  # Ending with .lock
+        r"[\x00-\x1F]",  # Control characters
+        r"[~^:?*[\]]",  # Special Git chars
+        r"\\",  # Backslash
     ]
 
     for pattern in invalid_patterns:
@@ -112,7 +112,7 @@ def validate_git_branch_name(branch_name):
             return False
 
     # Final check: branch name cannot begin or end with slash or contain consecutive slashes
-    if branch_name.startswith('/') or branch_name.endswith('/') or '//' in branch_name:
+    if branch_name.startswith("/") or branch_name.endswith("/") or "//" in branch_name:
         return False
 
     return True
@@ -144,12 +144,12 @@ def validate_directory_path(path):
         return False
 
     # Check for null bytes
-    if '\0' in path_str:
+    if "\0" in path_str:
         return False
 
     # Check for path traversal attempts
     normalized = os.path.normpath(path_str)
-    if '../' in normalized or normalized.startswith('..'):
+    if "../" in normalized or normalized.startswith(".."):
         return False
 
     # If the path exists, make sure it's a directory
@@ -194,9 +194,13 @@ class AgenticReviewLoop:
 
         # Validate branch names before assigning
         if branch and not validate_git_branch_name(branch):
-            sys.exit(f"Error: Invalid source branch name '{branch}'. Branch names must follow Git naming rules.")
+            sys.exit(
+                f"Error: Invalid source branch name '{branch}'. Branch names must follow Git naming rules."
+            )
         if not validate_git_branch_name(base_branch):
-            sys.exit(f"Error: Invalid base branch name '{base_branch}'. Branch names must follow Git naming rules.")
+            sys.exit(
+                f"Error: Invalid base branch name '{base_branch}'. Branch names must follow Git naming rules."
+            )
 
         self.source_branch = branch  # The branch to start FROM
         self.base_branch = base_branch  # The branch to compare AGAINST and PR INTO
@@ -239,7 +243,9 @@ class AgenticReviewLoop:
         self.pr_file = self.output_dir / "pr_report.md"  # PR report is final
 
         self.log(f"Initialized Agentic Review Loop [session: {self.session_id}]")
-        self.log(f"Source Reference: {'Latest commit' if latest_commit else f'Branch {self.source_branch}'}")
+        self.log(
+            f"Source Reference: {'Latest commit' if latest_commit else f'Branch {self.source_branch}'}"
+        )
         self.log(f"Base Branch: {self.base_branch}")
         self.log(f"Temporary Work Branch: {self.work_branch}")
         self.log(f"Using Worktree: {self.use_worktree} ({self.worktree_path})")
@@ -262,7 +268,9 @@ class AgenticReviewLoop:
         # Ensure effective_cwd actually exists
         effective_cwd_path = Path(effective_cwd)
         if not effective_cwd_path.exists():
-            sys.exit(f"Error: Directory '{effective_cwd}' does not exist for git command execution.")
+            sys.exit(
+                f"Error: Directory '{effective_cwd}' does not exist for git command execution."
+            )
         if not effective_cwd_path.is_dir():
             sys.exit(f"Error: Path '{effective_cwd}' is not a directory for git command execution.")
 
@@ -270,7 +278,12 @@ class AgenticReviewLoop:
             self.debug(f"Running git command in '{effective_cwd}': {' '.join(command)}")
         try:
             process = subprocess.run(
-                ["git"] + command, check=check, capture_output=capture, text=True, cwd=effective_cwd, **kwargs
+                ["git"] + command,
+                check=check,
+                capture_output=capture,
+                text=True,
+                cwd=effective_cwd,
+                **kwargs,
             )
             if capture:
                 return process.stdout.strip()
@@ -287,7 +300,9 @@ class AgenticReviewLoop:
 
     def _get_current_branch(self):
         """Get the name of the current git branch."""
-        return self._run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], capture=True, cwd=self.repo_root)
+        return self._run_git_command(
+            ["rev-parse", "--abbrev-ref", "HEAD"], capture=True, cwd=self.repo_root
+        )
 
     def _get_repo_root(self):
         """Get the root directory of the git repository."""
@@ -312,7 +327,9 @@ class AgenticReviewLoop:
                 self.source_branch = self.original_branch
                 # Validate the original branch name too when using it
                 if not validate_git_branch_name(self.source_branch):
-                    sys.exit(f"Error: Invalid original branch name '{self.source_branch}'. Branch names must follow Git naming rules.")
+                    sys.exit(
+                        f"Error: Invalid original branch name '{self.source_branch}'. Branch names must follow Git naming rules."
+                    )
 
             # Verify source branch exists
             if not self._run_git_command(
@@ -341,7 +358,9 @@ class AgenticReviewLoop:
                 # Now create the branch
                 self._run_git_command(["branch", self.work_branch, starting_point])
             else:
-                sys.exit(f"Error: Cannot delete work branch '{self.work_branch}' because it is currently checked out.")
+                sys.exit(
+                    f"Error: Cannot delete work branch '{self.work_branch}' because it is currently checked out."
+                )
         else:
             # Branch doesn't exist, create it
             self._run_git_command(["branch", self.work_branch, starting_point])
@@ -352,13 +371,19 @@ class AgenticReviewLoop:
             self.log(f"Setting up worktree at: {self.worktree_path}")
 
             # First check if the worktree path is already registered
-            worktree_list = self._run_git_command(["worktree", "list", "--porcelain"], capture=True, cwd=self.repo_root)
+            worktree_list = self._run_git_command(
+                ["worktree", "list", "--porcelain"], capture=True, cwd=self.repo_root
+            )
             if str(self.worktree_path) in worktree_list:
-                self.log(f"Worktree already exists at {self.worktree_path}, attempting to remove...")
+                self.log(
+                    f"Worktree already exists at {self.worktree_path}, attempting to remove..."
+                )
 
             # Remove existing worktree if present (e.g., from failed previous run)
             remove_result = self._run_git_command(
-                ["worktree", "remove", "--force", str(self.worktree_path)], check=False, cwd=self.repo_root
+                ["worktree", "remove", "--force", str(self.worktree_path)],
+                check=False,
+                cwd=self.repo_root,
             )
 
             # If worktree removal fails, try pruning first, then removing again
@@ -367,12 +392,16 @@ class AgenticReviewLoop:
                 self._run_git_command(["worktree", "prune"], check=False, cwd=self.repo_root)
                 time.sleep(0.5)  # Short pause sometimes helps git release locks
                 remove_result = self._run_git_command(
-                    ["worktree", "remove", "--force", str(self.worktree_path)], check=False, cwd=self.repo_root
+                    ["worktree", "remove", "--force", str(self.worktree_path)],
+                    check=False,
+                    cwd=self.repo_root,
                 )
 
                 # If still fails, try manual directory removal if the directory exists
                 if remove_result is None and self.worktree_path.exists():
-                    self.log(f"Git worktree remove failed, trying manual directory removal of {self.worktree_path}")
+                    self.log(
+                        f"Git worktree remove failed, trying manual directory removal of {self.worktree_path}"
+                    )
                     try:
                         shutil.rmtree(self.worktree_path)
                     except OSError as e:
@@ -384,7 +413,10 @@ class AgenticReviewLoop:
 
             # Add the new worktree
             try:
-                self._run_git_command(["worktree", "add", str(self.worktree_path), self.work_branch], cwd=self.repo_root)
+                self._run_git_command(
+                    ["worktree", "add", str(self.worktree_path), self.work_branch],
+                    cwd=self.repo_root,
+                )
                 self.cwd_for_tasks = self.worktree_path  # Set CWD for subsequent tasks
             except subprocess.CalledProcessError as e:
                 self.log(f"Error creating worktree: {e}")
@@ -414,19 +446,25 @@ class AgenticReviewLoop:
             self._run_git_command(["worktree", "prune"], check=False, cwd=self.repo_root)
             time.sleep(0.5)  # Short pause sometimes helps git release locks
             self._run_git_command(
-                ["worktree", "remove", "--force", str(self.worktree_path)], check=False, cwd=self.repo_root
+                ["worktree", "remove", "--force", str(self.worktree_path)],
+                check=False,
+                cwd=self.repo_root,
             )
             # Attempt to remove the directory if git didn't fully clean it
             if self.worktree_path.exists():
                 try:
                     shutil.rmtree(self.worktree_path)
                 except OSError as e:
-                    self.log(f"Warning: Could not remove worktree directory {self.worktree_path}: {e}")
+                    self.log(
+                        f"Warning: Could not remove worktree directory {self.worktree_path}: {e}"
+                    )
 
         # 3. Delete Temporary Branch (if not keeping)
         if not self.keep_branch:
             self.log(f"Deleting temporary branch '{self.work_branch}'")
-            self._run_git_command(["branch", "-D", self.work_branch], check=False, cwd=self.repo_root)
+            self._run_git_command(
+                ["branch", "-D", self.work_branch], check=False, cwd=self.repo_root
+            )
         else:
             self.log(f"Keeping temporary branch '{self.work_branch}' as requested.")
 
@@ -450,19 +488,13 @@ class AgenticReviewLoop:
         # Default tools per role
         if allowed_tools is None:
             if role == AgentRole.REVIEWER:
-                allowed_tools = (
-                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
-                )
+                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
             elif role == AgentRole.DEVELOPER:
                 allowed_tools = "Bash,Grep,Read,LS,Glob,Task,Edit,MultiEdit,Write,TodoRead,TodoWrite,WebSearch,WebFetch"  # Edit + web access + agent delegation
             elif role == AgentRole.VALIDATOR:
-                allowed_tools = (
-                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
-                )
+                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
             elif role == AgentRole.PR_MANAGER:
-                allowed_tools = (
-                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Bash for gh + web access + agent delegation
-                )
+                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Bash for gh + web access + agent delegation
 
         prompt_file_path = None  # Keep track of path for cleanup
         prompt_content = ""  # To store the prompt read from file
@@ -506,15 +538,19 @@ class AgenticReviewLoop:
                     capture_output=True,
                     text=True,
                     check=False,
-                    timeout=5  # Short timeout for version check
+                    timeout=5,  # Short timeout for version check
                 )
                 if version_check.returncode != 0:
                     raise ValueError(f"Claude command check failed: {version_check.stderr.strip()}")
                 self.debug(f"Claude command is available: {version_check.stdout.strip()}")
             except FileNotFoundError:
-                raise ValueError("Error: 'claude' command not found. Please ensure Claude CLI is installed and in your PATH.")
+                raise ValueError(
+                    "Error: 'claude' command not found. Please ensure Claude CLI is installed and in your PATH."
+                )
             except subprocess.TimeoutExpired:
-                raise ValueError("Error: 'claude --version' command timed out. Check if Claude CLI is functioning properly.")
+                raise ValueError(
+                    "Error: 'claude --version' command timed out. Check if Claude CLI is functioning properly."
+                )
 
             # --- Build Claude command using -p and the content read from the file ---
             cmd = [
@@ -535,7 +571,9 @@ class AgenticReviewLoop:
 
             # Make sure the working directory exists
             if not os.path.exists(self.cwd_for_tasks) or not os.path.isdir(self.cwd_for_tasks):
-                raise ValueError(f"Invalid working directory for Claude command: {self.cwd_for_tasks}")
+                raise ValueError(
+                    f"Invalid working directory for Claude command: {self.cwd_for_tasks}"
+                )
 
             result = subprocess.run(
                 cmd,
@@ -792,7 +830,9 @@ IMPORTANT:
             self.log(f"Error: Latest review file ({self.review_file}) not found for Validator.")
             return False, False
         if not self.dev_report_file or not self.dev_report_file.exists():
-            self.log(f"Error: Latest dev report file ({self.dev_report_file}) not found for Validator.")
+            self.log(
+                f"Error: Latest dev report file ({self.dev_report_file}) not found for Validator."
+            )
             return False, False
 
         prompt = f"""
@@ -872,7 +912,7 @@ IMPORTANT:
             sys.exit(f"Error: Invalid output directory path: {self.output_dir}")
 
         # Make sure self.pr_file has a safe path
-        if not hasattr(self, 'pr_file') or self.pr_file is None:
+        if not hasattr(self, "pr_file") or self.pr_file is None:
             pr_filename = "pr_report.md"
             # Ensure the filename does not contain path traversal attempts
             if ".." in pr_filename or "/" in pr_filename or "\\" in pr_filename:
@@ -892,7 +932,9 @@ IMPORTANT:
 
         # Check required input files from the final successful iteration
         if not self.validation_file or not self.validation_file.exists():
-            self.log(f"Error: Final validation file ({self.validation_file}) not found for PR Manager.")
+            self.log(
+                f"Error: Final validation file ({self.validation_file}) not found for PR Manager."
+            )
             return False
         # Find the reports from the last iteration
         final_review_file = self.output_dir / f"review_iter_{self.iteration}.md"
@@ -905,7 +947,11 @@ IMPORTANT:
         title = self.pr_title
         if not title:
             # Use the temporary branch name for a reasonable default
-            clean_branch = self.work_branch.replace("-agentic-" + self.session_id, "").replace("-", " ").title()
+            clean_branch = (
+                self.work_branch.replace("-agentic-" + self.session_id, "")
+                .replace("-", " ")
+                .title()
+            )
             title = f"Agentic Loop Changes for {clean_branch} (Iter {self.iteration})"
 
         prompt = f"""
@@ -991,7 +1037,9 @@ IMPORTANT:
             self.log(f"PR creation reported successfully: {pr_url}")
             return True
         else:
-            self.log("PR URL not found in the report. PR creation might have failed. Check the PR report.")
+            self.log(
+                "PR URL not found in the report. PR creation might have failed. Check the PR report."
+            )
             return False
 
     def run(self):
@@ -1015,13 +1063,17 @@ IMPORTANT:
                 # Developer uses the latest review and potentially previous validation feedback
                 dev_success = self.run_developer()
                 if not dev_success:
-                    self.log(f"Development phase failed on iteration {self.iteration}. Stopping loop.")
+                    self.log(
+                        f"Development phase failed on iteration {self.iteration}. Stopping loop."
+                    )
                     break
 
                 # --- Step 3: Re-Review (Review the developer's changes) ---
                 rereview_success = self.run_reviewer(is_rereview=True)
                 if not rereview_success:
-                    self.log(f"Re-Review phase failed on iteration {self.iteration}. Stopping loop.")
+                    self.log(
+                        f"Re-Review phase failed on iteration {self.iteration}. Stopping loop."
+                    )
                     break
                 # Note: The validation step will use the report from this re-review
 
@@ -1029,7 +1081,9 @@ IMPORTANT:
                 # Validator uses the latest (re-review) report and the latest dev report
                 validation_success, validation_passed = self.run_validator()
                 if not validation_success:
-                    self.log(f"Validation phase failed on iteration {self.iteration}. Stopping loop.")
+                    self.log(
+                        f"Validation phase failed on iteration {self.iteration}. Stopping loop."
+                    )
                     break
 
                 # --- Check Validation Result ---
@@ -1097,30 +1151,48 @@ Examples:
     )
     # Source selection (mutually exclusive)
     source_group = parser.add_mutually_exclusive_group(required=True)
-    source_group.add_argument("--latest", action="store_true", help="Source from the latest commit (HEAD)")
+    source_group.add_argument(
+        "--latest", action="store_true", help="Source from the latest commit (HEAD)"
+    )
     source_group.add_argument(
         "--branch", metavar="BRANCH", help="Source branch to create the temporary work branch from"
     )
 
     # Configuration options
     parser.add_argument(
-        "--base-branch", default="main", help="Base branch for comparison and PR target (default: main)"
+        "--base-branch",
+        default="main",
+        help="Base branch for comparison and PR target (default: main)",
     )
     parser.add_argument(
-        "--worktree", action="store_true", help="Run the entire process within a dedicated git worktree"
+        "--worktree",
+        action="store_true",
+        help="Run the entire process within a dedicated git worktree",
     )
     parser.add_argument(
-        "--keep-branch", action="store_true", help="Do not delete the temporary work branch after completion"
+        "--keep-branch",
+        action="store_true",
+        help="Do not delete the temporary work branch after completion",
     )
     parser.add_argument(
-        "--max-iterations", type=int, default=3, help="Maximum number of improvement cycles (default: 3)"
+        "--max-iterations",
+        type=int,
+        default=3,
+        help="Maximum number of improvement cycles (default: 3)",
     )
-    parser.add_argument("--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP_UUID)")
+    parser.add_argument(
+        "--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP_UUID)"
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Show verbose debug output")
-    parser.add_argument("--no-pr", action="store_true", help="Skip PR creation even if validation passes")
+    parser.add_argument(
+        "--no-pr", action="store_true", help="Skip PR creation even if validation passes"
+    )
     parser.add_argument("--pr-title", help="Custom title for PR (default: auto-generated)")
     parser.add_argument(
-        "--timeout", type=int, default=600, help="Timeout in seconds for each Claude agent call (default: 600)"
+        "--timeout",
+        type=int,
+        default=600,
+        help="Timeout in seconds for each Claude agent call (default: 600)",
     )
 
     args = parser.parse_args()
