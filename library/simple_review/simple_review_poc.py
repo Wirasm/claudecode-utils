@@ -7,10 +7,10 @@ This script runs a Claude instance to analyze code and generate a review report.
 
 Usage:
     # Review all changes in a branch compared to main
-    uv run python scripts/simple_review.py <branch_name> [--output <output_file>] [--verbose]
+    uv run python library/simple_review/simple_review_poc.py <branch_name> [--output <output_file>] [--verbose]
 
     # Review only the latest commit in a branch
-    uv run python scripts/simple_review.py <branch_name> --latest-commit [--output <output_file>] [--verbose]
+    uv run python library/simple_review/simple_review_poc.py <branch_name> --latest-commit [--output <output_file>] [--verbose]
 
 Arguments:
     branch_name             The git branch to review (required)
@@ -20,13 +20,13 @@ Arguments:
 
 Examples:
     # Review all changes in development-wip branch compared to main
-    uv run python scripts/simple_review.py development-wip
+    uv run python library/simple_review/simple_review_poc.py development-wip
 
     # Review only the latest commit in development-wip branch
-    uv run python scripts/simple_review.py development-wip --latest-commit
+    uv run python library/simple_review/simple_review_poc.py development-wip --latest-commit
 
     # Save review to a custom file with verbose output
-    uv run python scripts/simple_review.py feature-branch --output reviews/my_review.md --verbose
+    uv run python library/simple_review/simple_review_poc.py feature-branch --output reviews/my_review.md --verbose
 
 Notes:
     - The review focuses on code quality, architecture patterns, and best practices
