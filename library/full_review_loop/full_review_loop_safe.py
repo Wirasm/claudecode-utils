@@ -65,10 +65,21 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 import uuid
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+
+
+class GitCommandError(Exception):
+    """Exception raised when a git command fails."""
+    pass
+
+
+class GitNotFoundError(Exception):
+    """Exception raised when git is not installed or not in PATH."""
+    pass
 
 
 class AgentRole(Enum):
@@ -173,11 +184,11 @@ class AgenticReviewLoop:
             if hasattr(self, "log"):
                 self.log(f"Error running git command: {' '.join(command)}")
                 self.log(f"Stderr: {e.stderr}")
-            if check:  # Only exit if check=True caused the error
-                sys.exit(f"Git command failed: {e}")
+            if check:  # Only raise exception if check=True caused the error
+                raise GitCommandError(f"Git command failed: {e}\nCommand: git {' '.join(command)}\nStderr: {e.stderr}")
             return None  # Return None on failure if check=False
         except FileNotFoundError:
-            sys.exit("Error: 'git' command not found. Is git installed and in PATH?")
+            raise GitNotFoundError("Error: 'git' command not found. Is git installed and in PATH?")
 
     def _get_current_branch(self):
         """Get the name of the current git branch."""
@@ -186,13 +197,15 @@ class AgenticReviewLoop:
     def _get_repo_root(self):
         """Get the root directory of the git repository."""
         try:
+            # Using our centralized _run_git_command helper for consistency
+            # This runs before the helper is fully set up, so we use a direct call
             return Path(
                 subprocess.check_output(
                     ["git", "rev-parse", "--show-toplevel"], text=True, stderr=subprocess.DEVNULL
                 ).strip()
             )
         except subprocess.CalledProcessError:
-            sys.exit("Error: Not inside a git repository.")
+            raise GitCommandError("Error: Not inside a git repository.")
 
     def _setup_environment(self):
         """Creates the temporary branch and optional worktree."""
@@ -207,7 +220,7 @@ class AgenticReviewLoop:
             if not self._run_git_command(
                 ["show-ref", "--verify", "--quiet", f"refs/heads/{self.source_branch}"], check=False
             ):
-                sys.exit(f"Error: Source branch '{self.source_branch}' not found.")
+                raise GitCommandError(f"Error: Source branch '{self.source_branch}' not found.")
             starting_point = self.source_branch
             source_desc = f"branch '{self.source_branch}'"
 
@@ -242,30 +255,75 @@ class AgenticReviewLoop:
         # 1. Switch back to the original branch (only if not using worktree)
         if not self.use_worktree:
             self.log(f"Switching back to original branch '{self.original_branch}'")
-            self._run_git_command(["checkout", self.original_branch], cwd=self.repo_root)
+            try:
+                self._run_git_command(["checkout", self.original_branch], cwd=self.repo_root)
+            except GitCommandError as e:
+                self.log(f"Warning: Could not switch back to original branch: {e}")
+                # Continue cleanup despite this error
 
         # 2. Remove Worktree (if used)
         if self.use_worktree and self.worktree_path and self.worktree_path.exists():
             self.log(f"Removing worktree at {self.worktree_path}")
-            # Prune first to handle potential state issues
-            self._run_git_command(["worktree", "prune"], check=False, cwd=self.repo_root)
-            time.sleep(0.5)  # Short pause sometimes helps git release locks
-            self._run_git_command(
-                ["worktree", "remove", "--force", str(self.worktree_path)], check=False, cwd=self.repo_root
-            )
-            # Attempt to remove the directory if git didn't fully clean it
-            if self.worktree_path.exists():
+
+            # Retry mechanism for worktree removal
+            max_retries = 3
+            retry_delay = 1  # Start with 1 second
+
+            # First try to prune worktrees to clean up any stale references
+            try:
+                self._run_git_command(["worktree", "prune"], check=False, cwd=self.repo_root)
+            except Exception as e:
+                self.log(f"Warning: Error during worktree pruning: {e}")
+
+            # Try git worktree remove with retries and backoff
+            success = False
+            for attempt in range(max_retries):
                 try:
-                    shutil.rmtree(self.worktree_path)
-                except OSError as e:
-                    self.log(f"Warning: Could not remove worktree directory {self.worktree_path}: {e}")
+                    time.sleep(retry_delay)  # Wait before attempting
+                    self._run_git_command(
+                        ["worktree", "remove", "--force", str(self.worktree_path)],
+                        check=True,  # Use check=True to catch errors
+                        cwd=self.repo_root
+                    )
+                    success = True
+                    break
+                except GitCommandError as e:
+                    self.log(f"Attempt {attempt+1}/{max_retries} to remove worktree failed: {e}")
+                    retry_delay *= 2  # Exponential backoff
+
+            # If git worktree remove failed after all retries, try manual removal
+            if not success or self.worktree_path.exists():
+                self.log("Git worktree remove failed, attempting manual directory cleanup")
+                try:
+                    # Try using Path.rmdir() for controlled removal if directory is empty
+                    if next(self.worktree_path.glob('*'), None) is None:  # Check if dir is empty
+                        self.worktree_path.rmdir()
+                        self.log("Successfully removed empty worktree directory with Path.rmdir()")
+                    else:
+                        # For non-empty directories, use shutil.rmtree with error handler
+                        def error_handler(func, path, exc_info):
+                            self.log(f"Error during {func.__name__} on {path}: {exc_info[1]}")
+
+                        shutil.rmtree(self.worktree_path, onerror=error_handler)
+                        self.log("Removed worktree directory with shutil.rmtree")
+                except Exception as e:
+                    self.log(f"Error: Failed to manually remove worktree directory: {e}")
+                    # At this point we've done our best to clean up, but have to continue
 
         # 3. Delete Temporary Branch (if not keeping)
         if not self.keep_branch:
             self.log(f"Deleting temporary branch '{self.work_branch}'")
-            self._run_git_command(["branch", "-D", self.work_branch], check=False, cwd=self.repo_root)
+            try:
+                self._run_git_command(["branch", "-D", self.work_branch], check=False, cwd=self.repo_root)
+            except GitCommandError as e:
+                self.log(f"Warning: Could not delete temporary branch: {e}")
         else:
+            # Provide more detailed information about the kept branch
+            branch_location = "main repository" if not self.use_worktree else f"worktree at {self.worktree_path}"
             self.log(f"Keeping temporary branch '{self.work_branch}' as requested.")
+            self.log(f"Branch location: {branch_location}")
+            # Show the exact git command to access this branch later
+            self.log(f"Access with: git checkout {self.work_branch}")
 
     def log(self, message):
         """Log a message, always shown."""
@@ -296,28 +354,21 @@ class AgenticReviewLoop:
                 allowed_tools = "Bash,Grep,Read,LS,Glob,Task"  # Needs Bash for gh
 
         prompt_file_path = None  # Keep track of path for cleanup
-        prompt_content = ""  # To store the prompt read from file
         try:
             # Create a temporary file and write the prompt to it
-            # We still do this in case the prompt is very long,
-            # but we'll read it back immediately.
+            # This approach is more secure as it avoids command line injection risks
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt", dir=self.output_dir) as f:
                 prompt_file_path = f.name  # Store the path
                 f.write(prompt)
             self.debug(f"Wrote prompt to temporary file: {prompt_file_path}")
 
-            # Read the content back from the file
-            with open(prompt_file_path, "r") as f:
-                prompt_content = f.read()
-            self.debug(f"Read {len(prompt_content)} chars from prompt file for -p argument.")
-
-            # --- Build Claude command using -p and the content read from the file ---
+            # --- Build Claude command using -f with the file path ---
             cmd = [
                 "claude",
                 "--output-format",
                 "text",
-                "-p",
-                prompt_content,  # Use -p with the content string
+                "-f",
+                prompt_file_path,  # Use -f with the file path instead of -p with content
             ]
             # --- End Modification ---
 
@@ -358,8 +409,7 @@ class AgenticReviewLoop:
             return f"# {role.value.capitalize()} Report (Iteration {self.iteration})\n\nError: {e}\nStderr:\n```\n{stderr_excerpt}\n```"
         except Exception as e:
             self.log(f"Unexpected error: {e}")
-            import traceback  # Import here for debugging unexpected errors
-
+            # traceback is now imported at the top of the file
             self.debug(traceback.format_exc())
             return f"# {role.value.capitalize()} Report (Iteration {self.iteration})\n\nUnexpected error: {e}"
         finally:
@@ -437,7 +487,93 @@ IMPORTANT:
         with open(self.review_file, "w") as f:
             f.write(output)
         self.log(f"{phase} report saved to {self.review_file}")
-        return len(output.strip()) > 0 and "Error:" not in output[:100]  # Basic success check
+
+        # Enhanced success validation
+        success = self._validate_agent_output(output, AgentRole.REVIEWER)
+        if success:
+            self.log(f"{phase} successful - valid report format detected")
+        else:
+            self.log(f"{phase} may have failed - problems in the report format or content")
+
+        return success
+
+    def _validate_agent_output(self, output, role):
+        """
+        Validate agent output with comprehensive checks.
+
+        Args:
+            output: String output from the agent
+            role: AgentRole enum value
+
+        Returns:
+            bool: True if output passes validation, False otherwise
+        """
+        if not output or len(output.strip()) == 0:
+            self.log(f"Error: Empty output from {role.value} agent")
+            return False
+
+        # Check for common error patterns in the output
+        error_patterns = [
+            "Error:", "Exception:", "Failed:", "Could not", "Unable to",
+            "command failed", "command not found", "syntax error", "not a git repository",
+            "fatal: ", "exit code", "permission denied", "timed out"
+        ]
+
+        # Look for error patterns throughout the output, not just the first 100 chars
+        for pattern in error_patterns:
+            if pattern.lower() in output.lower():
+                self.debug(f"Error pattern found in {role.value} output: '{pattern}'")
+                # Don't fail immediately - check if error is in an example or explanation
+
+                # Check if error is part of a code block (might be an example)
+                lines = output.splitlines()
+                in_code_block = False
+                error_in_code_block = False
+
+                for line in lines:
+                    if line.strip().startswith("```"):
+                        in_code_block = not in_code_block
+                    elif in_code_block and pattern.lower() in line.lower():
+                        error_in_code_block = True
+
+                # If error is not in a code block, it's a real error
+                if not error_in_code_block and pattern.lower() in output.lower():
+                    self.log(f"Error detected in {role.value} output: '{pattern}'")
+                    return False
+
+        # Role-specific validations
+        if role == AgentRole.REVIEWER:
+            # Review should have Summary, Issue List, and Recommendations sections
+            required_sections = ["## Summary", "## Issue List", "## Recommendations"]
+            for section in required_sections:
+                if section not in output:
+                    self.log(f"Missing required section in review: '{section}'")
+                    return False
+
+        elif role == AgentRole.DEVELOPER:
+            # Developer should have Summary, Issues Addressed, and other sections
+            required_sections = ["## Summary", "## Issues Addressed"]
+            for section in required_sections:
+                if section not in output:
+                    self.log(f"Missing required section in dev report: '{section}'")
+                    return False
+
+        elif role == AgentRole.VALIDATOR:
+            # Validator should have relevant sections and final VALIDATION status
+            required_sections = ["## Summary", "## Issue Verification", "## Conclusion"]
+            for section in required_sections:
+                if section not in output:
+                    self.log(f"Missing required section in validation: '{section}'")
+                    return False
+
+            # Check if validation status is included and correctly formatted
+            last_line = output.strip().splitlines()[-1].strip()
+            if not (last_line == "VALIDATION: PASSED" or last_line == "VALIDATION: FAILED"):
+                self.log(f"Invalid validation status: '{last_line}'")
+                return False
+
+        # If all checks pass, output is valid
+        return True
 
     def run_developer(self):
         """Run the Developer agent."""
@@ -475,7 +611,7 @@ Your Process:
 
 Format your entire output as a markdown document containing ONLY the development report.
 The report MUST include these sections exactly:
-## Summary 
+## Summary
 [Concise overview of fixes implemented for Iteration {self.iteration}]
 
 ## Issues Addressed
@@ -502,7 +638,15 @@ IMPORTANT:
         with open(self.dev_report_file, "w") as f:
             f.write(output)
         self.log(f"Development report saved to {self.dev_report_file}")
-        return len(output.strip()) > 0 and "Error:" not in output[:100]
+
+        # Enhanced success validation
+        success = self._validate_agent_output(output, AgentRole.DEVELOPER)
+        if success:
+            self.log("Development phase successful - valid report format detected")
+        else:
+            self.log("Development phase may have failed - problems in the report format or content")
+
+        return success
 
     def run_validator(self):
         """Run the Validator agent."""
@@ -569,9 +713,23 @@ IMPORTANT:
         with open(self.validation_file, "w") as f:
             f.write(output)
         self.log(f"Validation report saved to {self.validation_file}")
-        validation_passed = "VALIDATION: PASSED" in output.splitlines()[-1]  # Check last line
-        self.log(f"Validation Result: {'PASSED' if validation_passed else 'FAILED'}")
-        success = len(output.strip()) > 0 and "Error:" not in output[:100]
+
+        # Enhanced success validation
+        success = self._validate_agent_output(output, AgentRole.VALIDATOR)
+        if success:
+            self.log("Validation phase successful - valid report format detected")
+            # Parse validation result
+            try:
+                last_line = output.strip().splitlines()[-1].strip()
+                validation_passed = last_line == "VALIDATION: PASSED"
+                self.log(f"Validation Result: {last_line}")
+            except Exception as e:
+                self.log(f"Error parsing validation result: {e}")
+                validation_passed = False
+        else:
+            self.log("Validation phase may have failed - problems in the report format or content")
+            validation_passed = False
+
         return success, validation_passed
 
     def run_pr_manager(self):
@@ -695,6 +853,13 @@ IMPORTANT:
                     self.log(f"Review phase failed on iteration {self.iteration}. Stopping loop.")
                     break
 
+                # --- Check if validation has already passed in a previous iteration ---
+                # If we're in iteration > 1 and validation already passed, we don't need to run additional steps
+                if validation_passed:
+                    self.log(f"Validation already passed in a previous iteration. Skipping development and validation phases.")
+                    final_success = True
+                    break
+
                 # --- Step 2: Develop ---
                 # Developer uses the latest review and potentially previous validation feedback
                 dev_success = self.run_developer()
@@ -743,8 +908,7 @@ IMPORTANT:
             final_success = False
         except Exception as e:
             self.log(f"An unexpected error occurred during the loop: {e}")
-            import traceback
-
+            # traceback is now imported at the top of the file
             self.debug(traceback.format_exc())
             final_success = False
         finally:
@@ -772,11 +936,11 @@ def main():
         epilog="""
 Examples:
   Review latest commit in a new temp branch (default behavior)
-  uv run python scripts/agentic_review_loop_v2.py --latest
+  uv run python library/full_review_loop/full_review_loop_safe.py --latest
   Review a specific branch in a new temp branch, using a worktree
-  uv run python scripts/agentic_review_loop_v2.py --branch feature-branch --worktree
+  uv run python library/full_review_loop/full_review_loop_safe.py --branch feature-branch --worktree
   Specify base branch and keep temporary branch after run
-  uv run python scripts/agentic_review_loop_v2.py --branch feature-branch --base-branch develop --keep-branch
+  uv run python library/full_review_loop/full_review_loop_safe.py --branch feature-branch --base-branch develop --keep-branch
 """,
     )
     # Source selection (mutually exclusive)
@@ -838,8 +1002,7 @@ Examples:
         sys.exit(130)
     except Exception as e:
         print(f"\nCritical Error during agentic loop execution: {e}")
-        import traceback
-
+        # traceback is now imported at the top of the file
         print(traceback.format_exc())  # Print stack trace for unexpected errors
         if loop:  # Ensure cleanup if loop was initialized
             loop._cleanup_environment()
