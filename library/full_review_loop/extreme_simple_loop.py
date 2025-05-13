@@ -173,11 +173,28 @@ Start with ## Summary without any introductory text.
         review_prompt, "Initial review", review_file, "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch", args.timeout
     )
 
-    # Simple check to determine if review passes or needs development
-    needs_fixes = False
-    if "REVIEW: NEEDS_FIXES" in review_output:
+    # Ask Claude explicitly if fixes are needed
+    decision_prompt = f"""
+I need your help parsing the review you just created. Please read the review at {review_file} 
+and tell me if any fixes are needed. Answer with ONLY ONE of these lines:
+DECISION: NEEDS_FIXES
+DECISION: PASSED
+"""
+    
+    decision_file = output_dir / "01_decision.md"
+    decision_output = run_claude(
+        decision_prompt,
+        "Review decision parser",
+        decision_file,
+        "Read", # Only need Read permission
+        60  # Short timeout since this is simple
+    )
+    
+    # Check decision
+    needs_fixes = "DECISION: NEEDS_FIXES" in decision_output
+    
+    if needs_fixes:
         log("Review indicates fixes are needed")
-        needs_fixes = True
     else:
         log("Review passed - no critical/high issues found")
 
@@ -295,8 +312,27 @@ Start with ## Summary without any introductory text.
             args.timeout,
         )
 
-        # Check if re-review passes
-        if "REVIEW: PASSED" in rereview_output:
+        # Ask Claude explicitly if re-review passes
+        decision_prompt = f"""
+I need your help parsing the re-review you just created. Please read the re-review at {rereview_file} 
+and tell me if it passes or needs more fixes. Answer with ONLY ONE of these lines:
+DECISION: NEEDS_FIXES
+DECISION: PASSED
+"""
+        
+        decision_file = output_dir / f"{(loop_count*2+1):02d}_redecision.md"
+        decision_output = run_claude(
+            decision_prompt,
+            f"Re-review decision parser {loop_count}",
+            decision_file,
+            "Read", # Only need Read permission
+            60  # Short timeout since this is simple
+        )
+        
+        # Check decision
+        review_passed = "DECISION: PASSED" in decision_output
+        
+        if review_passed:
             log(f"Re-review loop {loop_count} PASSED!")
             needs_fixes = False
             final_success = True
@@ -360,8 +396,27 @@ Start with ## Summary without any introductory text.
             args.timeout,
         )
 
-        # Check validation result
-        if "VALIDATION: PASSED" in validation_output:
+        # Ask Claude explicitly about validation result
+        decision_prompt = f"""
+I need your help parsing the validation report you just created. Please read the validation at {validation_file} 
+and tell me if it passes or fails. Answer with ONLY ONE of these lines:
+DECISION: FAILED
+DECISION: PASSED
+"""
+        
+        decision_file = output_dir / f"{(len(list(output_dir.glob('*.md'))) + 1):02d}_valdecision.md"
+        decision_output = run_claude(
+            decision_prompt,
+            "Validation decision parser",
+            decision_file,
+            "Read", # Only need Read permission
+            60  # Short timeout since this is simple
+        )
+        
+        # Check decision
+        validation_passed = "DECISION: PASSED" in decision_output
+        
+        if validation_passed:
             log("Validation PASSED!")
         else:
             log("Validation FAILED - see report for details")
