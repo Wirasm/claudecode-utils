@@ -129,12 +129,8 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
                         log(
                             f"  WARNING: Agent '{step_name}' did NOT create the output file '{output_file_path.resolve()}' as instructed."
                         )
-                        log(
-                            f"  Saving Claude's stdout to '{output_file_path.resolve()}' as a fallback."
-                        )
-                        output_file_path.parent.mkdir(
-                            parents=True, exist_ok=True
-                        )  # Ensure parent exists
+                        log(f"  Saving Claude's stdout to '{output_file_path.resolve()}' as a fallback.")
+                        output_file_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure parent exists
                         with open(output_file_path, "w") as f:
                             f.write(result.stdout)
                         log(f"  Fallback save completed for {step_name}.")
@@ -165,7 +161,9 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
         return output_file_path.read_text()
 
     except subprocess.CalledProcessError as e:
-        error_msg = f"Error running agent '{step_name}' (Exit Code {e.returncode}):\nStdout:\n{e.stdout}\nStderr:\n{e.stderr}"
+        error_msg = (
+            f"Error running agent '{step_name}' (Exit Code {e.returncode}):\nStdout:\n{e.stdout}\nStderr:\n{e.stderr}"
+        )
         log(error_msg)
         # Save error details to the intended output file if possible, with file locking
         lock_file = f"{output_file_path}.lock"
@@ -203,9 +201,7 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
             if os.path.exists(lock_file):
                 os.remove(lock_file)
         except Exception as save_err:
-            log(
-                f"  Additionally, failed to save timeout error details to {output_file_path}: {save_err}"
-            )
+            log(f"  Additionally, failed to save timeout error details to {output_file_path}: {save_err}")
         return error_msg  # Propagate error state
     except Exception as e:
         error_msg = f"An unexpected error occurred while running agent '{step_name}': {e}"
@@ -224,9 +220,7 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
             if os.path.exists(lock_file):
                 os.remove(lock_file)
         except Exception as save_err:
-            log(
-                f"  Additionally, failed to save unexpected error details to {output_file_path}: {save_err}"
-            )
+            log(f"  Additionally, failed to save unexpected error details to {output_file_path}: {save_err}")
         return error_msg  # Propagate error state
 
 
@@ -291,9 +285,7 @@ def parse_decision_from_file_content(file_content, file_path_for_log, pass_strin
     """
     # Check for empty or None content
     if not file_content:
-        log(
-            f"ERROR: Empty or None content received from '{file_path_for_log.name}'. Assuming failure."
-        )
+        log(f"ERROR: Empty or None content received from '{file_path_for_log.name}'. Assuming failure.")
         return False
 
     try:
@@ -357,9 +349,7 @@ def main():
     source_group = parser.add_mutually_exclusive_group(required=True)
     source_group.add_argument("--latest", action="store_true", help="Review latest commit")
     source_group.add_argument("--branch", help="Review branch against base branch")
-    parser.add_argument(
-        "--base-branch", default="main", help="Base branch for comparison (default: main)"
-    )
+    parser.add_argument("--base-branch", default="main", help="Base branch for comparison (default: main)")
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -372,9 +362,7 @@ def main():
         default=1200,
         help="Timeout in seconds for Claude calls (default: 1200)",
     )
-    parser.add_argument(
-        "--max-loops", type=int, default=2, help="Maximum review-develop cycles (default: 2)"
-    )
+    parser.add_argument("--max-loops", type=int, default=2, help="Maximum review-develop cycles (default: 2)")
     parser.add_argument("--skip-pr", action="store_true", help="Skip PR creation at the end")
     args = parser.parse_args()
 
@@ -433,7 +421,7 @@ Use the 'Write' tool for this purpose. Start your report directly with "## Initi
         "Initial Reviewer",
         initial_review_prompt,
         initial_review_filename,
-        "Bash,Grep,Read,LS,Glob,Write",  # Removed Task, WebSearch, WebFetch for simplicity unless essential
+        "Bash,Grep,Read,LS,Glob,Write,WebSearch,WebFetch,TaskRead,TaskWrite",
     )
 
     passed_initial_review = parse_decision_from_file_content(
@@ -493,7 +481,7 @@ Use the 'Write' tool. Start your report with "## Development Fixes - Iteration {
             f"Developer (Iteration {loop_count})",
             dev_prompt,
             dev_phase_filename,
-            "Bash,Grep,Read,LS,Glob,Edit,MultiEdit,Write,TodoRead,TodoWrite",
+            "Bash,Grep,Read,LS,Glob,Edit,MultiEdit,Write,TaskRead,TaskWrite,WebSearch,WebFetch",
         )
 
         # Re-review Phase
@@ -527,7 +515,7 @@ Use the 'Write' tool. Start your report with "## Re-review - Iteration {loop_cou
             f"Re-reviewer (Iteration {loop_count})",
             rereview_prompt,
             rereview_filename,
-            "Bash,Grep,Read,LS,Glob,Write",
+            "Bash,Grep,Read,LS,Glob,Write,TaskRead,TaskWrite,WebSearch,WebFetch",
         )
 
         current_loop_passed = parse_decision_from_file_content(
@@ -544,9 +532,7 @@ Use the 'Write' tool. Start your report with "## Re-review - Iteration {loop_cou
         else:
             log(f"Re-review (Iteration {loop_count}) still needs fixes.")
             if loop_count >= MAX_REVIEW_LOOPS:
-                log(
-                    f"Maximum review loops ({MAX_REVIEW_LOOPS}) reached. Process did not pass this stage."
-                )
+                log(f"Maximum review loops ({MAX_REVIEW_LOOPS}) reached. Process did not pass this stage.")
                 final_success_achieved = False  # Ensure it's marked as not successful
 
     # --- Validation Step (if all reviews passed) ---
@@ -582,7 +568,7 @@ Use the 'Write' tool. Start your report with "## Final Validation Report" and no
             "Final Validator",
             validation_prompt,
             validation_filename,
-            "Bash,Grep,Read,LS,Glob,Write",
+            "Bash,Grep,Read,LS,Glob,Write,TaskRead,TaskWrite,WebSearch,WebFetch",
         )
         validation_succeeded = parse_decision_from_file_content(
             validation_content,
@@ -600,67 +586,57 @@ Use the 'Write' tool. Start your report with "## Final Validation Report" and no
 
     # --- PR Creation Step (if all successful and not skipped) ---
     if final_success_achieved and validation_succeeded and not args.skip_pr:
-        log("--- Starting PR Creation Details Step ---")
-        pr_filename = f"{len(list(OUTPUT_DIR.glob('*.md'))) + 1:02d}_pr_details.md"
+        log("--- Starting PR Creation Step ---")  # Changed log message
+        pr_filename = f"{len(list(OUTPUT_DIR.glob('*.md'))) + 1:02d}_pr_creation_report.md"  # Changed filename
+        pr_body_temp_file = OUTPUT_DIR.resolve() / "pr_body_temp.md"
+
         pr_prompt = f"""
-Think hard about this task. You are a Release Engineer preparing a Pull Request.
+Think hard about this task. You are a Release Engineer responsible for CREATING a Pull Request.
 
 The code changes for submission relate to: {COMPARE_DESC}.
 All artifacts are in the output directory: {OUTPUT_DIR.resolve()}
 {get_all_artifacts_context()}
 
-All reviews and validation have passed. Your task is to outline the Pull Request details.
+All reviews and validation have passed. Your task is to:
+1.  Synthesize a PR title and description.
+2.  Actually CREATE the Pull Request using the `gh` CLI.
+3.  Report on the outcome.
 
 Your tasks are:
-1.  Review ALL reports in '{OUTPUT_DIR.resolve()}' to synthesize a comprehensive PR description.
+1.  Review ALL reports in '{OUTPUT_DIR.resolve()}' to synthesize a comprehensive PR title and description.
 2.  Formulate a clear and concise PR Title.
-3.  Detail the exact `gh pr create ...` command you would use (or equivalent for other platforms).
-4.  Describe the expected output or result of successfully creating the PR (e.g., PR URL).
-5.  Format your response in Markdown. Include:
-    - "## PR Title"
-    - "## PR Description" (Full Markdown for the PR body)
-    - "## PR Command"
-    - "## Expected PR Result"
+3.  Formulate the full PR Description (in Markdown).
+4.  **CRITICAL STEP: Create the Pull Request using the `gh` CLI.**
+    a.  Use the 'Write' tool to save your formulated PR Description to a temporary file: `{pr_body_temp_file}`.
+    b.  Then, using the 'Bash' tool, **EXECUTE** the `gh pr create` command.
+        - Use the PR Title you formulated.
+        - Use `--body-file "{pr_body_temp_file}"` to pass the description.
+        - You might need to ensure the current branch is pushed and has an upstream remote set. If `gh pr create` can handle prompting for this or if you need to add a `git push --set-upstream origin YOUR_BRANCH_NAME` command before it, please do so.
+        - Example: `gh pr create --title "YOUR_ACTUAL_TITLE" --body-file "{pr_body_temp_file}"`
+    c.  Capture the FULL output (both stdout and stderr) from the `gh pr create` command execution.
+5.  After attempting PR creation (whether success or failure), you can use 'Bash' to delete the temporary file: `rm -f "{pr_body_temp_file}"`.
+6.  Format your report on the PR creation attempt in Markdown. This report will be saved. It MUST include:
+    - "## PR Title Submitted"
+    - "## PR Description Submitted" (You can briefly state it was written to the temp file or include its content)
+    - "## PR Command Executed" (The exact `gh pr create ...` command and any preceding git commands you ran)
+    - "## PR Creation Result" (The full captured output from the `gh` command, including any PR URL, success messages, or errors)
 
-IMPORTANT: After completing all tasks, you MUST save your ENTIRE report on PR creation to the file:
+IMPORTANT: After completing all tasks, you MUST save your ENTIRE report on the PR creation attempt to the file:
 {OUTPUT_DIR.resolve() / pr_filename}
-Use the 'Write' tool. Start your report with "## Pull Request Details" and no other introductory text.
+Use the 'Write' tool. Start your report with "## Pull Request Creation Attempt and Result" and no other introductory text.
 """
         run_claude_agent(
-            "PR Creator",
+            "PR Creator (Execution)",  # Updated agent name
             pr_prompt,
             pr_filename,
-            "Bash,Grep,Read,LS,Glob,Write",  # Bash for gh command formulation
+            "Bash,Grep,Read,LS,Glob,Write",  # Bash for gh command, Write for temp file and final report
         )
-        log(f"PR creation details saved to '{pr_filename}'.")
+        log(f"PR creation attempt report saved to '{pr_filename}'. Check this file for the outcome.")
     elif not args.skip_pr:
         log("Skipping PR creation step due to failures in review or validation.")
 
     if args.skip_pr:
         log("PR creation skipped as per --skip-pr flag.")
-
-    # --- Final Summary ---
-    log("\n=== Review Loop Summary ===")
-    log(f"Output directory: {OUTPUT_DIR.resolve()}")
-    log(
-        f"Total review-develop iterations completed: {loop_count} (max allowed: {MAX_REVIEW_LOOPS})"
-    )
-
-    overall_outcome_status = "UNKNOWN"
-    if final_success_achieved and validation_succeeded:
-        overall_outcome_status = "SUCCESS"
-    elif final_success_achieved and not validation_succeeded:
-        overall_outcome_status = "FAILED VALIDATION"
-    else:  # Not final_success_achieved (implies review loops failed or initial review failed and no loops run)
-        overall_outcome_status = "NEEDS IMPROVEMENT / FAILED REVIEW CYCLES"
-
-    log(f"Final Outcome: {overall_outcome_status}")
-
-    log("Artifacts generated:")
-    for file_path in sorted(OUTPUT_DIR.glob("*.md")):
-        log(f"  - {file_path.name}")
-
-    return 0 if final_success_achieved and validation_succeeded else 1
 
 
 if __name__ == "__main__":

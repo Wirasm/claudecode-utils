@@ -11,9 +11,8 @@ This post outlines general patterns that have proven effective, both for Anthrop
 
 Looking for more detailed information? Our comprehensive documentation at claude.ai/code covers all the features mentioned in this post and provides additional examples, implementation details, and advanced techniques.
 
-
 1. Customize your setup
-Claude Code is an agentic coding assistant that automatically pulls context into prompts. This context gathering consumes time and tokens, but you can optimize it through environment tuning.
+   Claude Code is an agentic coding assistant that automatically pulls context into prompts. This context gathering consumes time and tokens, but you can optimize it through environment tuning.
 
 a. Create CLAUDE.md files
 CLAUDE.md is a special file that Claude automatically pulls into context when starting a conversation. This makes it an ideal place for documenting:
@@ -29,14 +28,17 @@ Other information you want Claude to remember
 There’s no required format for CLAUDE.md files. We recommend keeping them concise and human-readable. For example:
 
 # Bash commands
+
 - npm run build: Build the project
 - npm run typecheck: Run the typechecker
 
 # Code style
+
 - Use ES modules (import/export) syntax, not CommonJS (require)
 - Destructure imports when possible (eg. import { foo } from 'bar')
 
 # Workflow
+
 - Be sure to typecheck when you’re done making a series of code changes
 - Prefer running single tests, and not the whole test suite, for performance
 
@@ -63,14 +65,14 @@ By default, Claude Code requests permission for any action that might modify you
 There are four ways to manage allowed tools:
 
 Select "Always allow" when prompted during a session.
-Use the /allowed-tools command after starting Claude Code to add or remove tools from the allowlist. For example, you can add Edit to always allow file edits, Bash(git commit:*) to allow git commits, or mcp__puppeteer__puppeteer_navigate to allow navigating with the Puppeteer MCP server.
+Use the /allowed-tools command after starting Claude Code to add or remove tools from the allowlist. For example, you can add Edit to always allow file edits, Bash(git commit:\*) to allow git commits, or mcp**puppeteer**puppeteer_navigate to allow navigating with the Puppeteer MCP server.
 Manually edit your .claude/settings.json or ~/.claude.json (we recommend checking the former into source control to share with your team).
 Use the --allowedTools CLI flag for session-specific permissions.
 d. If using GitHub, install the gh CLI
 Claude knows how to use the gh CLI to interact with GitHub for creating issues, opening pull requests, reading comments, and more. Without gh installed, Claude can still use the GitHub API or MCP server (if you have it installed).
 
 2. Give Claude more tools
-Claude has access to your shell environment, where you can build up sets of convenience scripts and functions for it just like you would for yourself. It can also leverage more complex tools through MCP and REST APIs.
+   Claude has access to your shell environment, where you can build up sets of convenience scripts and functions for it just like you would for yourself. It can also leverage more complex tools through MCP and REST APIs.
 
 a. Use Claude with bash tools
 Claude Code inherits your bash environment, giving it access to all your tools. While Claude knows common utilities like unix tools and gh, it won't know about your custom bash tools without instructions:
@@ -112,7 +114,7 @@ Copy
 Putting the above content into .claude/commands/fix-github-issue.md makes it available as the /project:fix-github-issue command in Claude Code. You could then for example use /project:fix-github-issue 1234 to have Claude fix issue #1234. Similarly, you can add your own personal commands to the ~/.claude/commands folder for commands you want available in all of your sessions.
 
 3. Try common workflows
-Claude Code doesn’t impose a specific workflow, giving you the flexibility to use it how you want. Within the space this flexibility affords, several successful patterns for effectively using Claude Code have emerged across our community of users:
+   Claude Code doesn’t impose a specific workflow, giving you the flexibility to use it how you want. Within the space this flexibility affords, several successful patterns for effectively using Claude Code have emerged across our community of users:
 
 a. Explore, plan, code, commit
 This versatile workflow suits many problems:
@@ -184,17 +186,17 @@ Researchers and data scientists at Anthropic use Claude Code to read and write J
 You can also ask Claude to clean up or make aesthetic improvements to your Jupyter notebook before you show it to colleagues. Specifically telling it to make the notebook or its data visualizations “aesthetically pleasing” tends to help remind it that it’s optimizing for a human viewing experience.
 
 4. Optimize your workflow
-The suggestions below apply across all workflows:
+   The suggestions below apply across all workflows:
 
 a. Be specific in your instructions
 Claude Code’s success rate improves significantly with more specific instructions, especially on first attempts. Giving clear directions upfront reduces the need for course corrections later.
 
 For example:
 
-Poor	Good
-add tests for foo.py	write a new test case for foo.py, covering the edge case where the user is logged out. avoid mocks
-why does ExecutionFactory have such a weird api?	look through ExecutionFactory's git history and summarize how its api came to be
-add a calendar widget	look at how existing widgets are implemented on the home page to understand the patterns and specifically how code and interfaces are separated out. HotDogWidget.php is a good example to start with. then, follow the pattern to implement a new calendar widget that lets the user select a month and paginate forwards/backwards to pick a year. Build from scratch without libraries other than the ones already used in the rest of the codebase.
+Poor Good
+add tests for foo.py write a new test case for foo.py, covering the edge case where the user is logged out. avoid mocks
+why does ExecutionFactory have such a weird api? look through ExecutionFactory's git history and summarize how its api came to be
+add a calendar widget look at how existing widgets are implemented on the home page to understand the patterns and specifically how code and interfaces are separated out. HotDogWidget.php is a good example to start with. then, follow the pattern to implement a new calendar widget that lets the user select a month and paginate forwards/backwards to pick a year. Build from scratch without libraries other than the ones already used in the rest of the codebase.
 Claude can infer intent, but it can't read minds. Specificity leads to better alignment with expectations.
 
 Give Claude images
@@ -245,7 +247,7 @@ Ask Claude to read files or fetch URLs (works for images too)
 Most sessions involve a combination of these approaches. For example, you can pipe in a log file, then tell Claude to use a tool to pull in additional context to debug the logs.
 
 5. Use headless mode to automate your infra
-Claude Code includes headless mode for non-interactive contexts like CI, pre-commit hooks, build scripts, and automation. Use the -p flag with a prompt to enable headless mode, and --output-format stream-json for streaming JSON output.
+   Claude Code includes headless mode for non-interactive contexts like CI, pre-commit hooks, build scripts, and automation. Use the -p flag with a prompt to enable headless mode, and --output-format stream-json for streaming JSON output.
 
 Note that headless mode does not persist between sessions. You have to trigger it each session.
 
@@ -256,7 +258,7 @@ b. Use Claude as a linter
 Claude Code can provide subjective code reviews beyond what traditional linting tools detect, identifying issues like typos, stale comments, misleading function or variable names, and more.
 
 6. Uplevel with multi-Claude workflows
-Beyond standalone usage, some of the most powerful applications involve running multiple Claude instances in parallel:
+   Beyond standalone usage, some of the most powerful applications involve running multiple Claude instances in parallel:
 
 a. Have one Claude write code; use another Claude to verify
 A simple but effective approach is to have one Claude write code while another reviews or tests it. Similar to working with multiple engineers, sometimes having separate context is beneficial:
@@ -298,16 +300,14 @@ claude -p (headless mode) integrates Claude Code programmatically into larger wo
 1. Fanning out handles large migrations or analyses (e.g., analyzing sentiment in hundreds of logs or analyzing thousands of CSVs):
 
 Have Claude write a script to generate a task list. For example, generate a list of 2k files that need to be migrated from framework A to framework B.
-Loop through tasks, calling Claude programmatically for each and giving it a task and a set of tools it can use. For example: claude -p “migrate foo.py from React to Vue. When you are done, you MUST return the string OK if you succeeded, or FAIL if the task failed.” --allowedTools Edit Bash(git commit:*)
-Run the script several times and refine your prompt to get the desired outcome.
-2. Pipelining integrates Claude into existing data/processing pipelines:
+Loop through tasks, calling Claude programmatically for each and giving it a task and a set of tools it can use. For example: claude -p “migrate foo.py from React to Vue. When you are done, you MUST return the string OK if you succeeded, or FAIL if the task failed.” --allowedTools Edit Bash(git commit:\*)
+Run the script several times and refine your prompt to get the desired outcome. 2. Pipelining integrates Claude into existing data/processing pipelines:
 
 Call claude -p “<your prompt>” --json | your_command, where your_command is the next step of your processing pipeline
 That’s it! JSON output (optional) can help provide structure for easier automated processing.
 For both of these use cases, it can be helpful to use the --verbose flag for debugging the Claude invocation. We generally recommend turning verbose mode off in production for cleaner output.
 
 What are your tips and best practices for working with Claude Code? Tag @AnthropicAI so we can see what you're building!
-
 
 examples
 
@@ -346,20 +346,17 @@ Claude Code provides two options for resuming previous conversations:
 1
 Continue the most recent conversation
 
-
 claude --continue
 This immediately resumes your most recent conversation without any prompts.
 
 2
 Continue in non-interactive mode
 
-
 claude --continue --print "Continue with my task"
 Use --print with --continue to resume the most recent conversation in non-interactive mode, perfect for scripts or automation.
 
 3
 Show conversation picker
-
 
 claude --resume
 This displays an interactive conversation selector showing:
@@ -384,17 +381,20 @@ When resuming, you’ll see the entire conversation history before continuing
 The resumed conversation starts with the same model and configuration as the original
 Examples:
 
-
 # Continue most recent conversation
+
 claude --continue
 
 # Continue most recent conversation with a specific prompt
+
 claude --continue --print "Show me our progress"
 
 # Show conversation picker
+
 claude --resume
 
 # Continue most recent conversation in non-interactive mode
+
 claude --continue --print "Run the tests again"
 ​
 Understand new codebases
@@ -405,28 +405,24 @@ When to use: You’ve just joined a new project and need to understand its struc
 1
 Navigate to the project root directory
 
-
-cd /path/to/project 
+cd /path/to/project
 2
 Start Claude Code
 
-
-claude 
+claude
 3
 Ask for a high-level overview
 
+> give me an overview of this codebase
+> 4
+> Dive deeper into specific components
 
-> give me an overview of this codebase 
-4
-Dive deeper into specific components
-
-
-> explain the main architecture patterns used here 
+> explain the main architecture patterns used here
 
 > what are the key data models?
 
 > how is authentication handled?
-Tips:
+> Tips:
 
 Start with broad questions, then narrow down to specific areas
 Ask about coding conventions and patterns used in the project
@@ -438,19 +434,16 @@ When to use: You need to locate code related to a specific feature or functional
 1
 Ask Claude to find relevant files
 
+> find the files that handle user authentication
+> 2
+> Get context on how components interact
 
-> find the files that handle user authentication 
-2
-Get context on how components interact
+> how do these authentication files work together?
+> 3
+> Understand the execution flow
 
-
-> how do these authentication files work together? 
-3
-Understand the execution flow
-
-
-> trace the login process from front-end to database 
-Tips:
+> trace the login process from front-end to database
+> Tips:
 
 Be specific about what you’re looking for
 Use domain language from the project
@@ -463,19 +456,16 @@ When to use: You’ve encountered an error message and need to find and fix its 
 1
 Share the error with Claude
 
+> I'm seeing an error when I run npm test
+> 2
+> Ask for fix recommendations
 
-> I'm seeing an error when I run npm test 
-2
-Ask for fix recommendations
+> suggest a few ways to fix the @ts-ignore in user.ts
+> 3
+> Apply the fix
 
-
-> suggest a few ways to fix the @ts-ignore in user.ts 
-3
-Apply the fix
-
-
-> update user.ts to add the null check you suggested 
-Tips:
+> update user.ts to add the null check you suggested
+> Tips:
 
 Tell Claude the command to reproduce the issue and get a stack trace
 Mention any steps to reproduce the error
@@ -489,24 +479,20 @@ When to use: You need to update old code to use modern patterns and practices.
 1
 Identify legacy code for refactoring
 
+> find deprecated API usage in our codebase
+> 2
+> Get refactoring recommendations
 
-> find deprecated API usage in our codebase 
-2
-Get refactoring recommendations
+> suggest how to refactor utils.js to use modern JavaScript features
+> 3
+> Apply the changes safely
 
+> refactor utils.js to use ES2024 features while maintaining the same behavior
+> 4
+> Verify the refactoring
 
-> suggest how to refactor utils.js to use modern JavaScript features 
-3
-Apply the changes safely
-
-
-> refactor utils.js to use ES2024 features while maintaining the same behavior 
-4
-Verify the refactoring
-
-
-> run tests for the refactored code 
-Tips:
+> run tests for the refactored code
+> Tips:
 
 Ask Claude to explain the benefits of the modern approach
 Request that changes maintain backward compatibility when needed
@@ -520,24 +506,20 @@ When to use: You need to add tests for uncovered code.
 1
 Identify untested code
 
+> find functions in NotificationsService.swift that are not covered by tests
+> 2
+> Generate test scaffolding
 
-> find functions in NotificationsService.swift that are not covered by tests 
-2
-Generate test scaffolding
+> add tests for the notification service
+> 3
+> Add meaningful test cases
 
+> add test cases for edge conditions in the notification service
+> 4
+> Run and verify tests
 
-> add tests for the notification service 
-3
-Add meaningful test cases
-
-
-> add test cases for edge conditions in the notification service 
-4
-Run and verify tests
-
-
-> run the new tests and fix any failures 
-Tips:
+> run the new tests and fix any failures
+> Tips:
 
 Ask for tests that cover edge cases and error conditions
 Request both unit and integration tests when appropriate
@@ -551,24 +533,20 @@ When to use: You need to create a well-documented pull request for your changes.
 1
 Summarize your changes
 
+> summarize the changes I've made to the authentication module
+> 2
+> Generate a PR with Claude
 
-> summarize the changes I've made to the authentication module 
-2
-Generate a PR with Claude
+> create a pr
+> 3
+> Review and refine
 
+> enhance the PR description with more context about the security improvements
+> 4
+> Add testing details
 
-> create a pr 
-3
-Review and refine
-
-
-> enhance the PR description with more context about the security improvements 
-4
-Add testing details
-
-
-> add information about how these changes were tested 
-Tips:
+> add information about how these changes were tested
+> Tips:
 
 Ask Claude directly to make a PR for you
 Review Claude’s generated PR before submitting
@@ -582,24 +560,20 @@ When to use: You need to add or update documentation for your code.
 1
 Identify undocumented code
 
+> find functions without proper JSDoc comments in the auth module
+> 2
+> Generate documentation
 
-> find functions without proper JSDoc comments in the auth module 
-2
-Generate documentation
+> add JSDoc comments to the undocumented functions in auth.js
+> 3
+> Review and enhance
 
+> improve the generated documentation with more context and examples
+> 4
+> Verify documentation
 
-> add JSDoc comments to the undocumented functions in auth.js 
-3
-Review and enhance
-
-
-> improve the generated documentation with more context and examples 
-4
-Verify documentation
-
-
-> check if the documentation follows our project standards 
-Tips:
+> check if the documentation follows our project standards
+> Tips:
 
 Specify the documentation style you want (JSDoc, docstrings, etc.)
 Ask for examples in the documentation
@@ -621,23 +595,20 @@ Provide an image path claude “Analyze this image: /path/to/your/image.png”
 2
 Ask Claude to analyze the image
 
+> What does this image show?
+> Describe the UI elements in this screenshot
+> Are there any problematic elements in this diagram?
+> 3
+> Use images for context
 
-> What does this image show? 
-> Describe the UI elements in this screenshot 
-> Are there any problematic elements in this diagram? 
-3
-Use images for context
+> Here's a screenshot of the error. What's causing it?
+> This is our current database schema. How should we modify it for the new feature?
+> 4
+> Get code suggestions from visual content
 
-
-> Here's a screenshot of the error. What's causing it? 
-> This is our current database schema. How should we modify it for the new feature? 
-4
-Get code suggestions from visual content
-
-
-> Generate CSS to match this design mockup 
-> What HTML structure would recreate this component? 
-Tips:
+> Generate CSS to match this design mockup
+> What HTML structure would recreate this component?
+> Tips:
 
 Use images when text descriptions would be unclear or cumbersome
 Include screenshots of errors, UI designs, or diagrams for better context
@@ -652,17 +623,15 @@ When to use: When working on complex architectural decisions, challenging bugs, 
 1
 Provide context and ask Claude to think
 
-
-> I need to implement a new authentication system using OAuth2 for our API. Think deeply about the best approach for implementing this in our codebase. 
-Claude will gather relevant information from your codebase and use extended thinking, which will be visible in the interface.
+> I need to implement a new authentication system using OAuth2 for our API. Think deeply about the best approach for implementing this in our codebase.
+> Claude will gather relevant information from your codebase and use extended thinking, which will be visible in the interface.
 
 2
 Refine the thinking with follow-up prompts
 
-
-> think about potential security vulnerabilities in this approach 
-> think harder about edge cases we should handle 
-Tips to get the most value out of extended thinking:
+> think about potential security vulnerabilities in this approach
+> think harder about edge cases we should handle
+> Tips to get the most value out of extended thinking:
 
 Extended thinking is most valuable for complex tasks such as:
 
@@ -688,9 +657,8 @@ When to use: You want to set up a CLAUDE.md file to store important project info
 1
 Bootstrap a CLAUDE.md for your codebase
 
-
-> /init 
-Tips:
+> /init
+> Tips:
 
 Include frequently used commands (build, test, lint) to avoid repeated searches
 Document code style preferences and naming conventions
@@ -709,32 +677,36 @@ When to use: You want to enhance Claude’s capabilities by connecting it to spe
 1
 Add an MCP Stdio Server
 
-
 # Basic syntax
+
 claude mcp add <name> <command> [args...]
 
 # Example: Adding a local server
+
 claude mcp add my-server -e API_KEY=123 -- /path/to/server arg1 arg2
 2
 Add an MCP SSE Server
 
-
 # Basic syntax
+
 claude mcp add --transport sse <name> <url>
 
 # Example: Adding an SSE server
+
 claude mcp add --transport sse sse-server https://example.com/sse-endpoint
 3
 Manage your MCP servers
 
-
 # List all configured servers
+
 claude mcp list
 
 # Get details for a specific server
+
 claude mcp get my-server
 
 # Remove a server
+
 claude mcp remove my-server
 Tips:
 
@@ -755,39 +727,39 @@ Local-scoped MCP servers
 
 The default scope (local) stores MCP server configurations in your project-specific user settings. These servers are only available to you while working in the current project.
 
-
 # Add a local-scoped server (default)
+
 claude mcp add my-private-server /path/to/server
 
 # Explicitly specify local scope
+
 claude mcp add my-private-server -s local /path/to/server
 2
 Project-scoped MCP servers (.mcp.json)
 
 Project-scoped servers are stored in a .mcp.json file at the root of your project. This file should be checked into version control to share servers with your team.
 
-
 # Add a project-scoped server
+
 claude mcp add shared-server -s project /path/to/server
 This creates or updates a .mcp.json file with the following structure:
 
-
 {
-  "mcpServers": {
-    "shared-server": {
-      "command": "/path/to/server",
-      "args": [],
-      "env": {}
-    }
-  }
+"mcpServers": {
+"shared-server": {
+"command": "/path/to/server",
+"args": [],
+"env": {}
+}
+}
 }
 3
 User-scoped MCP servers
 
 User-scoped servers are available to you across all projects on your machine, and are private to you.
 
-
 # Add a user server
+
 claude mcp add my-user-server -s user /path/to/server
 Tips:
 
@@ -804,18 +776,16 @@ When to use: You want to give Claude read-only access to a PostgreSQL database f
 1
 Add the Postgres MCP server
 
-
 claude mcp add postgres-server /path/to/postgres-mcp-server --connection-string "postgresql://user:pass@localhost:5432/mydb"
 2
 Query your database with Claude
-
 
 # In your Claude session, you can ask about your database
 
 > describe the schema of our users table
 > what are the most recent orders in the system?
 > show me the relationship between customers and invoices
-Tips:
+> Tips:
 
 The Postgres MCP server provides read-only access for safety
 Claude can help you explore database structure and run analytical queries
@@ -828,15 +798,15 @@ When to use: You have a JSON configuration for a single MCP server that you want
 1
 Add an MCP server from JSON
 
-
 # Basic syntax
+
 claude mcp add-json <name> '<json>'
 
 # Example: Adding a stdio server with JSON configuration
+
 claude mcp add-json weather-api '{"type":"stdio","command":"/path/to/weather-cli","args":["--api-key","abc123"],"env":{"CACHE_DIR":"/tmp"}}'
 2
 Verify the server was added
-
 
 claude mcp get weather-api
 Tips:
@@ -851,9 +821,9 @@ When to use: You have already configured MCP servers in Claude Desktop and want 
 1
 Import servers from Claude Desktop
 
+# Basic syntax
 
-# Basic syntax 
-claude mcp add-from-claude-desktop 
+claude mcp add-from-claude-desktop
 2
 Select which servers to import
 
@@ -862,8 +832,7 @@ After running the command, you’ll see an interactive dialog that allows you to
 3
 Verify the servers were imported
 
-
-claude mcp list 
+claude mcp list
 Tips:
 
 This feature only works on macOS and Windows Subsystem for Linux (WSL)
@@ -878,19 +847,18 @@ When to use: You want to use Claude Code itself as an MCP server that other appl
 1
 Start Claude as an MCP server
 
-
 # Basic syntax
+
 claude mcp serve
 2
 Connect from another application
 
 You can connect to Claude Code MCP server from any MCP client, such as Claude Desktop. If you’re using Claude Desktop, you can add the Claude Code MCP server using this configuration:
 
-
 {
-  "command": "claude",
-  "args": ["mcp", "serve"],
-  "env": {}
+"command": "claude",
+"args": ["mcp", "serve"],
+"env": {}
 }
 Tips:
 
@@ -908,14 +876,13 @@ Steps:
 1
 Add Claude to your build script
 
-
 // package.json
 {
-    ...
-    "scripts": {
-        ...
-        "lint:claude": "claude -p 'you are a linter. please look at the changes vs. main and report any issues related to typos. report the filename and line number on one line, and a description of the issue on the second line. do not return any other text.'"
-    }
+...
+"scripts": {
+...
+"lint:claude": "claude -p 'you are a linter. please look at the changes vs. main and report any issues related to typos. report the filename and line number on one line, and a description of the issue on the second line. do not return any other text.'"
+}
 }
 ​
 Pipe in, pipe out
@@ -923,7 +890,6 @@ When to use: You want to pipe data into Claude, and get back data in a structure
 
 1
 Pipe data through Claude
-
 
 cat build-error.txt | claude -p 'concisely explain the root cause of this build error' > output.txt
 ​
@@ -933,20 +899,17 @@ When to use: You need Claude’s output in a specific format, especially when in
 1
 Use text format (default)
 
-
 cat data.txt | claude -p 'summarize this data' --output-format text > summary.txt
 This outputs just Claude’s plain text response (default behavior).
 
 2
 Use JSON format
 
-
 cat code.py | claude -p 'analyze this code for bugs' --output-format json > analysis.json
 This outputs a JSON array of messages with metadata including cost and duration.
 
 3
 Use streaming JSON format
-
 
 cat log.txt | claude -p 'parse this log file for errors' --output-format stream-json
 This outputs a series of JSON objects in real-time as Claude processes the request. Each message is a valid JSON object, but the entire output is not valid JSON if concatenated.
@@ -967,18 +930,15 @@ When to use: You want to create reusable slash commands for your project that al
 1
 Create a commands directory in your project
 
-
 mkdir -p .claude/commands
 2
 Create a Markdown file for each command
 
-
-echo "Analyze the performance of this code and suggest three specific optimizations:" > .claude/commands/optimize.md 
+echo "Analyze the performance of this code and suggest three specific optimizations:" > .claude/commands/optimize.md
 3
 Use your custom command in Claude Code
 
-
-claude > /project:optimize 
+claude > /project:optimize
 Tips:
 
 Command names are derived from the filename (e.g., optimize.md becomes /project:optimize)
@@ -992,17 +952,15 @@ When to use: You want to create flexible slash commands that can accept addition
 1
 Create a command file with the $ARGUMENTS placeholder
 
-
 echo "Find and fix issue #$ARGUMENTS. Follow these steps: 1.
 Understand the issue described in the ticket 2. Locate the relevant code in
 our codebase 3. Implement a solution that addresses the root cause 4. Add
 appropriate tests 5. Prepare a concise PR description" >
-.claude/commands/fix-issue.md 
+.claude/commands/fix-issue.md
 2
 Use the command with an issue number
 
-
-claude > /project:fix-issue 123 
+claude > /project:fix-issue 123
 This will replace $ARGUMENTS with “123” in the prompt.
 
 Tips:
@@ -1017,19 +975,16 @@ When to use: You want to create personal slash commands that work across all you
 1
 Create a commands directory in your home folder
 
-
-mkdir -p ~/.claude/commands 
+mkdir -p ~/.claude/commands
 2
 Create a Markdown file for each command
 
-
 echo "Review this code for security vulnerabilities, focusing on:" >
-~/.claude/commands/security-review.md 
+~/.claude/commands/security-review.md
 3
 Use your personal custom command
 
-
-claude > /user:security-review 
+claude > /user:security-review
 Tips:
 
 Personal commands are prefixed with /user: instead of /project:
@@ -1050,29 +1005,28 @@ Git worktrees allow you to check out multiple branches from the same repository 
 2
 Create a new worktree
 
-
 # Create a new worktree with a new branch git worktree add
+
 ../project-feature-a feature-a # Or create a worktree with an existing
-branch git worktree add ../project-bugfix bugfix-123 
+branch git worktree add ../project-bugfix bugfix-123
 This creates a new directory with a separate working copy of your repository.
 
 3
 Run Claude Code in each worktree
 
+# Navigate to your worktree
 
-# Navigate to your worktree 
-cd ../project-feature-a # Run Claude Code in this isolated environment claude 
+cd ../project-feature-a # Run Claude Code in this isolated environment claude
 4
 In another terminal:
-
 
 cd ../project-bugfix claude
 5
 Manage your worktrees
 
-
 # List all worktrees git worktree list # Remove a worktree when done
-git worktree remove ../project-feature-a 
+
+git worktree remove ../project-feature-a
 Tips:
 
 Each worktree has its own independent file state, making it perfect for parallel Claude Code sessions
@@ -1085,3 +1039,57 @@ JavaScript projects: Running dependency installation (npm install, yarn)
 Python projects: Setting up virtual environments or installing with package managers
 Other languages: Following your project’s standard setup process
 ​
+
+Claude Code
+Core tasks and workflows
+Explore Claude Code’s powerful features for editing, searching, testing, and automating your development workflow.
+
+Claude Code operates directly in your terminal, understanding your project context and taking real actions. No need to manually add files to context - Claude will explore your codebase as needed.
+
+​
+Understand unfamiliar code
+
+> what does the payment processing system do?
+> find where user permissions are checked
+> explain how the caching layer works
+> ​
+> Automate Git operations
+
+> commit my changes
+> create a pr
+> which commit added tests for markdown back in December?
+> rebase on main and resolve any merge conflicts
+> ​
+> Edit code intelligently
+
+> add input validation to the signup form
+> refactor the logger to use the new API
+> fix the race condition in the worker queue
+> ​
+> Test and debug your code
+
+> run tests for the auth module and fix failures
+> find and fix security vulnerabilities
+> explain why this test is failing
+> ​
+> Encourage deeper thinking
+> For complex problems, explicitly ask Claude to think more deeply:
+
+> think about how we should architect the new payment service
+> think hard about the edge cases in our authentication flow
+> Claude Code will show when Claude (3.7 Sonnet) is using extended thinking. You can proactively prompt Claude to “think” or “think deeply” for more planning-intensive tasks. We suggest that you first tell Claude about your task and let it gather context from your project. Then, ask it to “think” to create a plan.
+
+Claude will think more based on the words you use. For example, “think hard” will trigger more extended thinking than saying “think” alone.
+
+For more tips, see Extended thinking tips.
+
+​
+Automate CI and infra workflows
+Claude Code comes with a non-interactive mode for headless execution. This is especially useful for running Claude Code in non-interactive contexts like scripts, pipelines, and Github Actions.
+
+Use --print (-p) to run Claude in non-interactive mode. In this mode, you can set the ANTHROPIC_API_KEY environment variable to provide a custom API key.
+
+Non-interactive mode is especially useful when you pre-configure the set of commands Claude is allowed to use:
+
+export ANTHROPIC*API_KEY=sk*...
+claude -p "update the README with the latest changes" --allowedTools "Bash(git diff:_)" "Bash(git log:_)" Write --disallowedTools ...
