@@ -278,9 +278,14 @@ def main():
         "validation_score": 0,  # Higher is better
     }
 
-    while iteration < args.max_iterations:
-        iteration += 1
-        log(f"\n=== Starting Iteration {iteration}/{args.max_iterations}, State: {state} ===")
+    # Continue either while under max iterations OR if we're in validator state
+    # This ensures validator can run even if we reach max iterations in review
+    while (iteration < args.max_iterations) or (state == "validator" and iteration == args.max_iterations):
+        # Only increment iteration counter when entering review state, not for every loop
+        if state == "review":
+            iteration += 1
+
+        log(f"\n=== Starting Phase: {state.capitalize()}, Iteration {iteration}/{args.max_iterations} ===")
 
         #######################
         # Step 3.3.1: Review State
@@ -351,12 +356,16 @@ Start with ## Summary without any introductory text.
 
             # Define regex patterns to match the exact review decision phrases
             # Using anchored patterns with line boundaries for exact matches
-            passed_pattern = re.compile(r'^REVIEW:\s*PASSED\s*$', re.MULTILINE)
-            rejected_pattern = re.compile(r'^REVIEW:\s*REJECTED\s*$', re.MULTILINE)
+            passed_pattern = re.compile(r"^REVIEW:\s*PASSED\s*$", re.MULTILINE)
+            rejected_pattern = re.compile(r"^REVIEW:\s*REJECTED\s*$", re.MULTILINE)
+
+            # Also check for alternative formats that Claude might use
+            alt_passed_pattern = re.compile(r"\bREVIEW PASSED\b", re.IGNORECASE)
+            alt_rejected_pattern = re.compile(r"\bREVIEW REJECTED\b", re.IGNORECASE)
 
             # Count critical and high issues to track progress for potential fallback
-            critical_pattern = re.compile(r'###\s*CRITICAL.*?(?=###|$)', re.DOTALL | re.MULTILINE)
-            high_pattern = re.compile(r'###\s*HIGH.*?(?=###|$)', re.DOTALL | re.MULTILINE)
+            critical_pattern = re.compile(r"###\s*CRITICAL.*?(?=###|$)", re.DOTALL | re.MULTILINE)
+            high_pattern = re.compile(r"###\s*HIGH.*?(?=###|$)", re.DOTALL | re.MULTILINE)
 
             critical_section = critical_pattern.search(review_output)
             high_section = high_pattern.search(review_output)
@@ -365,10 +374,10 @@ Start with ## Summary without any introductory text.
             high_count = 0
 
             if critical_section:
-                critical_count = len(re.findall(r'^\d+\.', critical_section.group(0), re.MULTILINE))
+                critical_count = len(re.findall(r"^\d+\.", critical_section.group(0), re.MULTILINE))
 
             if high_section:
-                high_count = len(re.findall(r'^\d+\.', high_section.group(0), re.MULTILINE))
+                high_count = len(re.findall(r"^\d+\.", high_section.group(0), re.MULTILINE))
 
             issue_score = critical_count * 10 + high_count  # Weight critical issues higher
 
@@ -378,16 +387,22 @@ Start with ## Summary without any introductory text.
                 best_effort["review_score"] = issue_score
                 log(f"Saved as best review so far ({critical_count} critical, {high_count} high issues)")
 
-            if passed_pattern.search(review_output):
+            # Check for review decision using both primary and alternative patterns
+            if passed_pattern.search(review_output) or alt_passed_pattern.search(review_output):
                 log("Review PASSED! Moving to validator state.")
                 state = "validator"
-            elif rejected_pattern.search(review_output):
+            elif rejected_pattern.search(review_output) or alt_rejected_pattern.search(review_output):
                 log("Review REJECTED. Moving to developer state.")
                 state = "developer"
             else:
-                log("Warning: No valid review decision found. Default to developer state.")
-                log("Expected 'REVIEW: PASSED' or 'REVIEW: REJECTED' in the output.")
-                state = "developer"
+                # Fall back to checking for positive/negative language in conclusion
+                if "no issues" in review_output.lower() or "all issues fixed" in review_output.lower():
+                    log("Review appears positive. Moving to validator state.")
+                    state = "validator"
+                else:
+                    log("Warning: No valid review decision found. Default to developer state.")
+                    log("Expected 'REVIEW: PASSED' or 'REVIEW: REJECTED' in the output.")
+                    state = "developer"
 
         #######################
         # Step 3.3.2: Developer State
@@ -458,7 +473,6 @@ Start with ## Summary without any introductory text.
                 best_effort["dev_file"] = dev_file
                 log("Saved as best developer output so far")
 
-
             # After development, always go back to review
             log("Development completed. Moving back to review state.")
             state = "review"
@@ -524,8 +538,12 @@ Start with ## Summary without any introductory text.
 
             # Define regex patterns to match the exact validation decision phrases
             # Using anchored patterns with line boundaries for exact matches
-            passed_pattern = re.compile(r'^VALIDATION:\s*PASSED\s*$', re.MULTILINE)
-            rejected_pattern = re.compile(r'^VALIDATION:\s*REJECTED\s*$', re.MULTILINE)
+            passed_pattern = re.compile(r"^VALIDATION:\s*PASSED\s*$", re.MULTILINE)
+            rejected_pattern = re.compile(r"^VALIDATION:\s*REJECTED\s*$", re.MULTILINE)
+
+            # Also check for alternative formats that Claude might use
+            alt_passed_pattern = re.compile(r"\bVALIDATION PASSED\b", re.IGNORECASE)
+            alt_rejected_pattern = re.compile(r"\bVALIDATION REJECTED\b", re.IGNORECASE)
 
             # Calculate validation score based on quality assessment
             quality_score = 0
@@ -544,12 +562,13 @@ Start with ## Summary without any introductory text.
                 best_effort["validation_score"] = quality_score
                 log(f"Saved as best validation so far (quality score: {quality_score})")
 
-            if passed_pattern.search(validation_output):
+            # Check for validation decision using both primary and alternative patterns
+            if passed_pattern.search(validation_output) or alt_passed_pattern.search(validation_output):
                 log(f"Validation PASSED in iteration {iteration}!")
                 validation_passed = True
                 final_success = True
                 break
-            elif rejected_pattern.search(validation_output):
+            elif rejected_pattern.search(validation_output) or alt_rejected_pattern.search(validation_output):
                 log(f"Validation REJECTED in iteration {iteration}.")
                 if iteration < args.max_iterations:
                     log("Moving back to developer state...")
@@ -558,14 +577,33 @@ Start with ## Summary without any introductory text.
                     log("Maximum iterations reached without passing validation.")
                     break
             else:
-                log(f"Warning: No valid validation decision found in iteration {iteration}.")
-                log("Expected 'VALIDATION: PASSED' or 'VALIDATION: REJECTED' in the output.")
-                if iteration < args.max_iterations:
-                    log("Moving back to developer state by default...")
-                    state = "developer"
-                else:
-                    log("Maximum iterations reached without clear validation result.")
+                # Try to infer from content
+                positive_indicators = [
+                    "all issues addressed",
+                    "all critical issues fixed",
+                    "successfully fixed",
+                    "high quality",
+                ]
+                negative_indicators = ["issues remain", "not addressed", "still present", "failed"]
+
+                # Count positive and negative indicators
+                pos_count = sum(1 for indicator in positive_indicators if indicator in validation_output.lower())
+                neg_count = sum(1 for indicator in negative_indicators if indicator in validation_output.lower())
+
+                if pos_count > neg_count:
+                    log(f"Validation appears positive based on content. Treating as PASSED.")
+                    validation_passed = True
+                    final_success = True
                     break
+                else:
+                    log(f"Warning: No valid validation decision found in iteration {iteration}.")
+                    log("Expected 'VALIDATION: PASSED' or 'VALIDATION: REJECTED' in the output.")
+                    if iteration < args.max_iterations:
+                        log("Moving back to developer state by default...")
+                        state = "developer"
+                    else:
+                        log("Maximum iterations reached without clear validation result.")
+                        break
 
     #######################
     # Step 3.3.4: Fallback Mechanism
@@ -593,9 +631,13 @@ However, we've preserved the best interim results for manual intervention.
 ### Best Development Attempt
 - File: {best_effort["dev_file"]}
 
-{f'''### Best Validation Attempt
+{
+                    f'''### Best Validation Attempt
 - File: {best_effort["validation_file"]}
-- Quality score: {best_effort["validation_score"]} (higher is better)''' if best_effort["validation_file"] else ''}
+- Quality score: {best_effort["validation_score"]} (higher is better)'''
+                    if best_effort["validation_file"]
+                    else ""
+                }
 
 ### Next Steps
 1. Review the best files identified above
@@ -658,6 +700,7 @@ Start with ## PR Title without any introductory text.
     log(f"Iterations completed: {iteration} of {args.max_iterations}")
     log(f"Total development iterations: {dev_iterations}")
     log(f"Final result: {'SUCCESS' if final_success else 'FAILED'}")
+    log(f"Final state: {state.capitalize()}")
     log(f"All artifacts saved to: {output_dir}")
 
     # List all artifacts
