@@ -61,8 +61,23 @@ def run_claude(prompt, role, output_file, allowed_tools, session_dir):
         artifacts_info = ""
         if session_dir.exists():
             artifacts_info = "Available artifacts from previous steps:\n"
-            for file in sorted(session_dir.glob("*.md")):
-                artifacts_info += f"- {file.name}: {file}\n"
+            # Resolve the absolute path of the session directory to avoid directory traversal
+            resolved_session_dir = session_dir.resolve()
+
+            # Only include files that are within the resolved session directory
+            for file in sorted(resolved_session_dir.glob("*.md")):
+                # Ensure the file is actually within the session directory to prevent directory traversal
+                try:
+                    file_resolved = file.resolve()
+                    # Check if this file is inside the session directory
+                    if file_resolved.is_relative_to(resolved_session_dir):
+                        artifacts_info += f"- {file.name}: {file}\n"
+                    else:
+                        log(f"Warning: Skipping file outside session directory: {file}")
+                except (ValueError, RuntimeError) as e:
+                    # Handle any path resolution errors
+                    log(f"Error validating file path {file}: {e}")
+                    continue
 
         full_prompt = f"""
 {artifacts_info}
@@ -70,34 +85,79 @@ def run_claude(prompt, role, output_file, allowed_tools, session_dir):
 {prompt}
 """
 
-        result = subprocess.run(
-            [
-                "claude",
-                "--output-format",
-                "text",
-                "-p",
-                full_prompt,
-                "--allowedTools",
-                allowed_tools,
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=1200,  # 20 minute timeout
-        )
+        # Construct command arguments as a list to prevent command injection
+        cmd = [
+            "claude",
+            "--output-format",
+            "text",
+            "-p",
+            full_prompt,
+            "--allowedTools",
+            allowed_tools,
+        ]
 
-        # Save output to file
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=1200,  # 20 minute timeout
+                shell=False,  # Explicitly disable shell to prevent command injection
+            )
+
+            # Save output to file
+            with open(output_file, "w") as f:
+                f.write(result.stdout)
+
+            log(f"{role.capitalize()} completed and saved to {output_file}")
+            return result.stdout
+
+        except subprocess.TimeoutExpired as e:
+            log(f"Timeout error running {role}: Process exceeded {e.timeout} seconds")
+            error_msg = f"Timeout error: Process exceeded {e.timeout} seconds"
+            with open(output_file, "w") as f:
+                f.write(f"Error running {role}: {error_msg}")
+            return f"Error: {error_msg}"
+
+        except subprocess.CalledProcessError as e:
+            log(f"Process error running {role}: Command failed with exit code {e.returncode}")
+            error_msg = f"Command failed with exit code {e.returncode}\nStderr: {e.stderr}"
+            with open(output_file, "w") as f:
+                f.write(f"Error running {role}: {error_msg}")
+            return f"Error: {error_msg}"
+
+    except FileNotFoundError as e:
+        log(f"File not found error: {e}")
+        error_msg = f"File not found: {e}"
         with open(output_file, "w") as f:
-            f.write(result.stdout)
+            f.write(f"Error running {role}: {error_msg}")
+        return f"Error: {error_msg}"
 
-        log(f"{role.capitalize()} completed and saved to {output_file}")
-        return result.stdout
+    except PermissionError as e:
+        log(f"Permission error: {e}")
+        error_msg = f"Permission denied: {e}"
+        with open(output_file, "w") as f:
+            f.write(f"Error running {role}: {error_msg}")
+        return f"Error: {error_msg}"
+
+    except IOError as e:
+        log(f"I/O error when running {role}: {e}")
+        error_msg = f"I/O error: {e}"
+        with open(output_file, "w") as f:
+            f.write(f"Error running {role}: {error_msg}")
+        return f"Error: {error_msg}"
+
     except Exception as e:
-        log(f"Error running {role}: {e}")
-        # Save error to file
-        with open(output_file, "w") as f:
-            f.write(f"Error running {role}: {e}")
-        return f"Error: {e}"
+        # Fallback for any unexpected errors
+        log(f"Unexpected error running {role}: {e}")
+        error_msg = f"Unexpected error: {e}"
+        try:
+            with open(output_file, "w") as f:
+                f.write(f"Error running {role}: {error_msg}")
+        except Exception as write_err:
+            log(f"Failed to write error to file: {write_err}")
+        return f"Error: {error_msg}"
 
 
 #######################
@@ -137,7 +197,54 @@ def main():
         timestamp = int(time.time())
         output_dir = Path("tmp") / f"claude_review_{timestamp}_{session_id}"
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # Validate directory creation with proper error handling
+    try:
+        # First check if path exists and is a directory
+        if output_dir.exists():
+            if not output_dir.is_dir():
+                log(f"Error: '{output_dir}' exists but is not a directory")
+                return 1
+
+            # Check if we have write permission to the directory
+            if not os.access(output_dir, os.W_OK):
+                log(f"Error: No write permission to directory '{output_dir}'")
+                return 1
+
+            log(f"Using existing directory: {output_dir}")
+        else:
+            # Create directory with explicit permission checks
+            try:
+                # First check if parent directory exists and we have write permission
+                parent_dir = output_dir.parent
+                if not parent_dir.exists():
+                    parent_dir.mkdir(parents=True, exist_ok=True)
+
+                if not os.access(parent_dir, os.W_OK):
+                    log(f"Error: No write permission to parent directory '{parent_dir}'")
+                    return 1
+
+                # Now create the directory
+                output_dir.mkdir(parents=True, exist_ok=True)
+                log(f"Created directory: {output_dir}")
+
+                # Double-check that the directory was created and we can write to it
+                if not output_dir.exists() or not output_dir.is_dir():
+                    log(f"Error: Failed to create directory '{output_dir}'")
+                    return 1
+
+                if not os.access(output_dir, os.W_OK):
+                    log(f"Error: Created directory '{output_dir}' but cannot write to it")
+                    return 1
+            except PermissionError as e:
+                log(f"Permission error creating directory '{output_dir}': {e}")
+                return 1
+            except OSError as e:
+                log(f"OS error creating directory '{output_dir}': {e}")
+                return 1
+
+    except Exception as e:
+        log(f"Unexpected error validating/creating directory '{output_dir}': {e}")
+        return 1
 
     # Log basic info
     if args.latest:
@@ -161,6 +268,15 @@ def main():
     dev_iterations = 0
     validation_passed = False
     final_success = False
+
+    # Track best effort results in case we need to fall back
+    best_effort = {
+        "review_file": None,
+        "review_score": 0,  # Lower is better (count of critical/high issues)
+        "dev_file": None,
+        "validation_file": None,
+        "validation_score": 0,  # Higher is better
+    }
 
     while iteration < args.max_iterations:
         iteration += 1
@@ -230,12 +346,47 @@ Start with ## Summary without any introductory text.
                 output_dir,
             )
 
-            # Check if review passed or failed
-            if "REVIEW: PASSED" in review_output:
+            # Check if review passed or failed using robust regex pattern matching
+            import re
+
+            # Define regex patterns to match the exact review decision phrases
+            # Using anchored patterns with line boundaries for exact matches
+            passed_pattern = re.compile(r'^REVIEW:\s*PASSED\s*$', re.MULTILINE)
+            rejected_pattern = re.compile(r'^REVIEW:\s*REJECTED\s*$', re.MULTILINE)
+
+            # Count critical and high issues to track progress for potential fallback
+            critical_pattern = re.compile(r'###\s*CRITICAL.*?(?=###|$)', re.DOTALL | re.MULTILINE)
+            high_pattern = re.compile(r'###\s*HIGH.*?(?=###|$)', re.DOTALL | re.MULTILINE)
+
+            critical_section = critical_pattern.search(review_output)
+            high_section = high_pattern.search(review_output)
+
+            critical_count = 0
+            high_count = 0
+
+            if critical_section:
+                critical_count = len(re.findall(r'^\d+\.', critical_section.group(0), re.MULTILINE))
+
+            if high_section:
+                high_count = len(re.findall(r'^\d+\.', high_section.group(0), re.MULTILINE))
+
+            issue_score = critical_count * 10 + high_count  # Weight critical issues higher
+
+            # Update best effort tracking if this review has fewer issues
+            if best_effort["review_file"] is None or issue_score < best_effort["review_score"]:
+                best_effort["review_file"] = review_file
+                best_effort["review_score"] = issue_score
+                log(f"Saved as best review so far ({critical_count} critical, {high_count} high issues)")
+
+            if passed_pattern.search(review_output):
                 log("Review PASSED! Moving to validator state.")
                 state = "validator"
-            else:
+            elif rejected_pattern.search(review_output):
                 log("Review REJECTED. Moving to developer state.")
+                state = "developer"
+            else:
+                log("Warning: No valid review decision found. Default to developer state.")
+                log("Expected 'REVIEW: PASSED' or 'REVIEW: REJECTED' in the output.")
                 state = "developer"
 
         #######################
@@ -294,13 +445,19 @@ Format your output as a markdown document with these sections:
 
 Start with ## Summary without any introductory text.
 """
-            run_claude(
+            dev_output = run_claude(
                 dev_prompt,
                 f"developer_{iteration}",
                 dev_file,
                 "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch,Edit,MultiEdit,Write,TodoRead,TodoWrite",
                 output_dir,
             )
+
+            # Update best effort tracking
+            if dev_output and "Error:" not in dev_output:
+                best_effort["dev_file"] = dev_file
+                log("Saved as best developer output so far")
+
 
             # After development, always go back to review
             log("Development completed. Moving back to review state.")
@@ -362,13 +519,37 @@ Start with ## Summary without any introductory text.
                 output_dir,
             )
 
-            # Check validation result
-            if "VALIDATION: PASSED" in validation_output:
+            # Check validation result using robust regex patterns
+            import re
+
+            # Define regex patterns to match the exact validation decision phrases
+            # Using anchored patterns with line boundaries for exact matches
+            passed_pattern = re.compile(r'^VALIDATION:\s*PASSED\s*$', re.MULTILINE)
+            rejected_pattern = re.compile(r'^VALIDATION:\s*REJECTED\s*$', re.MULTILINE)
+
+            # Calculate validation score based on quality assessment
+            quality_score = 0
+            if "high quality" in validation_output.lower():
+                quality_score += 3
+            if "good quality" in validation_output.lower():
+                quality_score += 2
+            if "acceptable" in validation_output.lower():
+                quality_score += 1
+            if "poor quality" in validation_output.lower():
+                quality_score -= 2
+
+            # Update best effort tracking
+            if best_effort["validation_file"] is None or quality_score > best_effort["validation_score"]:
+                best_effort["validation_file"] = validation_file
+                best_effort["validation_score"] = quality_score
+                log(f"Saved as best validation so far (quality score: {quality_score})")
+
+            if passed_pattern.search(validation_output):
                 log(f"Validation PASSED in iteration {iteration}!")
                 validation_passed = True
                 final_success = True
                 break
-            else:
+            elif rejected_pattern.search(validation_output):
                 log(f"Validation REJECTED in iteration {iteration}.")
                 if iteration < args.max_iterations:
                     log("Moving back to developer state...")
@@ -376,6 +557,60 @@ Start with ## Summary without any introductory text.
                 else:
                     log("Maximum iterations reached without passing validation.")
                     break
+            else:
+                log(f"Warning: No valid validation decision found in iteration {iteration}.")
+                log("Expected 'VALIDATION: PASSED' or 'VALIDATION: REJECTED' in the output.")
+                if iteration < args.max_iterations:
+                    log("Moving back to developer state by default...")
+                    state = "developer"
+                else:
+                    log("Maximum iterations reached without clear validation result.")
+                    break
+
+    #######################
+    # Step 3.3.4: Fallback Mechanism
+    # If validation failed after all iterations, provide a fallback
+    #######################
+    if not validation_passed:
+        log("\n=== Validation did not pass across all iterations ===")
+
+        # Check if we have any best effort results to fall back to
+        if best_effort["review_file"] and best_effort["dev_file"]:
+            log("Implementing fallback mechanism: Saving best effort results")
+
+            # Create a fallback summary file
+            fallback_file = output_dir / "fallback_summary.md"
+            with open(fallback_file, "w") as f:
+                f.write(f"""## Fallback Summary
+                
+The review-develop-validate loop did not complete successfully within {args.max_iterations} iterations.
+However, we've preserved the best interim results for manual intervention.
+
+### Best Review
+- File: {best_effort["review_file"]}
+- Issue score: {best_effort["review_score"]} (lower is better)
+
+### Best Development Attempt
+- File: {best_effort["dev_file"]}
+
+{f'''### Best Validation Attempt
+- File: {best_effort["validation_file"]}
+- Quality score: {best_effort["validation_score"]} (higher is better)''' if best_effort["validation_file"] else ''}
+
+### Next Steps
+1. Review the best files identified above
+2. Consider manual fixes for remaining issues
+3. Use `git diff` to see what changes were made in the best development attempt
+4. You may need to selectively apply parts of the changes or modify them
+5. Run tests manually to verify any additional changes
+
+This fallback summary was generated automatically by the review loop to help you continue the work manually.
+""")
+
+            log(f"Fallback summary saved to {fallback_file}")
+            log("Please review this file for next steps")
+        else:
+            log("No viable fallback information available. Please review the logs manually.")
 
     #######################
     # Step 3.4: PR Creation
