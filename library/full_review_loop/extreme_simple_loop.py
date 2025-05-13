@@ -2,7 +2,7 @@
 
 # /// script
 # requires-python = ">=3.8"
-# dependencies = [] # No external Python deps needed if using Claude CLI
+# dependencies = ["filelock>=3.12.2"] # Only filelock needed for file locking mechanism
 # ///
 
 """
@@ -20,9 +20,12 @@ Key principles:
 
 import argparse
 import datetime
+import os
 import subprocess
 import time
 from pathlib import Path
+
+import filelock
 
 # Globals to simplify access in main logic, set by args
 OUTPUT_DIR = None
@@ -112,32 +115,71 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
             shell=False,  # Crucial for security and proper arg handling
         )
 
-        if not output_file_path.exists():
-            log(
-                f"  WARNING: Agent '{step_name}' did NOT create the output file '{output_file_path.resolve()}' as instructed."
-            )
-            log(f"  Saving Claude's stdout to '{output_file_path.resolve()}' as a fallback.")
-            output_file_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure parent exists
-            with open(output_file_path, "w") as f:
-                f.write(result.stdout)
-            log(f"  Fallback save completed for {step_name}.")
-        else:
-            log(
-                f"  Agent '{step_name}' successfully wrote to '{output_file_path.resolve()}' (as instructed or verified)."
-            )
+        # Use file locking to prevent race conditions when multiple Claude instances write to files
+        lock_file = f"{output_file_path}.lock"
+        lock = filelock.FileLock(lock_file, timeout=30)  # 30 second timeout for acquiring lock
+
+        max_retries = 3
+        retry_delay = 2  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                with lock:
+                    if not output_file_path.exists():
+                        log(
+                            f"  WARNING: Agent '{step_name}' did NOT create the output file '{output_file_path.resolve()}' as instructed."
+                        )
+                        log(
+                            f"  Saving Claude's stdout to '{output_file_path.resolve()}' as a fallback."
+                        )
+                        output_file_path.parent.mkdir(
+                            parents=True, exist_ok=True
+                        )  # Ensure parent exists
+                        with open(output_file_path, "w") as f:
+                            f.write(result.stdout)
+                        log(f"  Fallback save completed for {step_name}.")
+                    else:
+                        log(
+                            f"  Agent '{step_name}' successfully wrote to '{output_file_path.resolve()}' (as instructed or verified)."
+                        )
+
+                    # Successfully acquired lock and performed file operations
+                    break
+            except filelock.Timeout:
+                if attempt < max_retries - 1:
+                    log(
+                        f"  File lock timeout on attempt {attempt + 1}/{max_retries}. Retrying in {retry_delay} seconds..."
+                    )
+                    time.sleep(retry_delay)
+                else:
+                    log(f"  ERROR: Failed to acquire file lock after {max_retries} attempts.")
+                    raise
+
+        # Clean up lock file if it exists after operations
+        try:
+            if os.path.exists(lock_file):
+                os.remove(lock_file)
+        except Exception as e:
+            log(f"  Warning: Could not remove lock file {lock_file}: {e}")
 
         return output_file_path.read_text()
 
     except subprocess.CalledProcessError as e:
-        error_msg = (
-            f"Error running agent '{step_name}' (Exit Code {e.returncode}):\nStdout:\n{e.stdout}\nStderr:\n{e.stderr}"
-        )
+        error_msg = f"Error running agent '{step_name}' (Exit Code {e.returncode}):\nStdout:\n{e.stdout}\nStderr:\n{e.stderr}"
         log(error_msg)
-        # Save error details to the intended output file if possible
+        # Save error details to the intended output file if possible, with file locking
+        lock_file = f"{output_file_path}.lock"
+        lock = filelock.FileLock(lock_file, timeout=30)
+
         try:
-            output_file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file_path, "w") as f:
-                f.write(error_msg)
+            with lock:
+                output_file_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_file_path, "w") as f:
+                    f.write(error_msg)
+
+            # Clean up lock file
+            if os.path.exists(lock_file):
+                os.remove(lock_file)
         except Exception as save_err:
             log(f"  Additionally, failed to save error details to {output_file_path}: {save_err}")
         return error_msg  # Propagate error state
@@ -147,40 +189,165 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
             f"Stdout:\n{e.stdout}\nStderr:\n{e.stderr}"
         )
         log(error_msg)
+        # Save timeout error details with file locking
+        lock_file = f"{output_file_path}.lock"
+        lock = filelock.FileLock(lock_file, timeout=30)
+
         try:
-            output_file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file_path, "w") as f:
-                f.write(error_msg)
+            with lock:
+                output_file_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_file_path, "w") as f:
+                    f.write(error_msg)
+
+            # Clean up lock file
+            if os.path.exists(lock_file):
+                os.remove(lock_file)
         except Exception as save_err:
-            log(f"  Additionally, failed to save timeout error details to {output_file_path}: {save_err}")
+            log(
+                f"  Additionally, failed to save timeout error details to {output_file_path}: {save_err}"
+            )
         return error_msg  # Propagate error state
     except Exception as e:
         error_msg = f"An unexpected error occurred while running agent '{step_name}': {e}"
         log(error_msg)
+        # Save general exception error details with file locking
+        lock_file = f"{output_file_path}.lock"
+        lock = filelock.FileLock(lock_file, timeout=30)
+
         try:
-            output_file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file_path, "w") as f:
-                f.write(error_msg)
+            with lock:
+                output_file_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_file_path, "w") as f:
+                    f.write(error_msg)
+
+            # Clean up lock file
+            if os.path.exists(lock_file):
+                os.remove(lock_file)
         except Exception as save_err:
-            log(f"  Additionally, failed to save unexpected error details to {output_file_path}: {save_err}")
+            log(
+                f"  Additionally, failed to save unexpected error details to {output_file_path}: {save_err}"
+            )
         return error_msg  # Propagate error state
+
+
+def validate_branch_name(branch_name):
+    """
+    Validates a branch name to prevent command injection.
+
+    Returns:
+        tuple: (is_valid, error_message) where is_valid is a boolean and error_message is a string or None
+    """
+    if branch_name is None:
+        return False, "Branch name cannot be None"
+
+    # Validate branch name against git's allowed characters
+    # Git branch names cannot have:
+    # - ASCII control characters (such as null byte or ESC)
+    # - Space, ~, ^, :, ?, *, [, spaces at the beginning or end
+    # - Consecutive dots or ending with .lock
+    import re
+
+    if not branch_name or not isinstance(branch_name, str):
+        return False, "Branch name must be a non-empty string"
+
+    # Check for control characters and other disallowed characters
+    if re.search(r"[\x00-\x1F\x7F~^:?*\[\]\\]", branch_name):
+        return False, "Branch name contains disallowed characters"
+
+    # Check for spaces at beginning or end
+    if branch_name != branch_name.strip():
+        return False, "Branch name cannot have spaces at the beginning or end"
+
+    # Check for consecutive dots or .lock ending
+    if ".." in branch_name or branch_name.endswith(".lock"):
+        return False, "Branch name cannot contain consecutive dots or end with .lock"
+
+    # Check for "@{" sequence (used in reflog references)
+    if "@{" in branch_name:
+        return False, "Branch name cannot contain '@{'"
+
+    # Check for directory traversal attempts
+    if "/" in branch_name and (".." in branch_name or branch_name.startswith("/")):
+        return False, "Branch name contains suspicious path traversal patterns"
+
+    return True, None
 
 
 def parse_decision_from_file_content(file_content, file_path_for_log, pass_string, fail_string):
     """
-    Checks file content for decision strings.
-    Returns True if pass_string is found, False if fail_string is found or neither.
+    Checks file content for decision strings with enhanced error handling.
+
+    Args:
+        file_content: The content to search in
+        file_path_for_log: Path object for logging purposes
+        pass_string: String indicating success
+        fail_string: String indicating failure
+
+    Returns:
+        bool: True if pass_string is found, False if fail_string is found or in error cases
+
+    This function implements more robust error handling for unexpected Claude output formats
+    and provides detailed logging about why a decision couldn't be parsed.
     """
-    if pass_string in file_content:
-        return True
-    if fail_string in file_content:
+    # Check for empty or None content
+    if not file_content:
+        log(
+            f"ERROR: Empty or None content received from '{file_path_for_log.name}'. Assuming failure."
+        )
         return False
 
-    log(
-        f"WARNING: Could not parse decision from '{file_path_for_log.name}'. Neither '{pass_string}' nor '{fail_string}' found. Assuming failure/needs fixes."
-    )
-    log(f"Content snippet (up to 500 chars):\n{file_content[:500]}")
-    return False  # Default to failure/needs_fixes if decision is unclear
+    try:
+        # Case-insensitive search for the decision strings
+        if pass_string.lower() in file_content.lower():
+            log(f"Decision found in '{file_path_for_log.name}': PASSED")
+            return True
+
+        if fail_string.lower() in file_content.lower():
+            log(f"Decision found in '{file_path_for_log.name}': NEEDS FIXES/FAILED")
+            return False
+
+        # Try to look for variations of pass/fail indicators if exact strings not found
+        if "pass" in file_content.lower() and not "fail" in file_content.lower():
+            log(
+                f"WARNING: Exact '{pass_string}' not found in '{file_path_for_log.name}', but 'pass' was detected. Assuming PASS."
+            )
+            return True
+
+        if "fail" in file_content.lower() or "fix" in file_content.lower():
+            log(
+                f"WARNING: Exact '{fail_string}' not found in '{file_path_for_log.name}', but 'fail' or 'fix' was detected. Assuming FAIL."
+            )
+            return False
+
+        # If we get here, we couldn't find any clear indicators
+        log(
+            f"WARNING: Could not parse decision from '{file_path_for_log.name}'. Neither '{pass_string}' nor '{fail_string}' found. Assuming failure/needs fixes."
+        )
+
+        # Log more context to help debug the issue
+        content_length = len(file_content)
+        log(f"Content length: {content_length} characters")
+        log(f"Content snippet (up to 500 chars):\n{file_content[:500]}")
+
+        # If content is very long, also show the end where conclusion might be
+        if content_length > 1000:
+            log(f"End of content (last 500 chars):\n{file_content[-500:]}")
+
+        # Save the problematic content to a debug file for further analysis
+        debug_file = file_path_for_log.parent / f"debug_{file_path_for_log.name}"
+        try:
+            with open(debug_file, "w") as f:
+                f.write(f"# DEBUG: Failed to parse decision from {file_path_for_log.name}\n\n")
+                f.write(file_content)
+            log(f"Full content saved to debug file: {debug_file}")
+        except Exception as e:
+            log(f"Failed to save debug file: {e}")
+
+        return False  # Default to failure/needs_fixes if decision is unclear
+
+    except Exception as e:
+        log(f"ERROR: Exception while trying to parse decision from '{file_path_for_log.name}': {e}")
+        return False  # Any exception defaults to failure
 
 
 def main():
@@ -190,12 +357,24 @@ def main():
     source_group = parser.add_mutually_exclusive_group(required=True)
     source_group.add_argument("--latest", action="store_true", help="Review latest commit")
     source_group.add_argument("--branch", help="Review branch against base branch")
-    parser.add_argument("--base-branch", default="main", help="Base branch for comparison (default: main)")
     parser.add_argument(
-        "--output-dir", type=str, default=None, help="Directory for output files (default: tmp/simple_loop_TIMESTAMP)"
+        "--base-branch", default="main", help="Base branch for comparison (default: main)"
     )
-    parser.add_argument("--timeout", type=int, default=1200, help="Timeout in seconds for Claude calls (default: 1200)")
-    parser.add_argument("--max-loops", type=int, default=2, help="Maximum review-develop cycles (default: 2)")
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Directory for output files (default: tmp/simple_loop_TIMESTAMP)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=1200,
+        help="Timeout in seconds for Claude calls (default: 1200)",
+    )
+    parser.add_argument(
+        "--max-loops", type=int, default=2, help="Maximum review-develop cycles (default: 2)"
+    )
     parser.add_argument("--skip-pr", action="store_true", help="Skip PR creation at the end")
     args = parser.parse_args()
 
@@ -209,6 +388,17 @@ def main():
         log("Starting review of latest commit")
         COMPARE_DESC = "the latest commit against its parent"
     else:
+        # Validate branch names to prevent command injection
+        is_branch_valid, branch_error = validate_branch_name(args.branch)
+        if not is_branch_valid:
+            log(f"ERROR: Invalid branch name: {branch_error}")
+            return 1
+
+        is_base_valid, base_error = validate_branch_name(args.base_branch)
+        if not is_base_valid:
+            log(f"ERROR: Invalid base branch name: {base_error}")
+            return 1
+
         log(f"Starting review of branch '{args.branch}' against '{args.base_branch}'")
         COMPARE_DESC = f"branch '{args.branch}' against base branch '{args.base_branch}'"
 
@@ -334,7 +524,10 @@ IMPORTANT: After completing all tasks, you MUST save your ENTIRE re-review repor
 Use the 'Write' tool. Start your report with "## Re-review - Iteration {loop_count}" and no other introductory text.
 """
         rereview_content = run_claude_agent(
-            f"Re-reviewer (Iteration {loop_count})", rereview_prompt, rereview_filename, "Bash,Grep,Read,LS,Glob,Write"
+            f"Re-reviewer (Iteration {loop_count})",
+            rereview_prompt,
+            rereview_filename,
+            "Bash,Grep,Read,LS,Glob,Write",
         )
 
         current_loop_passed = parse_decision_from_file_content(
@@ -351,7 +544,9 @@ Use the 'Write' tool. Start your report with "## Re-review - Iteration {loop_cou
         else:
             log(f"Re-review (Iteration {loop_count}) still needs fixes.")
             if loop_count >= MAX_REVIEW_LOOPS:
-                log(f"Maximum review loops ({MAX_REVIEW_LOOPS}) reached. Process did not pass this stage.")
+                log(
+                    f"Maximum review loops ({MAX_REVIEW_LOOPS}) reached. Process did not pass this stage."
+                )
                 final_success_achieved = False  # Ensure it's marked as not successful
 
     # --- Validation Step (if all reviews passed) ---
@@ -384,7 +579,10 @@ IMPORTANT: After completing all tasks, you MUST save your ENTIRE validation repo
 Use the 'Write' tool. Start your report with "## Final Validation Report" and no other introductory text.
 """
         validation_content = run_claude_agent(
-            "Final Validator", validation_prompt, validation_filename, "Bash,Grep,Read,LS,Glob,Write"
+            "Final Validator",
+            validation_prompt,
+            validation_filename,
+            "Bash,Grep,Read,LS,Glob,Write",
         )
         validation_succeeded = parse_decision_from_file_content(
             validation_content,
@@ -444,7 +642,9 @@ Use the 'Write' tool. Start your report with "## Pull Request Details" and no ot
     # --- Final Summary ---
     log("\n=== Review Loop Summary ===")
     log(f"Output directory: {OUTPUT_DIR.resolve()}")
-    log(f"Total review-develop iterations completed: {loop_count} (max allowed: {MAX_REVIEW_LOOPS})")
+    log(
+        f"Total review-develop iterations completed: {loop_count} (max allowed: {MAX_REVIEW_LOOPS})"
+    )
 
     overall_outcome_status = "UNKNOWN"
     if final_success_achieved and validation_succeeded:
@@ -464,5 +664,7 @@ Use the 'Write' tool. Start your report with "## Pull Request Details" and no ot
 
 
 if __name__ == "__main__":
+    # Exit code 0 indicates complete success (all reviews passed and validation succeeded)
+    # Exit code 1 indicates failure at some stage (review problems or validation failed)
     exit_code = main()
     exit(exit_code)
