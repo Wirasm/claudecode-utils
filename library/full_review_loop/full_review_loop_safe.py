@@ -242,6 +242,8 @@ class AgenticReviewLoop:
         self.dev_report_file = None
         self.validation_file = None
         self.pr_file = self.output_dir / "pr_report.md"  # PR report is final
+        self.current_review_for_dev = None  # Tracks which review file developer should use
+        self.current_validation_for_dev = None  # Tracks which validation file developer should use
 
         self.log(f"Initialized Agentic Review Loop [session: {self.session_id}]")
         self.log(
@@ -480,6 +482,73 @@ class AgenticReviewLoop:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp} AgenticLoop:DEBUG] {message}")
 
+    def get_appropriate_review_file(self, is_rereview=False, for_developer=False,
+                                   for_validator=False, required=False):
+        """
+        Get the appropriate review file based on context and availability.
+
+        This centralizes the file selection logic to ensure consistent
+        handling across different phases of the workflow.
+
+        Args:
+            is_rereview: Whether to get a re-review file vs initial review
+            for_developer: Special logic for developer to get most recent review
+            for_validator: Special logic for validator (always needs re-review)
+            required: Whether to raise an error if file not found
+
+        Returns:
+            Path: The path to the appropriate review file
+
+        Raises:
+            FileNotFoundError: If required=True and the file doesn't exist
+        """
+        file_path = None
+
+        # For validators, we always want the current re-review file
+        if for_validator:
+            file_path = self.rereview_file
+            self.debug(f"Validator using re-review file: {file_path}")
+
+        # For developers, we need more complex logic
+        elif for_developer:
+            # For iteration > 1, try to use the re-review from previous iteration
+            if self.iteration > 1:
+                prev_rereview_file = self.output_dir / f"rereview_iter_{self.iteration-1}.md"
+                prev_review_file = self.output_dir / f"review_iter_{self.iteration-1}.md"
+
+                # Check in priority order:
+                # 1. Previous iteration's re-review (best option)
+                if prev_rereview_file.exists():
+                    file_path = prev_rereview_file
+                    self.debug(f"Developer using previous re-review: {file_path}")
+                # 2. Previous iteration's initial review
+                elif prev_review_file.exists():
+                    file_path = prev_review_file
+                    self.debug(f"Developer using previous review: {file_path}")
+                # 3. Current iteration's initial review
+                else:
+                    file_path = self.review_file
+                    self.debug(f"Developer using current review: {file_path}")
+            else:
+                # For iteration 1, just use the initial review
+                file_path = self.review_file
+                self.debug(f"Developer using current review: {file_path}")
+
+        # Standard review/re-review selection
+        else:
+            if is_rereview:
+                file_path = self.rereview_file
+                self.debug(f"Using re-review file: {file_path}")
+            else:
+                file_path = self.review_file
+                self.debug(f"Using initial review file: {file_path}")
+
+        # Check if file exists and handle accordingly
+        if file_path and (not file_path.exists()) and required:
+            raise FileNotFoundError(f"Required review file not found: {file_path}")
+
+        return file_path
+
     def run_claude(self, prompt, role, allowed_tools=None, timeout=None):
         """Run a Claude instance with the given prompt and tools."""
         start_time = time.time()
@@ -514,10 +583,8 @@ class AgenticReviewLoop:
             # Use mkstemp for more secure temporary file creation
             fd, prompt_file_path = tempfile.mkstemp(suffix=".txt", dir=self.output_dir)
             try:
-                # Close the file descriptor returned by mkstemp
-                os.close(fd)
-                # Write the prompt to the temporary file
-                with open(prompt_file_path, "w") as f:
+                # Write to the file using the file descriptor directly to avoid TOCTOU vulnerability
+                with os.fdopen(fd, 'w') as f:
                     f.write(prompt)
                 self.debug(f"Wrote prompt to temporary file: {prompt_file_path}")
 
@@ -553,13 +620,13 @@ class AgenticReviewLoop:
                     "Error: 'claude --version' command timed out. Check if Claude CLI is functioning properly."
                 )
 
-            # --- Build Claude command using -p and the content read from the file ---
+            # --- Build Claude command using -p with the content string ---
             cmd = [
                 "claude",
                 "--output-format",
                 "text",
                 "-p",
-                prompt_content,  # Use -p with the content string
+                prompt_content,  # Use the content read from the file rather than the file path
             ]
             # --- End Modification ---
 
@@ -628,6 +695,300 @@ class AgenticReviewLoop:
                     self.debug(f"Cleaned up temporary prompt file: {prompt_file_path}")
                 except Exception as e:
                     self.debug(f"Error cleaning up temporary file {prompt_file_path}: {e}")
+
+    def _extract_issues_from_report(self, report_file, report_type, iteration):
+        """
+        Extract issues from a review report and update the issue tracker.
+
+        Args:
+            report_file: Path to the report file
+            report_type: Type of report ('review', 'rereview', 'validation')
+            iteration: The iteration number
+
+        Returns:
+            dict: Dictionary of issues extracted from the report
+        """
+        if not report_file.exists():
+            self.log(f"Warning: Report file {report_file} does not exist, cannot extract issues")
+            return {}
+
+        try:
+            with open(report_file, "r") as f:
+                content = f.read()
+
+            # Extract issues from the report
+            issues = {}
+
+            # Look for the Issue List section
+            issue_section_match = re.search(r"## Issue List\n(.*?)(?:\n##|\Z)", content, re.DOTALL)
+            if not issue_section_match:
+                self.debug(f"No issue list section found in {report_file}")
+                return {}
+
+            issue_section = issue_section_match.group(1)
+
+            # Extract issues by priority sections
+            priority_sections = re.findall(r"### (CRITICAL|HIGH|MEDIUM|LOW).*?\n(.*?)(?=\n###|\Z)",
+                                           issue_section, re.DOTALL)
+
+            if not priority_sections:
+                # Try alternative format where issues are listed with priority prefix
+                issue_items = re.findall(r"(?:^|\n)- (CRITICAL|HIGH|MEDIUM|LOW):(.*?)(?=\n-|\Z)",
+                                         issue_section, re.DOTALL)
+
+                for priority, issue_text in issue_items:
+                    # Extract file path and line numbers
+                    file_line_match = re.search(r'([^:\s]+):(\d+(?:-\d+)?)', issue_text)
+                    if file_line_match:
+                        file_path = file_line_match.group(1)
+                        line_nums = file_line_match.group(2)
+
+                        # Generate a unique identifier for the issue
+                        issue_id = f"{file_path}:{line_nums}:{len(issue_text) % 100}"
+
+                        # Store issue details
+                        issues[issue_id] = {
+                            'priority': priority,
+                            'file_path': file_path,
+                            'line_nums': line_nums,
+                            'description': issue_text.strip(),
+                            'status': 'Identified' if report_type == 'review' else
+                                      'Pending' if report_type == 'rereview' else 'Validated',
+                            'iteration_found': iteration,
+                            'iterations': [iteration],
+                        }
+            else:
+                # Process structured priority sections
+                for priority, section_content in priority_sections:
+                    # Find individual issues within the priority section
+                    issue_items = re.split(r'\n(?=- )', section_content.strip())
+
+                    for item in issue_items:
+                        if not item.strip():
+                            continue
+
+                        # Extract file path and line numbers
+                        file_line_match = re.search(r'([^:\s]+):(\d+(?:-\d+)?)', item)
+                        if file_line_match:
+                            file_path = file_line_match.group(1)
+                            line_nums = file_line_match.group(2)
+
+                            # Generate a unique identifier for the issue
+                            issue_id = f"{file_path}:{line_nums}:{len(item) % 100}"
+
+                            # Store issue details
+                            issues[issue_id] = {
+                                'priority': priority,
+                                'file_path': file_path,
+                                'line_nums': line_nums,
+                                'description': item.strip(),
+                                'status': 'Identified' if report_type == 'review' else
+                                          'Pending' if report_type == 'rereview' else 'Validated',
+                                'iteration_found': iteration,
+                                'iterations': [iteration],
+                            }
+
+            # Update the global issue tracker
+            for issue_id, issue_data in issues.items():
+                if issue_id in self.issue_tracker:
+                    # Update existing issue
+                    existing_issue = self.issue_tracker[issue_id]
+                    if iteration not in existing_issue['iterations']:
+                        existing_issue['iterations'].append(iteration)
+
+                    # Update status based on report type
+                    if report_type == 'review':
+                        existing_issue['status'] = 'Identified'
+                    elif report_type == 'rereview':
+                        if existing_issue['status'] == 'Fixed':
+                            existing_issue['status'] = 'Regression'
+                        else:
+                            existing_issue['status'] = 'Pending'
+                    elif report_type == 'validation':
+                        # Check if the issue is mentioned in validation as fixed
+                        if 'fixed' in issue_data['description'].lower() or 'addressed' in issue_data['description'].lower():
+                            existing_issue['status'] = 'Fixed'
+                        else:
+                            existing_issue['status'] = 'Pending'
+                else:
+                    # Add new issue to tracker
+                    self.issue_tracker[issue_id] = issue_data
+
+            self.debug(f"Extracted {len(issues)} issues from {report_file}")
+            return issues
+
+        except Exception as e:
+            self.log(f"Error extracting issues from {report_file}: {e}")
+            import traceback
+            self.debug(traceback.format_exc())
+            return {}
+
+    def generate_issue_timeline(self):
+        """
+        Generate a comprehensive timeline of issues across all iterations.
+
+        This creates a markdown report showing how issues evolved through iterations,
+        which is useful for:
+        1. Understanding the review/fix lifecycle of each issue
+        2. Identifying persistent issues that weren't fully addressed
+        3. Tracking regressions or new issues introduced during fixes
+
+        Returns:
+            bool: True if the timeline was generated successfully, False otherwise
+        """
+        self.log("Generating issue timeline report...")
+
+        try:
+            # Create a timeline structure
+            timeline_content = [
+                "# Issue Resolution Timeline",
+                "",
+                f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"Branch: {self.work_branch}",
+                f"Base: {self.base_branch}",
+                f"Iterations: {self.iteration}",
+                "",
+                "## Timeline Overview",
+                "",
+                "| Issue | Priority | Location | First Found | Last Seen | Final Status |",
+                "|-------|----------|----------|-------------|-----------|--------------|",
+            ]
+
+            # Sort issues by priority and then by file path
+            sorted_issues = sorted(
+                self.issue_tracker.items(),
+                key=lambda x: (
+                    {'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}.get(x[1]['priority'], 4),
+                    x[1]['file_path'],
+                    x[1]['line_nums']
+                )
+            )
+
+            # Add each issue to the overview table
+            for issue_id, issue_data in sorted_issues:
+                first_found = min(issue_data['iterations'])
+                last_seen = max(issue_data['iterations'])
+                final_status = issue_data['status']
+
+                # Create a shortened description (first line or first 100 chars)
+                short_desc = issue_data['description'].split('\n')[0][:100]
+                if len(short_desc) < len(issue_data['description'].split('\n')[0]):
+                    short_desc += "..."
+
+                timeline_content.append(
+                    f"| {short_desc} | {issue_data['priority']} | {issue_data['file_path']}:{issue_data['line_nums']} | "
+                    f"Iter {first_found} | Iter {last_seen} | {final_status} |"
+                )
+
+            timeline_content.append("")
+            timeline_content.append("## Detailed Issue History")
+            timeline_content.append("")
+
+            # Add detailed sections for each issue
+            for issue_id, issue_data in sorted_issues:
+                issue_file = issue_data['file_path']
+                issue_lines = issue_data['line_nums']
+
+                timeline_content.append(f"### {issue_data['priority']}: {issue_file}:{issue_lines}")
+                timeline_content.append("")
+
+                # Add initial description
+                timeline_content.append(f"**Initial Report (Iteration {issue_data['iteration_found']}):**")
+                timeline_content.append("")
+                timeline_content.append("```")
+                timeline_content.append(issue_data['description'])
+                timeline_content.append("```")
+
+                # Add status timeline
+                timeline_content.append("")
+                timeline_content.append("**Status Timeline:**")
+                timeline_content.append("")
+
+                prev_status = None
+                for iter_num in range(1, self.iteration + 1):
+                    # Skip iterations where this issue wasn't mentioned
+                    if iter_num not in issue_data['iterations']:
+                        continue
+
+                    # Determine status for this iteration
+                    if iter_num == issue_data['iteration_found']:
+                        status = "Identified"
+                    elif iter_num == self.iteration:  # Last iteration
+                        status = issue_data['status']
+                    else:
+                        # For intermediate iterations, try to infer from next iteration's status
+                        next_iter = next((i for i in issue_data['iterations'] if i > iter_num), None)
+                        if next_iter:
+                            if 'Fixed' in issue_data['status']:
+                                status = "In Progress"
+                            else:
+                                status = "Pending"
+                        else:
+                            status = "Pending"
+
+                    # Only add entry if status changed
+                    if status != prev_status:
+                        timeline_content.append(f"- **Iteration {iter_num}**: {status}")
+                        prev_status = status
+
+                timeline_content.append("")
+                timeline_content.append("---")
+                timeline_content.append("")
+
+            # Add summary section
+            timeline_content.append("## Summary Statistics")
+            timeline_content.append("")
+
+            # Count issues by priority and status
+            priority_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+            status_counts = {'Fixed': 0, 'Pending': 0, 'Identified': 0, 'Regression': 0, 'Validated': 0}
+
+            for issue_data in self.issue_tracker.values():
+                # Handle any priority or status value
+                priority = issue_data['priority']
+                status = issue_data['status']
+
+                if priority not in priority_counts:
+                    priority_counts[priority] = 0
+                priority_counts[priority] += 1
+
+                if status not in status_counts:
+                    status_counts[status] = 0
+                status_counts[status] += 1
+
+            timeline_content.append("**Issues by Priority:**")
+            timeline_content.append("")
+            for priority, count in priority_counts.items():
+                if count > 0:
+                    timeline_content.append(f"- {priority}: {count}")
+
+            timeline_content.append("")
+            timeline_content.append("**Final Status:**")
+            timeline_content.append("")
+            for status, count in status_counts.items():
+                if count > 0:
+                    timeline_content.append(f"- {status}: {count}")
+
+            # Calculate fix rate
+            total_issues = len(self.issue_tracker)
+            fixed_issues = status_counts.get('Fixed', 0)
+            fix_rate = (fixed_issues / total_issues * 100) if total_issues > 0 else 0
+
+            timeline_content.append("")
+            timeline_content.append(f"**Overall Fix Rate:** {fix_rate:.1f}% ({fixed_issues}/{total_issues})")
+
+            # Write the timeline to file
+            with open(self.timeline_file, "w") as f:
+                f.write("\n".join(timeline_content))
+
+            self.log(f"Issue timeline report saved to {self.timeline_file}")
+            return True
+
+        except Exception as e:
+            self.log(f"Error generating issue timeline: {e}")
+            import traceback
+            self.debug(traceback.format_exc())
+            return False
 
     def run_reviewer(self, is_rereview=False):
         """Run the Reviewer agent."""
@@ -724,6 +1085,8 @@ IMPORTANT:
             with open(target_file, "w") as f:
                 f.write(output)
             self.log(f"{phase} report saved to {target_file}")
+
+
         except IOError as e:
             self.log(f"Error writing to {phase.lower()} file {target_file}: {e}")
             return False
@@ -746,28 +1109,8 @@ IMPORTANT:
 
         self.dev_report_file = self.output_dir / dev_report_filename  # Iteration specific
 
-        # Check required input files - we need the most recent review
-        # Use either the initial review or the re-review from a previous iteration
-        if (
-            self.iteration > 1
-            and hasattr(self, "rereview_file")
-            and self.rereview_file
-            and self.rereview_file.exists()
-        ):
-            # For iteration > 1, we should have a re-review from previous iteration
-            prev_rereview_file = self.output_dir / f"rereview_iter_{self.iteration-1}.md"
-            if prev_rereview_file.exists():
-                review_to_use = prev_rereview_file
-            else:
-                # Fall back to the initial review from the current iteration
-                review_to_use = self.review_file
-        elif self.iteration > 1:
-            # This might be an upgrade case where only review files exist from previous iterations
-            prev_review_file = self.output_dir / f"review_iter_{self.iteration-1}.md"
-            review_to_use = prev_review_file if prev_review_file.exists() else self.review_file
-        else:
-            # For iteration 1, use the initial review
-            review_to_use = self.review_file
+        # Get the appropriate review file using the helper method
+        review_to_use = self.get_appropriate_review_file(for_developer=True)
 
         if not review_to_use or not review_to_use.exists():
             self.log(f"Error: Review file ({review_to_use}) not found for Developer.")
@@ -780,6 +1123,9 @@ IMPORTANT:
         previous_validation_file = self.output_dir / f"validation_iter_{self.iteration - 1}.md"
         has_validation_feedback = self.iteration > 1 and previous_validation_file.exists()
 
+        # Store the validation file for reference
+        self.current_validation_for_dev = previous_validation_file if has_validation_feedback else None
+
         prompt = f"""
 Think hard about this task. You are Iteration #{self.iteration}.
 
@@ -789,13 +1135,13 @@ Your task is to address all CRITICAL and HIGH priority issues identified in the 
 
 Input Sources:
 1. Latest Code Review: {self.current_review_for_dev}
-{"2. Previous Failed Validation Report: " + str(previous_validation_file) if has_validation_feedback else ""}
+{"2. Previous Failed Validation Report: " + str(self.current_validation_for_dev) if self.current_validation_for_dev else ""}
 
 Your Process:
 1. Carefully analyze the latest review ({self.current_review_for_dev}).
-{"2. Study the previous failed validation report (" + str(previous_validation_file) + ") and prioritize fixing the issues IT identified." if has_validation_feedback else ""}
+{"2. Study the previous failed validation report (" + str(self.current_validation_for_dev) + ") and prioritize fixing the issues IT identified." if self.current_validation_for_dev else ""}
 3. Assess the current code state by running: git diff {self.compare_cmd}
-4. Create a systematic plan to address all CRITICAL and HIGH priority issues from the review {"paying special attention to the feedback in the validation report" if has_validation_feedback else ""}.
+4. Create a systematic plan to address all CRITICAL and HIGH priority issues from the review {"paying special attention to the feedback in the validation report" if self.current_validation_for_dev else ""}.
 5. For every library call or API you're not 100% sure about:
    • Use WebSearch to access the latest official documentation
    • Summarize key findings in Implementation Notes
@@ -861,20 +1207,20 @@ IMPORTANT:
 
         self.validation_file = self.output_dir / validation_filename  # Iteration specific
 
+        # Get the appropriate review files using the helper method
+        rereview_file = self.get_appropriate_review_file(is_rereview=True, for_validator=True)
+
         # Check required input files - validator needs the rereview (post-development review)
-        if not self.rereview_file or not self.rereview_file.exists():
-            self.log(
-                f"Error: Latest re-review file ({self.rereview_file}) not found for Validator."
-            )
+        if not rereview_file or not rereview_file.exists():
+            self.log(f"Error: Latest re-review file ({rereview_file}) not found for Validator.")
             return False, False
         if not self.dev_report_file or not self.dev_report_file.exists():
-            self.log(
-                f"Error: Latest dev report file ({self.dev_report_file}) not found for Validator."
-            )
+            self.log(f"Error: Latest dev report file ({self.dev_report_file}) not found for Validator.")
             return False, False
 
         # Also check if we have the initial review for reference
-        initial_review_exists = self.review_file and self.review_file.exists()
+        initial_review = self.get_appropriate_review_file(is_rereview=False)
+        initial_review_exists = initial_review and initial_review.exists()
 
         prompt = f"""
 Think hard about this task. You are Iteration #{self.iteration}.
@@ -883,13 +1229,14 @@ You are a quality validator ensuring code standards after development changes on
 Your task is to verify that all critical issues have been properly addressed, and no new issues were introduced.
 
 Input Sources:
-1. Latest Re-Review: {self.rereview_file} (This review was done AFTER the development attempt)
+1. Latest Re-Review: {rereview_file} (This review was done AFTER the development attempt)
 2. Latest Development Report: {self.dev_report_file}
-{f"3. Initial Review: {self.review_file} (For reference to see original issues)" if initial_review_exists else ""}
+{f"3. Initial Review: {initial_review} (For reference to see original issues)" if initial_review_exists else ""}
 
 Your Process:
-1. Carefully study both the re-review ({self.rereview_file}) and dev report ({self.dev_report_file}).
+1. Carefully study both the re-review ({rereview_file}) and dev report ({self.dev_report_file}).
 2. Examine the current code changes: git diff {self.compare_cmd}
+{f"3. Compare with the initial review ({initial_review}) to ensure ALL original issues are being addressed." if initial_review_exists else ""}
 3. Verify if EVERY CRITICAL and HIGH priority issue mentioned in the latest review has been properly addressed by the developer.
 4. Check if any NEW issues (especially CRITICAL/HIGH) were introduced during the fix process.
 5. For any library usage or API you're not 100% familiar with, FIRST look at the ai_docs/ directory, the user might have pasted documentation there. If not, use WebSearch to verify functionality and proper usage before determining if an issue is addressed correctly.
@@ -936,6 +1283,8 @@ IMPORTANT:
             with open(self.validation_file, "w") as f:
                 f.write(output)
             self.log(f"Validation report saved to {self.validation_file}")
+
+
         except IOError as e:
             self.log(f"Error writing to validation file {self.validation_file}: {e}")
             return False, False
@@ -1015,9 +1364,9 @@ Input Sources:
 Your Process:
 1. Read all final reports to gather complete context.
 2. Analyze the final code changes: git diff {self.compare_cmd}
-3. For any library or API discussions in the reports, use WebSearch to verify that the implemented solutions follow best practices and documentation.
-4. Generate a comprehensive PR description in markdown format that accurately describes the changes, especially noting any API or library updates.
-5. Prepare and execute the commands to create the PR using the GitHub CLI (gh).
+4. For any library or API discussions in the reports, use WebSearch to verify that the implemented solutions follow best practices and documentation.
+5. Generate a comprehensive PR description in markdown format that accurately describes the changes, especially noting any API or library updates.
+6. Prepare and execute the commands to create the PR using the GitHub CLI (gh).
 
 IMPORTANT: When describing library or API changes in the PR, make sure to verify the correct usage through official documentation using WebSearch. This ensures the PR accurately represents the technical changes made.
 
@@ -1094,34 +1443,38 @@ IMPORTANT:
         self.log(f"Starting agentic review loop for branch '{self.work_branch}'...")
         validation_passed = False
         final_success = False
+        continuing_after_validation_failure = False
 
         try:
             while self.iteration < self.max_iterations:
                 self.iteration += 1
                 self.log(f"\n=== Starting Iteration {self.iteration}/{self.max_iterations} ===")
 
-                # --- Step 1: Review ---
-                review_success = self.run_reviewer(is_rereview=(self.iteration > 1))
-                if not review_success:
-                    self.log(f"Review phase failed on iteration {self.iteration}. Stopping loop.")
-                    break
+                # For the first iteration, or when not continuing after validation failure,
+                # start with review
+                if self.iteration == 1 or not continuing_after_validation_failure:
+                    # --- Step 1: Initial Review ---
+                    review_success = self.run_reviewer(is_rereview=(self.iteration > 1))
+                    if not review_success:
+                        self.log(f"Review phase failed on iteration {self.iteration}. Stopping loop.")
+                        break
+                else:
+                    self.log(f"Skipping initial review as we're continuing after a validation failure")
+                    # When continuing after validation failure, the developer will use the
+                    # latest re-review and validation feedback from previous iteration
 
                 # --- Step 2: Develop ---
                 # Developer uses the latest review and potentially previous validation feedback
                 dev_success = self.run_developer()
                 if not dev_success:
-                    self.log(
-                        f"Development phase failed on iteration {self.iteration}. Stopping loop."
-                    )
+                    self.log(f"Development phase failed on iteration {self.iteration}. Stopping loop.")
                     break
 
                 # --- Step 3: Re-Review (Review the developer's changes) ---
                 # This creates a separate rereview_file, distinct from the initial review_file
                 rereview_success = self.run_reviewer(is_rereview=True)
                 if not rereview_success:
-                    self.log(
-                        f"Re-Review phase failed on iteration {self.iteration}. Stopping loop."
-                    )
+                    self.log(f"Re-Review phase failed on iteration {self.iteration}. Stopping loop.")
                     break
                 # Note: The validation step will use the report from this re-review (stored in rereview_file)
 
@@ -1129,9 +1482,7 @@ IMPORTANT:
                 # Validator uses the latest (re-review) report and the latest dev report
                 validation_success, validation_passed = self.run_validator()
                 if not validation_success:
-                    self.log(
-                        f"Validation phase failed on iteration {self.iteration}. Stopping loop."
-                    )
+                    self.log(f"Validation phase failed on iteration {self.iteration}. Stopping loop.")
                     break
 
                 # --- Check Validation Result ---
@@ -1146,8 +1497,12 @@ IMPORTANT:
                         self.log("Maximum iterations reached without passing validation.")
                         break
                     else:
+                        # Set flag to skip initial review in next iteration
+                        continuing_after_validation_failure = True
                         self.log("Continuing to next iteration with validation feedback...")
-                        # Loop continues, developer will use the failed validation report
+                        # Loop continues, developer will use the re-review and validation report
+
+            # End of workflow loop
 
             # --- Step 5: PR Creation (if validation passed) ---
             if final_success:

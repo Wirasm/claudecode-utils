@@ -141,3 +141,5 @@ dmypy.json
 # uv specific
 .uv/
 uv.lock
+
+**/.claude/settings.local.json
