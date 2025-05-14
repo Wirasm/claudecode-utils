@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A utility package for Claude code generation"
 readme = "README.md"
 requires-python = ">=3.12"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     {name = "Rasmus Widing", email = "rasmus.widing@gmail.com"}
 ]
@@ -22,21 +22,22 @@ dependencies = [
     "pygithub>=2.6.1",
 ]
 
-[tool.setuptools]
-packages = ["src", "src.utility_library", "src.utility_library.cc_review", "src.utility_library.cc_review.tests", "src.utility_library.cc_standup", "src.utility_library.cc_standup.tests"]
-
-[project.scripts]
-claudecode = "src.utility_library.cli:main"
-cc-review = "src.utility_library.cc_review.cli:main"
-standup = "src.utility_library.cc_standup.cli:main"
-
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "black>=25.1.0",
     "mypy>=1.15.0",
     "pytest>=8.3.5",
     "ruff>=0.11.9",
 ]
+
+[tool.setuptools]
+packages = ["src"]
+package-dir = {"" = "."}
+
+[project.scripts]   
+claudecode = "src.cli:app"
+cc-review = "src.utility_library.cc_review.cli:main"
+standup = "src.utility_library.cc_standup.standup_cli:main"
 
 [tool.black]
 line-length = 100

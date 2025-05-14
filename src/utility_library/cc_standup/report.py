@@ -19,10 +19,18 @@ def build_prompt(commits: List[Dict[str, str]], prs: List[Dict[str, str]]) -> st
     payload: Dict[str, Any] = {"commits": commits, "prs": prs}
 
     return f"""You are an scrum standup assistant preparing a stand-up report for **{today}**.
-Turn the JSON that follows into Markdown with three sections following excellent standup report practices:
-**Yesterday**, **Today**, **Blockers**.
+Your task is to IMMEDIATELY generate a Markdown document with three sections based on the provided JSON data:
+**Yesterday**, **Today**, **Blockers**. Do not wait for user confirmation before generating the report.
 
-JSON:
+Create a well-formatted Markdown document with the following characteristics:
+1. Use headers (##) for the main sections (Yesterday, Today, Blockers)
+2. Group related commits by topic when possible
+3. Use bullet points for individual items
+4. Highlight important achievements or milestones
+5. Keep it concise but informative
+6. DO NOT INCLUDE ANY MESSAGES ASKING FOR USER CONFIRMATION
+
+Here is the JSON data to use for generating the report:
 {json.dumps(payload, indent=2, ensure_ascii=False)}
 """
 

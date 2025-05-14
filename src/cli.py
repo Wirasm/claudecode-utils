@@ -16,5 +16,5 @@ app.add_typer(standup_cmd, name="standup", help="Generate Markdown stand-up repo
 def _root(ctx: typer.Context):
     """Show help if no sub-command supplied."""
     if ctx.invoked_subcommand is None:
-        print("[yellow]Nothing to do – choose a sub-command.[/]")
+        print("[yellow]Nothing to do - choose a sub-command.[/]")
         typer.echo(app.get_help())
