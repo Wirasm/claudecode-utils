@@ -8,7 +8,7 @@ particularly in the run_developer method.
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Add the parent directory to the path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -92,14 +92,14 @@ class TestReviewFileSelection(unittest.TestCase):
 
         # Mock path.exists to return different values for different paths
         original_exists = Path.exists
-        
+
         def mock_exists(path_obj):
             if "rereview_iter_1.md" in str(path_obj):
                 return False
             return True
-            
+
         # Apply the patch to Path.exists
-        with patch('pathlib.Path.exists', mock_exists):
+        with patch("pathlib.Path.exists", mock_exists):
             # Run a mocked version of run_developer that only tests the file selection
             with patch.object(self.loop, "run_claude", return_value="output"):
                 # Mock writing to file
@@ -121,9 +121,9 @@ class TestReviewFileSelection(unittest.TestCase):
             if "rereview_iter_1.md" in path_str or "review_iter_1.md" in path_str:
                 return False
             return True
-            
+
         # Apply the patch
-        with patch('pathlib.Path.exists', mock_exists):
+        with patch("pathlib.Path.exists", mock_exists):
             # Run a mocked version of run_developer that only tests the file selection
             with patch.object(self.loop, "run_claude", return_value="output"):
                 # Mock writing to file

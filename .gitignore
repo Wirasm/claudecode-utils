@@ -143,3 +143,6 @@ dmypy.json
 uv.lock
 
 **/.claude/settings.local.json
+
+# ruff
+.ruff_cache

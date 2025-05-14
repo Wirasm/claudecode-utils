@@ -9,15 +9,15 @@ import os
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Add the parent directory to the path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from full_review_loop.full_review_loop_safe import (
     AgenticReviewLoop,
-    validate_git_branch_name,
     validate_directory_path,
+    validate_git_branch_name,
 )
 
 

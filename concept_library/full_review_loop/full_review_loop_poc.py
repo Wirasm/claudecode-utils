@@ -13,13 +13,13 @@ This script:
 
 Usage:
     # Compare latest commit to its parent (most common use case)
-    uv run python library/full_review_loop/full_review_loop_poc.py --latest
+    uv run python concept_library/full_review_loop/full_review_loop_poc.py --latest
 
     # Compare a specific branch to main
-    uv run python library/full_review_loop/full_review_loop_poc.py --branch feature-branch
+    uv run python concept_library/full_review_loop/full_review_loop_poc.py --branch feature-branch
 
     # Compare current branch to another branch
-    uv run python library/full_review_loop/full_review_loop_poc.py --branch feature-branch --base-branch development
+    uv run python concept_library/full_review_loop/full_review_loop_poc.py --branch feature-branch --base-branch development
 
 Options:
     --latest              Compare latest commit to previous commit (HEAD vs HEAD~1)
@@ -34,13 +34,13 @@ Options:
 
 Examples:
     # Review latest commit
-    uv run python library/full_review_loop/full_review_loop_poc.py --latest --verbose
+    uv run python concept_library/full_review_loop/full_review_loop_poc.py --latest --verbose
 
     # Review feature branch compared to main
-    uv run python library/full_review_loop/full_review_loop_poc.py --branch feature-branch --verbose
+    uv run python concept_library/full_review_loop/full_review_loop_poc.py --branch feature-branch --verbose
 
     # Review with custom settings
-    uv run python library/full_review_loop/full_review_loop_poc.py --latest --max-iterations 5 --output-dir my_review --pr-title "Add configuration API"
+    uv run python concept_library/full_review_loop/full_review_loop_poc.py --latest --max-iterations 5 --output-dir my_review --pr-title "Add configuration API"
 """
 
 import argparse
@@ -189,9 +189,7 @@ class AgenticReviewLoop:
                 allowed_tools = "Bash,Grep,Read,LS,Glob,Task"
             elif role == AgentRole.DEVELOPER:
                 # Developer needs to read, analyze, and modify code
-                allowed_tools = (
-                    "Bash,Grep,Read,LS,Glob,Task,Edit,MultiEdit,Write,TodoRead,TodoWrite"
-                )
+                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,Edit,MultiEdit,Write,TodoRead,TodoWrite"
             elif role == AgentRole.VALIDATOR:
                 # Validator only needs to read and analyze
                 allowed_tools = "Bash,Grep,Read,LS,Glob,Task"
@@ -222,9 +220,7 @@ class AgenticReviewLoop:
 
             # Run Claude
             self.debug(f"Running command: {' '.join(cmd)}")
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, check=True, timeout=_timeout
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=_timeout)
 
             output = result.stdout
 
@@ -233,9 +229,7 @@ class AgenticReviewLoop:
                 self.log(f"Warning: Empty output from {role.value} agent")
                 if result.stderr:
                     self.debug(f"stderr: {result.stderr[:500]}...")
-                output = (
-                    f"# {role.value.capitalize()} Report\n\nNo content was returned from Claude."
-                )
+                output = f"# {role.value.capitalize()} Report\n\nNo content was returned from Claude."
 
             # Log execution time
             duration = time.time() - start_time
@@ -327,9 +321,7 @@ Be thorough yet constructive in your feedback.
         Returns:
             bool: Whether the development was successful
         """
-        self.log(
-            f"Starting development phase (iteration {self.iteration}/{self.max_iterations})..."
-        )
+        self.log(f"Starting development phase (iteration {self.iteration}/{self.max_iterations})...")
 
         # Check that review file exists
         if not self.review_file.exists():
@@ -487,9 +479,7 @@ Then thoroughly analyze the current state of the code to determine if ALL issues
             # Try to generate a sensible title from branch or latest commit
             if self.latest_commit:
                 try:
-                    title = subprocess.check_output(
-                        ["git", "log", "-1", "--pretty=%s"], text=True
-                    ).strip()
+                    title = subprocess.check_output(["git", "log", "-1", "--pretty=%s"], text=True).strip()
                 except subprocess.SubprocessError:
                     title = "Changes from latest commit"
             else:
@@ -630,9 +620,7 @@ Include the PR URL at the end of your report.
 
         # Check if we hit max iterations
         if self.iteration == self.max_iterations and not validation_passed:
-            self.log(
-                f"Reached maximum iterations ({self.max_iterations}) without passing validation."
-            )
+            self.log(f"Reached maximum iterations ({self.max_iterations}) without passing validation.")
 
         self.log(f"Agentic review loop completed.")
         self.log(f"Output artifacts are in: {self.output_dir}")
@@ -672,27 +660,19 @@ Examples:
         action="store_true",
         help="Compare latest commit to previous commit (HEAD vs HEAD~1)",
     )
-    comparison_group.add_argument(
-        "--branch", metavar="BRANCH", help="Branch to review (compared to base-branch)"
-    )
+    comparison_group.add_argument("--branch", metavar="BRANCH", help="Branch to review (compared to base-branch)")
 
     # Additional options
-    parser.add_argument(
-        "--base-branch", default="main", help="Base branch for comparison (default: main)"
-    )
+    parser.add_argument("--base-branch", default="main", help="Base branch for comparison (default: main)")
     parser.add_argument(
         "--max-iterations",
         type=int,
         default=3,
         help="Maximum number of improvement cycles (default: 3)",
     )
-    parser.add_argument(
-        "--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP)"
-    )
+    parser.add_argument("--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show verbose output")
-    parser.add_argument(
-        "--no-pr", action="store_true", help="Skip PR creation even if validation passes"
-    )
+    parser.add_argument("--no-pr", action="store_true", help="Skip PR creation even if validation passes")
     parser.add_argument("--pr-title", help="Custom title for PR (default: auto-generated)")
     parser.add_argument(
         "--timeout",

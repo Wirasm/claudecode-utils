@@ -16,14 +16,19 @@ authors = [
 dependencies = [
     "requests>=2.32.3",
     "filelock>=3.12.2",
+    "typer>=0.15.3",
+    "rich>=14.0.0",
+    "gitpython>=3.1.44",
+    "pygithub>=2.6.1",
 ]
 
 [tool.setuptools]
-packages = ["library", "library.cc_review", "library.cc_review.tests"]
+packages = ["src", "src.utility_library", "src.utility_library.cc_review", "src.utility_library.cc_review.tests", "src.utility_library.cc_standup", "src.utility_library.cc_standup.tests"]
 
 [project.scripts]
-claudecode = "library.cc_review.main:main"
-cc-review = "library.cc_review.main:main"
+claudecode = "src.utility_library.cli:main"
+cc-review = "src.utility_library.cc_review.cli:main"
+standup = "src.utility_library.cc_standup.cli:main"
 
 [dependency-groups]
 dev = [

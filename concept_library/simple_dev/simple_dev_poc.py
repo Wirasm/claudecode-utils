@@ -7,13 +7,13 @@ This script runs a Claude instance to implement fixes based on a code review.
 
 Usage:
     # Implement fixes from a review (default branch: development-wip)
-    uv run python library/simple_dev/simple_dev_poc.py <review_file> [--output <output_file>] [--verbose]
+    uv run python concept_library/simple_dev/simple_dev_poc.py <review_file> [--output <output_file>] [--verbose]
 
     # Implement fixes for a specific branch
-    uv run python library/simple_dev/simple_dev_poc.py <review_file> --branch <branch_name> [--output <output_file>] [--verbose]
+    uv run python concept_library/simple_dev/simple_dev_poc.py <review_file> --branch <branch_name> [--output <output_file>] [--verbose]
 
     # Implement fixes for the latest commit only
-    uv run python library/simple_dev/simple_dev_poc.py <review_file> --latest-commit [--branch <branch_name>] [--output <output_file>] [--verbose]
+    uv run python concept_library/simple_dev/simple_dev_poc.py <review_file> --latest-commit [--branch <branch_name>] [--output <output_file>] [--verbose]
 
 Arguments:
     review                  Path to the review file to implement fixes from (required)
@@ -24,17 +24,17 @@ Arguments:
 
 Examples:
     # Implement fixes from review_development-wip.md on the development-wip branch
-    uv run python library/simple_dev/simple_dev_poc.py review_development-wip.md
+    uv run python concept_library/simple_dev/simple_dev_poc.py review_development-wip.md
 
     # Implement fixes from review_latest_commit.md for the latest commit
-    uv run python library/simple_dev/simple_dev_poc.py review_latest_commit.md --latest-commit
+    uv run python concept_library/simple_dev/simple_dev_poc.py review_latest_commit.md --latest-commit
 
     # Implement fixes for a feature branch with custom output file
-    uv run python library/simple_dev/simple_dev_poc.py reviews/feature_review.md --branch feature-branch --output reports/feature_fixes.md --verbose
+    uv run python concept_library/simple_dev/simple_dev_poc.py reviews/feature_review.md --branch feature-branch --output reports/feature_fixes.md --verbose
 
     # Full development cycle example (review then fix)
-    uv run python library/simple_review/simple_review_poc.py development-wip --latest-commit --output review_latest.md
-    uv run python library/simple_dev/simple_dev_poc.py review_latest.md --latest-commit --output dev_report_latest.md
+    uv run python concept_library/simple_review/simple_review_poc.py development-wip --latest-commit --output review_latest.md
+    uv run python concept_library/simple_dev/simple_dev_poc.py review_latest.md --latest-commit --output dev_report_latest.md
 
 Notes:
     - The development process follows a review/fix workflow
@@ -230,9 +230,7 @@ def main():
             output_file = f"tmp/dev_report_{args.branch}.md"
 
     # Run the development process
-    success = run_development(
-        args.review, output_file, args.branch, args.verbose, args.latest_commit
-    )
+    success = run_development(args.review, output_file, args.branch, args.verbose, args.latest_commit)
 
     sys.exit(0 if success else 1)
 

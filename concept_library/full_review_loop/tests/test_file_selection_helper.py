@@ -5,7 +5,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Add parent directory to path to import module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -22,7 +22,7 @@ class TestFileSelectionHelper(unittest.TestCase):
         self.loop = MagicMock(spec=AgenticReviewLoop)
         self.loop.output_dir = Path("/tmp/test_output")
         self.loop.iteration = 1
-        
+
         # Add the method we're testing to the mock instance
         # This is required because we can't create a real instance easily
         self.loop.get_appropriate_review_file = AgenticReviewLoop.get_appropriate_review_file.__get__(

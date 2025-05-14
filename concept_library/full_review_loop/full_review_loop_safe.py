@@ -23,13 +23,13 @@ Key Features:
 
 Usage:
     # Review latest commit in a new temp branch (default behavior)
-    uv run python library/full_review_loop/full_review_loop_safe.py --latest
+    uv run python concept_library/full_review_loop/full_review_loop_safe.py --latest
 
     # Review a specific branch in a new temp branch, using a worktree
-    uv run python library/full_review_loop/full_review_loop_safe.py --branch feature-branch --worktree
+    uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --worktree
 
     # Specify base branch and keep temporary branch after run
-    uv run python library/full_review_loop/full_review_loop_safe.py --branch feature-branch --base-branch develop --keep-branch
+    uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --base-branch develop --keep-branch
 
 Options:
     --latest              Compare latest commit to previous commit (HEAD vs HEAD~1)
@@ -46,13 +46,13 @@ Options:
 
 Examples:
     # Review latest commit in temp branch, verbose output
-    uv run python library/full_review_loop/full_review_loop_safe.py --latest --verbose
+    uv run python concept_library/full_review_loop/full_review_loop_safe.py --latest --verbose
 
     # Review feature-branch vs main in temp branch + worktree, keep branch
-    uv run python library/full_review_loop/full_review_loop_safe.py --branch feature-branch --worktree --keep-branch --verbose
+    uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --worktree --keep-branch --verbose
 
     # Review latest commit, 5 iterations, custom output dir
-    uv run python library/full_review_loop/full_review_loop_safe.py --latest --max-iterations 5 --output-dir my_review
+    uv run python concept_library/full_review_loop/full_review_loop_safe.py --latest --max-iterations 5 --output-dir my_review
 """
 
 import argparse
@@ -194,13 +194,9 @@ class AgenticReviewLoop:
 
         # Validate branch names before assigning
         if branch and not validate_git_branch_name(branch):
-            sys.exit(
-                f"Error: Invalid source branch name '{branch}'. Branch names must follow Git naming rules."
-            )
+            sys.exit(f"Error: Invalid source branch name '{branch}'. Branch names must follow Git naming rules.")
         if not validate_git_branch_name(base_branch):
-            sys.exit(
-                f"Error: Invalid base branch name '{base_branch}'. Branch names must follow Git naming rules."
-            )
+            sys.exit(f"Error: Invalid base branch name '{base_branch}'. Branch names must follow Git naming rules.")
 
         self.source_branch = branch  # The branch to start FROM
         self.base_branch = base_branch  # The branch to compare AGAINST and PR INTO
@@ -246,9 +242,7 @@ class AgenticReviewLoop:
         self.current_validation_for_dev = None  # Tracks which validation file developer should use
 
         self.log(f"Initialized Agentic Review Loop [session: {self.session_id}]")
-        self.log(
-            f"Source Reference: {'Latest commit' if latest_commit else f'Branch {self.source_branch}'}"
-        )
+        self.log(f"Source Reference: {'Latest commit' if latest_commit else f'Branch {self.source_branch}'}")
         self.log(f"Base Branch: {self.base_branch}")
         self.log(f"Temporary Work Branch: {self.work_branch}")
         self.log(f"Using Worktree: {self.use_worktree} ({self.worktree_path})")
@@ -271,9 +265,7 @@ class AgenticReviewLoop:
         # Ensure effective_cwd actually exists
         effective_cwd_path = Path(effective_cwd)
         if not effective_cwd_path.exists():
-            sys.exit(
-                f"Error: Directory '{effective_cwd}' does not exist for git command execution."
-            )
+            sys.exit(f"Error: Directory '{effective_cwd}' does not exist for git command execution.")
         if not effective_cwd_path.is_dir():
             sys.exit(f"Error: Path '{effective_cwd}' is not a directory for git command execution.")
 
@@ -303,9 +295,7 @@ class AgenticReviewLoop:
 
     def _get_current_branch(self):
         """Get the name of the current git branch."""
-        return self._run_git_command(
-            ["rev-parse", "--abbrev-ref", "HEAD"], capture=True, cwd=self.repo_root
-        )
+        return self._run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], capture=True, cwd=self.repo_root)
 
     def _get_repo_root(self):
         """Get the root directory of the git repository."""
@@ -349,9 +339,7 @@ class AgenticReviewLoop:
 
         # 3. Create the Branch
         # Check if branch already exists
-        if self._run_git_command(
-            ["show-ref", "--verify", "--quiet", f"refs/heads/{self.work_branch}"], check=False
-        ):
+        if self._run_git_command(["show-ref", "--verify", "--quiet", f"refs/heads/{self.work_branch}"], check=False):
             self.log(f"Warning: Work branch '{self.work_branch}' already exists")
             # Delete the existing branch forcefully if it's not checked out
             current_branch = self._get_current_branch()
@@ -361,9 +349,7 @@ class AgenticReviewLoop:
                 # Now create the branch
                 self._run_git_command(["branch", self.work_branch, starting_point])
             else:
-                sys.exit(
-                    f"Error: Cannot delete work branch '{self.work_branch}' because it is currently checked out."
-                )
+                sys.exit(f"Error: Cannot delete work branch '{self.work_branch}' because it is currently checked out.")
         else:
             # Branch doesn't exist, create it
             self._run_git_command(["branch", self.work_branch, starting_point])
@@ -374,13 +360,9 @@ class AgenticReviewLoop:
             self.log(f"Setting up worktree at: {self.worktree_path}")
 
             # First check if the worktree path is already registered
-            worktree_list = self._run_git_command(
-                ["worktree", "list", "--porcelain"], capture=True, cwd=self.repo_root
-            )
+            worktree_list = self._run_git_command(["worktree", "list", "--porcelain"], capture=True, cwd=self.repo_root)
             if str(self.worktree_path) in worktree_list:
-                self.log(
-                    f"Worktree already exists at {self.worktree_path}, attempting to remove..."
-                )
+                self.log(f"Worktree already exists at {self.worktree_path}, attempting to remove...")
 
             # Remove existing worktree if present (e.g., from failed previous run)
             remove_result = self._run_git_command(
@@ -402,9 +384,7 @@ class AgenticReviewLoop:
 
                 # If still fails, try manual directory removal if the directory exists
                 if remove_result is None and self.worktree_path.exists():
-                    self.log(
-                        f"Git worktree remove failed, trying manual directory removal of {self.worktree_path}"
-                    )
+                    self.log(f"Git worktree remove failed, trying manual directory removal of {self.worktree_path}")
                     try:
                         shutil.rmtree(self.worktree_path)
                     except OSError as e:
@@ -458,16 +438,12 @@ class AgenticReviewLoop:
                 try:
                     shutil.rmtree(self.worktree_path)
                 except OSError as e:
-                    self.log(
-                        f"Warning: Could not remove worktree directory {self.worktree_path}: {e}"
-                    )
+                    self.log(f"Warning: Could not remove worktree directory {self.worktree_path}: {e}")
 
         # 3. Delete Temporary Branch (if not keeping)
         if not self.keep_branch:
             self.log(f"Deleting temporary branch '{self.work_branch}'")
-            self._run_git_command(
-                ["branch", "-D", self.work_branch], check=False, cwd=self.repo_root
-            )
+            self._run_git_command(["branch", "-D", self.work_branch], check=False, cwd=self.repo_root)
         else:
             self.log(f"Keeping temporary branch '{self.work_branch}' as requested.")
 
@@ -482,8 +458,7 @@ class AgenticReviewLoop:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp} AgenticLoop:DEBUG] {message}")
 
-    def get_appropriate_review_file(self, is_rereview=False, for_developer=False,
-                                   for_validator=False, required=False):
+    def get_appropriate_review_file(self, is_rereview=False, for_developer=False, for_validator=False, required=False):
         """
         Get the appropriate review file based on context and availability.
 
@@ -513,8 +488,8 @@ class AgenticReviewLoop:
         elif for_developer:
             # For iteration > 1, try to use the re-review from previous iteration
             if self.iteration > 1:
-                prev_rereview_file = self.output_dir / f"rereview_iter_{self.iteration-1}.md"
-                prev_review_file = self.output_dir / f"review_iter_{self.iteration-1}.md"
+                prev_rereview_file = self.output_dir / f"rereview_iter_{self.iteration - 1}.md"
+                prev_review_file = self.output_dir / f"review_iter_{self.iteration - 1}.md"
 
                 # Check in priority order:
                 # 1. Previous iteration's re-review (best option)
@@ -558,13 +533,19 @@ class AgenticReviewLoop:
         # Default tools per role
         if allowed_tools is None:
             if role == AgentRole.REVIEWER:
-                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
+                allowed_tools = (
+                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
+                )
             elif role == AgentRole.DEVELOPER:
                 allowed_tools = "Bash,Grep,Read,LS,Glob,Task,Edit,MultiEdit,Write,TodoRead,TodoWrite,WebSearch,WebFetch"  # Edit + web access + agent delegation
             elif role == AgentRole.VALIDATOR:
-                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
+                allowed_tools = (
+                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
+                )
             elif role == AgentRole.PR_MANAGER:
-                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Bash for gh + web access + agent delegation
+                allowed_tools = (
+                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Bash for gh + web access + agent delegation
+                )
 
         prompt_file_path = None  # Keep track of path for cleanup
         prompt_content = ""  # To store the prompt read from file
@@ -584,7 +565,7 @@ class AgenticReviewLoop:
             fd, prompt_file_path = tempfile.mkstemp(suffix=".txt", dir=self.output_dir)
             try:
                 # Write to the file using the file descriptor directly to avoid TOCTOU vulnerability
-                with os.fdopen(fd, 'w') as f:
+                with os.fdopen(fd, "w") as f:
                     f.write(prompt)
                 self.debug(f"Wrote prompt to temporary file: {prompt_file_path}")
 
@@ -639,9 +620,7 @@ class AgenticReviewLoop:
 
             # Make sure the working directory exists
             if not os.path.exists(self.cwd_for_tasks) or not os.path.isdir(self.cwd_for_tasks):
-                raise ValueError(
-                    f"Invalid working directory for Claude command: {self.cwd_for_tasks}"
-                )
+                raise ValueError(f"Invalid working directory for Claude command: {self.cwd_for_tasks}")
 
             result = subprocess.run(
                 cmd,
@@ -728,17 +707,19 @@ class AgenticReviewLoop:
             issue_section = issue_section_match.group(1)
 
             # Extract issues by priority sections
-            priority_sections = re.findall(r"### (CRITICAL|HIGH|MEDIUM|LOW).*?\n(.*?)(?=\n###|\Z)",
-                                           issue_section, re.DOTALL)
+            priority_sections = re.findall(
+                r"### (CRITICAL|HIGH|MEDIUM|LOW).*?\n(.*?)(?=\n###|\Z)", issue_section, re.DOTALL
+            )
 
             if not priority_sections:
                 # Try alternative format where issues are listed with priority prefix
-                issue_items = re.findall(r"(?:^|\n)- (CRITICAL|HIGH|MEDIUM|LOW):(.*?)(?=\n-|\Z)",
-                                         issue_section, re.DOTALL)
+                issue_items = re.findall(
+                    r"(?:^|\n)- (CRITICAL|HIGH|MEDIUM|LOW):(.*?)(?=\n-|\Z)", issue_section, re.DOTALL
+                )
 
                 for priority, issue_text in issue_items:
                     # Extract file path and line numbers
-                    file_line_match = re.search(r'([^:\s]+):(\d+(?:-\d+)?)', issue_text)
+                    file_line_match = re.search(r"([^:\s]+):(\d+(?:-\d+)?)", issue_text)
                     if file_line_match:
                         file_path = file_line_match.group(1)
                         line_nums = file_line_match.group(2)
@@ -748,27 +729,30 @@ class AgenticReviewLoop:
 
                         # Store issue details
                         issues[issue_id] = {
-                            'priority': priority,
-                            'file_path': file_path,
-                            'line_nums': line_nums,
-                            'description': issue_text.strip(),
-                            'status': 'Identified' if report_type == 'review' else
-                                      'Pending' if report_type == 'rereview' else 'Validated',
-                            'iteration_found': iteration,
-                            'iterations': [iteration],
+                            "priority": priority,
+                            "file_path": file_path,
+                            "line_nums": line_nums,
+                            "description": issue_text.strip(),
+                            "status": "Identified"
+                            if report_type == "review"
+                            else "Pending"
+                            if report_type == "rereview"
+                            else "Validated",
+                            "iteration_found": iteration,
+                            "iterations": [iteration],
                         }
             else:
                 # Process structured priority sections
                 for priority, section_content in priority_sections:
                     # Find individual issues within the priority section
-                    issue_items = re.split(r'\n(?=- )', section_content.strip())
+                    issue_items = re.split(r"\n(?=- )", section_content.strip())
 
                     for item in issue_items:
                         if not item.strip():
                             continue
 
                         # Extract file path and line numbers
-                        file_line_match = re.search(r'([^:\s]+):(\d+(?:-\d+)?)', item)
+                        file_line_match = re.search(r"([^:\s]+):(\d+(?:-\d+)?)", item)
                         if file_line_match:
                             file_path = file_line_match.group(1)
                             line_nums = file_line_match.group(2)
@@ -778,14 +762,17 @@ class AgenticReviewLoop:
 
                             # Store issue details
                             issues[issue_id] = {
-                                'priority': priority,
-                                'file_path': file_path,
-                                'line_nums': line_nums,
-                                'description': item.strip(),
-                                'status': 'Identified' if report_type == 'review' else
-                                          'Pending' if report_type == 'rereview' else 'Validated',
-                                'iteration_found': iteration,
-                                'iterations': [iteration],
+                                "priority": priority,
+                                "file_path": file_path,
+                                "line_nums": line_nums,
+                                "description": item.strip(),
+                                "status": "Identified"
+                                if report_type == "review"
+                                else "Pending"
+                                if report_type == "rereview"
+                                else "Validated",
+                                "iteration_found": iteration,
+                                "iterations": [iteration],
                             }
 
             # Update the global issue tracker
@@ -793,23 +780,26 @@ class AgenticReviewLoop:
                 if issue_id in self.issue_tracker:
                     # Update existing issue
                     existing_issue = self.issue_tracker[issue_id]
-                    if iteration not in existing_issue['iterations']:
-                        existing_issue['iterations'].append(iteration)
+                    if iteration not in existing_issue["iterations"]:
+                        existing_issue["iterations"].append(iteration)
 
                     # Update status based on report type
-                    if report_type == 'review':
-                        existing_issue['status'] = 'Identified'
-                    elif report_type == 'rereview':
-                        if existing_issue['status'] == 'Fixed':
-                            existing_issue['status'] = 'Regression'
+                    if report_type == "review":
+                        existing_issue["status"] = "Identified"
+                    elif report_type == "rereview":
+                        if existing_issue["status"] == "Fixed":
+                            existing_issue["status"] = "Regression"
                         else:
-                            existing_issue['status'] = 'Pending'
-                    elif report_type == 'validation':
+                            existing_issue["status"] = "Pending"
+                    elif report_type == "validation":
                         # Check if the issue is mentioned in validation as fixed
-                        if 'fixed' in issue_data['description'].lower() or 'addressed' in issue_data['description'].lower():
-                            existing_issue['status'] = 'Fixed'
+                        if (
+                            "fixed" in issue_data["description"].lower()
+                            or "addressed" in issue_data["description"].lower()
+                        ):
+                            existing_issue["status"] = "Fixed"
                         else:
-                            existing_issue['status'] = 'Pending'
+                            existing_issue["status"] = "Pending"
                 else:
                     # Add new issue to tracker
                     self.issue_tracker[issue_id] = issue_data
@@ -820,6 +810,7 @@ class AgenticReviewLoop:
         except Exception as e:
             self.log(f"Error extracting issues from {report_file}: {e}")
             import traceback
+
             self.debug(traceback.format_exc())
             return {}
 
@@ -858,21 +849,21 @@ class AgenticReviewLoop:
             sorted_issues = sorted(
                 self.issue_tracker.items(),
                 key=lambda x: (
-                    {'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}.get(x[1]['priority'], 4),
-                    x[1]['file_path'],
-                    x[1]['line_nums']
-                )
+                    {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}.get(x[1]["priority"], 4),
+                    x[1]["file_path"],
+                    x[1]["line_nums"],
+                ),
             )
 
             # Add each issue to the overview table
             for issue_id, issue_data in sorted_issues:
-                first_found = min(issue_data['iterations'])
-                last_seen = max(issue_data['iterations'])
-                final_status = issue_data['status']
+                first_found = min(issue_data["iterations"])
+                last_seen = max(issue_data["iterations"])
+                final_status = issue_data["status"]
 
                 # Create a shortened description (first line or first 100 chars)
-                short_desc = issue_data['description'].split('\n')[0][:100]
-                if len(short_desc) < len(issue_data['description'].split('\n')[0]):
+                short_desc = issue_data["description"].split("\n")[0][:100]
+                if len(short_desc) < len(issue_data["description"].split("\n")[0]):
                     short_desc += "..."
 
                 timeline_content.append(
@@ -886,8 +877,8 @@ class AgenticReviewLoop:
 
             # Add detailed sections for each issue
             for issue_id, issue_data in sorted_issues:
-                issue_file = issue_data['file_path']
-                issue_lines = issue_data['line_nums']
+                issue_file = issue_data["file_path"]
+                issue_lines = issue_data["line_nums"]
 
                 timeline_content.append(f"### {issue_data['priority']}: {issue_file}:{issue_lines}")
                 timeline_content.append("")
@@ -896,7 +887,7 @@ class AgenticReviewLoop:
                 timeline_content.append(f"**Initial Report (Iteration {issue_data['iteration_found']}):**")
                 timeline_content.append("")
                 timeline_content.append("```")
-                timeline_content.append(issue_data['description'])
+                timeline_content.append(issue_data["description"])
                 timeline_content.append("```")
 
                 # Add status timeline
@@ -907,19 +898,19 @@ class AgenticReviewLoop:
                 prev_status = None
                 for iter_num in range(1, self.iteration + 1):
                     # Skip iterations where this issue wasn't mentioned
-                    if iter_num not in issue_data['iterations']:
+                    if iter_num not in issue_data["iterations"]:
                         continue
 
                     # Determine status for this iteration
-                    if iter_num == issue_data['iteration_found']:
+                    if iter_num == issue_data["iteration_found"]:
                         status = "Identified"
                     elif iter_num == self.iteration:  # Last iteration
-                        status = issue_data['status']
+                        status = issue_data["status"]
                     else:
                         # For intermediate iterations, try to infer from next iteration's status
-                        next_iter = next((i for i in issue_data['iterations'] if i > iter_num), None)
+                        next_iter = next((i for i in issue_data["iterations"] if i > iter_num), None)
                         if next_iter:
-                            if 'Fixed' in issue_data['status']:
+                            if "Fixed" in issue_data["status"]:
                                 status = "In Progress"
                             else:
                                 status = "Pending"
@@ -940,13 +931,13 @@ class AgenticReviewLoop:
             timeline_content.append("")
 
             # Count issues by priority and status
-            priority_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
-            status_counts = {'Fixed': 0, 'Pending': 0, 'Identified': 0, 'Regression': 0, 'Validated': 0}
+            priority_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+            status_counts = {"Fixed": 0, "Pending": 0, "Identified": 0, "Regression": 0, "Validated": 0}
 
             for issue_data in self.issue_tracker.values():
                 # Handle any priority or status value
-                priority = issue_data['priority']
-                status = issue_data['status']
+                priority = issue_data["priority"]
+                status = issue_data["status"]
 
                 if priority not in priority_counts:
                     priority_counts[priority] = 0
@@ -971,7 +962,7 @@ class AgenticReviewLoop:
 
             # Calculate fix rate
             total_issues = len(self.issue_tracker)
-            fixed_issues = status_counts.get('Fixed', 0)
+            fixed_issues = status_counts.get("Fixed", 0)
             fix_rate = (fixed_issues / total_issues * 100) if total_issues > 0 else 0
 
             timeline_content.append("")
@@ -987,6 +978,7 @@ class AgenticReviewLoop:
         except Exception as e:
             self.log(f"Error generating issue timeline: {e}")
             import traceback
+
             self.debug(traceback.format_exc())
             return False
 
@@ -1085,7 +1077,6 @@ IMPORTANT:
             with open(target_file, "w") as f:
                 f.write(output)
             self.log(f"{phase} report saved to {target_file}")
-
 
         except IOError as e:
             self.log(f"Error writing to {phase.lower()} file {target_file}: {e}")
@@ -1284,7 +1275,6 @@ IMPORTANT:
                 f.write(output)
             self.log(f"Validation report saved to {self.validation_file}")
 
-
         except IOError as e:
             self.log(f"Error writing to validation file {self.validation_file}: {e}")
             return False, False
@@ -1323,9 +1313,7 @@ IMPORTANT:
 
         # Check required input files from the final successful iteration
         if not self.validation_file or not self.validation_file.exists():
-            self.log(
-                f"Error: Final validation file ({self.validation_file}) not found for PR Manager."
-            )
+            self.log(f"Error: Final validation file ({self.validation_file}) not found for PR Manager.")
             return False
 
         # Find the reports from the last iteration
@@ -1342,11 +1330,7 @@ IMPORTANT:
         title = self.pr_title
         if not title:
             # Use the temporary branch name for a reasonable default
-            clean_branch = (
-                self.work_branch.replace("-agentic-" + self.session_id, "")
-                .replace("-", " ")
-                .title()
-            )
+            clean_branch = self.work_branch.replace("-agentic-" + self.session_id, "").replace("-", " ").title()
             title = f"Agentic Loop Changes for {clean_branch} (Iter {self.iteration})"
 
         prompt = f"""
@@ -1433,9 +1417,7 @@ IMPORTANT:
             self.log(f"PR creation reported successfully: {pr_url}")
             return True
         else:
-            self.log(
-                "PR URL not found in the report. PR creation might have failed. Check the PR report."
-            )
+            self.log("PR URL not found in the report. PR creation might have failed. Check the PR report.")
             return False
 
     def run(self):
@@ -1555,9 +1537,7 @@ Examples:
     )
     # Source selection (mutually exclusive)
     source_group = parser.add_mutually_exclusive_group(required=True)
-    source_group.add_argument(
-        "--latest", action="store_true", help="Source from the latest commit (HEAD)"
-    )
+    source_group.add_argument("--latest", action="store_true", help="Source from the latest commit (HEAD)")
     source_group.add_argument(
         "--branch", metavar="BRANCH", help="Source branch to create the temporary work branch from"
     )
@@ -1584,13 +1564,9 @@ Examples:
         default=3,
         help="Maximum number of improvement cycles (default: 3)",
     )
-    parser.add_argument(
-        "--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP_UUID)"
-    )
+    parser.add_argument("--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP_UUID)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show verbose debug output")
-    parser.add_argument(
-        "--no-pr", action="store_true", help="Skip PR creation even if validation passes"
-    )
+    parser.add_argument("--no-pr", action="store_true", help="Skip PR creation even if validation passes")
     parser.add_argument("--pr-title", help="Custom title for PR (default: auto-generated)")
     parser.add_argument(
         "--timeout",

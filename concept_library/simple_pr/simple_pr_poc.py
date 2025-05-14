@@ -7,13 +7,13 @@ This script runs a Claude instance to create or update a pull request based on v
 
 Usage:
     # Create PR with default options based on validation report
-    uv run python library/simple_pr/simple_pr_poc.py <validation_file> [--title <pr_title>] [--output <output_file>] [--verbose]
+    uv run python concept_library/simple_pr/simple_pr_poc.py <validation_file> [--title <pr_title>] [--output <output_file>] [--verbose]
 
     # Create PR for a specific branch
-    uv run python library/simple_pr/simple_pr_poc.py <validation_file> --branch <branch_name> --base <base_branch> [--title <pr_title>] [--output <output_file>] [--verbose]
+    uv run python concept_library/simple_pr/simple_pr_poc.py <validation_file> --branch <branch_name> --base <base_branch> [--title <pr_title>] [--output <output_file>] [--verbose]
 
     # Only generate PR description without actually creating PR
-    uv run python library/simple_pr/simple_pr_poc.py <validation_file> --dry-run [--output <output_file>] [--verbose]
+    uv run python concept_library/simple_pr/simple_pr_poc.py <validation_file> --dry-run [--output <output_file>] [--verbose]
 
 Arguments:
     validation_file        Path to the validation report file confirming changes are ready (required)
@@ -26,19 +26,19 @@ Arguments:
 
 Examples:
     # Create a PR based on validation report
-    uv run python library/simple_pr/simple_pr_poc.py tmp/validation.md --title "Add PipedriveSettings configuration class"
+    uv run python concept_library/simple_pr/simple_pr_poc.py tmp/validation.md --title "Add PipedriveSettings configuration class"
 
     # Create a PR for a specific branch into main
-    uv run python library/simple_pr/simple_pr_poc.py tmp/validation.md --branch feature-branch --base main --verbose
+    uv run python concept_library/simple_pr/simple_pr_poc.py tmp/validation.md --branch feature-branch --base main --verbose
 
     # Generate PR description without creating PR
-    uv run python library/simple_pr/simple_pr_poc.py tmp/validation.md --dry-run --output tmp/pr_description.md
+    uv run python concept_library/simple_pr/simple_pr_poc.py tmp/validation.md --dry-run --output tmp/pr_description.md
 
     # Complete workflow example (review, develop, validate, create PR)
-    uv run python library/simple_review/simple_review_poc.py development-wip --output tmp/review.md
-    uv run python library/simple_dev/simple_dev_poc.py tmp/review.md --output tmp/dev_report.md
-    uv run python library/simple_validator/simple_validator_poc.py tmp/review.md tmp/dev_report.md --output tmp/validation.md
-    uv run python library/simple_pr/simple_pr_poc.py tmp/validation.md --title "Implement configuration management"
+    uv run python concept_library/simple_review/simple_review_poc.py development-wip --output tmp/review.md
+    uv run python concept_library/simple_dev/simple_dev_poc.py tmp/review.md --output tmp/dev_report.md
+    uv run python concept_library/simple_validator/simple_validator_poc.py tmp/review.md tmp/dev_report.md --output tmp/validation.md
+    uv run python concept_library/simple_pr/simple_pr_poc.py tmp/validation.md --title "Implement configuration management"
 
 Notes:
     - Only proceeds if validation report shows PASSED status
@@ -265,19 +265,11 @@ def main():
         default="development-wip",
         help="Git branch containing changes (default: development-wip)",
     )
-    parser.add_argument(
-        "--base", default="main", help="Base branch to merge changes into (default: main)"
-    )
-    parser.add_argument(
-        "--title", help="Title for the pull request (default: generated from branch name)"
-    )
-    parser.add_argument(
-        "--output", help="Output file path for the PR report (default: tmp/pr_<branch>.md)"
-    )
+    parser.add_argument("--base", default="main", help="Base branch to merge changes into (default: main)")
+    parser.add_argument("--title", help="Title for the pull request (default: generated from branch name)")
+    parser.add_argument("--output", help="Output file path for the PR report (default: tmp/pr_<branch>.md)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Generate PR description without creating the PR"
-    )
+    parser.add_argument("--dry-run", action="store_true", help="Generate PR description without creating the PR")
 
     args = parser.parse_args()
 
