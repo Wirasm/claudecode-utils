@@ -23,15 +23,15 @@ console = Console()
 def main():
     """Main entry point for the standup command."""
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Generate a stand-up report from git commits and GitHub PRs."
-    )
+    parser = argparse.ArgumentParser(description="Generate a stand-up report from git commits and GitHub PRs.")
     parser.add_argument(
-        "--since", "-s",
+        "--since",
+        "-s",
         help="ISO datetime or natural language recognised by git (default: yesterday 09:00)",
     )
     parser.add_argument(
-        "--out", "-o",
+        "--out",
+        "-o",
         help="Output .md path (default: standup_<date>.md)",
         type=pathlib.Path,
     )
@@ -40,10 +40,10 @@ def main():
         help="Open file afterwards",
         action="store_true",
     )
-    
+
     # Parse known args to handle unknown arguments gracefully
     args, _ = parser.parse_known_args()
-    
+
     # Resolve date range
     if args.since is None:
         since_dt = (dt.datetime.now() - dt.timedelta(days=1)).replace(hour=9, minute=0)
@@ -51,9 +51,11 @@ def main():
         try:
             since_dt = dt.datetime.fromisoformat(args.since)
         except ValueError:
-            console.print(f"[red]Error: Invalid date format '{args.since}'. Use ISO format (YYYY-MM-DDTHH:MM:SS).[/red]")
+            console.print(
+                f"[red]Error: Invalid date format '{args.since}'. Use ISO format (YYYY-MM-DDTHH:MM:SS).[/red]"
+            )
             sys.exit(1)
-    
+
     since_iso = since_dt.isoformat()
 
     # Collect activity
@@ -70,18 +72,18 @@ def main():
 
     # Create output file path
     outfile = args.out or pathlib.Path(f"standup_{dt.date.today()}.md")
-    
+
     # Let the user know we're generating the report
     console.print("[yellow]Generating stand-up report...[/yellow]")
-    
+
     # Prompt Claude
     provider = get_provider()  # only Claude for now
     prompt = build_prompt(commits, prs)
     markdown = provider.generate(prompt)
-    
+
     # Save the file directly
     outfile.write_text(markdown, encoding="utf-8")
-    
+
     # Show preview and confirmation
     preview(markdown)
     console.print(f"[green]Report saved to {outfile}[/green]")

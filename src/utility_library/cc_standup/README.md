@@ -20,6 +20,8 @@ The cc_standup tool helps developers generate daily stand-up reports by:
 
 ## Installation
 
+Clone this repository
+
 ### Using uv (recommended)
 
 ```bash
@@ -33,6 +35,12 @@ uv pip install -e .
 
 # Install with development dependencies
 uv pip install -e ".[dev]"
+
+# Install as a UV tool to use on any directory
+uv tool install -e /path/to/repo/root
+
+# Run in any git repository
+standup
 ```
 
 ### Using pip
