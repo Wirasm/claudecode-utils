@@ -69,24 +69,32 @@ jobs:
             # Only analyze commit types if we have a valid comparison point
             if [ -n "$COMPARE_POINT" ]; then
               # Get recent commits since the comparison point
-              RECENT_COMMITS=$(git log --pretty=format:"%h %s" $COMPARE_POINT..HEAD 2>/dev/null | head -n 20)
+              RECENT_COMMITS=$(git log --pretty=format:"%h %s" "$COMPARE_POINT"..HEAD 2>/dev/null | head -n 20 || echo "")
               
               # Count commit types to determine release type
-              FEATURES=$(echo "$RECENT_COMMITS" | grep -c -E "feat(\(.*\))?:|add(\(.*\))?:" || echo "0")
-              FIXES=$(echo "$RECENT_COMMITS" | grep -c -E "fix(\(.*\))?:|bug(\(.*\))?:" || echo "0")
-              BREAKING=$(echo "$RECENT_COMMITS" | grep -c -E "BREAKING CHANGE|!:" || echo "0")
+              FEATURES=0
+              FIXES=0
+              BREAKING=0
+              
+              if [ -n "$RECENT_COMMITS" ]; then
+                FEATURES=$(echo "$RECENT_COMMITS" | grep -c -E "feat(\(.*\))?:|add(\(.*\))?:" || echo "0")
+                FIXES=$(echo "$RECENT_COMMITS" | grep -c -E "fix(\(.*\))?:|bug(\(.*\))?:" || echo "0")
+                BREAKING=$(echo "$RECENT_COMMITS" | grep -c -E "BREAKING CHANGE|!:" || echo "0")
+              fi
               
               # Determine release type
               if [ "$BREAKING" -gt 0 ]; then
                 RELEASE_TYPE="major"
               elif [ "$FEATURES" -gt 0 ]; then
                 RELEASE_TYPE="minor"
-              else
+              elif [ "$FIXES" -gt 0 ]; then
                 RELEASE_TYPE="patch"
+              else
+                RELEASE_TYPE="patch"  # Default to patch if no recognized commits
               fi
               
               # Check if any significant changes since last release
-              HAS_CHANGES=$(git log $COMPARE_POINT..HEAD --oneline 2>/dev/null || echo "")
+              HAS_CHANGES=$(git log "$COMPARE_POINT"..HEAD --oneline 2>/dev/null || echo "")
               if [ -z "$HAS_CHANGES" ]; then
                 echo "significant_changes=false" >> $GITHUB_OUTPUT
               else
@@ -112,7 +120,7 @@ jobs:
           COMPARE_POINT="${{ steps.git_data.outputs.compare_point }}"
           
           # Run Claude in headless mode with focused prompt and limited scope
-          OUTPUT=$(claude -p "You are tasked with updating the changelog and bumping the version of this project.
+          PROMPT="You are tasked with updating the changelog and bumping the version of this project.
           Be concise and focus only on the required tasks.
 
           Release Type: $RELEASE_TYPE (determined from commit analysis)
@@ -135,22 +143,31 @@ jobs:
             \"new_version\": \"x.y.z\",
             \"changes_made\": true or false,
             \"files_modified\": [\"list\", \"of\", \"files\", \"modified\"]
-          }" \
-          --allowedTools \
-          "Read" \
-          "Write" \
-          "Bash(git log:$COMPARE_POINT..HEAD)" \
-          "Bash(git diff:$COMPARE_POINT..HEAD)" \
-          "Bash(git log:*)" \
-          "Bash(git diff:*)" \
-          --output-format json)
+          }"
           
-          # Extract results from JSON output
-          CHANGES_MADE=$(echo "$OUTPUT" | jq -r '.messages[-1].content.text' | grep -o '"changes_made":\s*true' || echo "")
-          NEW_VERSION=$(echo "$OUTPUT" | jq -r '.messages[-1].content.text' | grep -o '"new_version":\s*"[^"]*"' | cut -d'"' -f4 || echo "")
+          # Run Claude and capture output as plain text
+          OUTPUT=$(claude -p "$PROMPT" \
+            --allowedTools \
+            "Read" \
+            "Write" \
+            "Bash(git log:*)" \
+            "Bash(git diff:*)" \
+            --output-format text)
+          
+          # Extract JSON object from output
+          JSON_RESPONSE=$(echo "$OUTPUT" | grep -o '{.*}' || echo '{"changes_made": false}')
+          
+          # Extract key information from JSON response
+          CHANGES_MADE=$(echo "$JSON_RESPONSE" | grep -o '"changes_made":\s*true' || echo "")
+          NEW_VERSION=$(echo "$JSON_RESPONSE" | grep -o '"new_version":\s*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "")
+          
+          # Log the response for debugging
+          echo "Claude response received"
+          echo "JSON extracted: $JSON_RESPONSE"
           
           if [[ -n "$CHANGES_MADE" ]]; then
             echo "Changes were made to changelog and version"
+            echo "New version: $NEW_VERSION"
             echo "changes=true" >> $GITHUB_OUTPUT
             echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           else
@@ -167,6 +184,8 @@ jobs:
           git commit -m "chore: Update changelog and bump version to ${{ steps.update.outputs.new_version }} [skip ci]"
           git push
           
-          # Create a version tag if changes were made
-          git tag v${{ steps.update.outputs.new_version }}
-          git push origin v${{ steps.update.outputs.new_version }}
+          # Create a version tag if changes were made and new_version is not empty
+          if [ -n "${{ steps.update.outputs.new_version }}" ]; then
+            git tag v${{ steps.update.outputs.new_version }}
+            git push origin v${{ steps.update.outputs.new_version }}
+          fi
