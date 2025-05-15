@@ -4,37 +4,37 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   update-changelog-and-version:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for changelog generation
-      
+          fetch-depth: 0 # Fetch all history for changelog generation
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      
+          node-version: "22"
+
       - name: Install Claude Code CLI
         run: |
           npm install -g @anthropic-ai/claude-code
-      
+
       - name: Configure Claude API key
         run: |
           mkdir -p ~/.config/anthropic
@@ -45,70 +45,37 @@ jobs:
         run: |
           # Run Claude in headless mode to analyze repo and update changelog
           PROMPT="You are tasked with updating the changelog and bumping the version of this project.
-          
+
           Please follow these steps:
-          
-          1. Analyze the git repository history to understand the recent changes:
-             - Use git commands to view recent commits
+
+          1. Analyze the git commit history to understand the changes thats being pushed to main:
+             - Use git commands to view the recent commits
              - Determine if these changes are features, bug fixes, or breaking changes
              - Based on semantic versioning principles, decide whether to bump the major, minor, or patch version
-          
+
           2. Check if CHANGELOG.md exists. If not, create it with proper headers following the Keep a Changelog format.
-          
+
           3. Read the current version from pyproject.toml and determine the new version:
              - If you found breaking changes, bump the major version
              - If you found new features but no breaking changes, bump the minor version
              - If you found only bug fixes, documentation updates, or other minor changes, bump the patch version
-          
+
           4. Update the version in:
              - pyproject.toml
-             - src/__init__.py if it exists
-          
+             - then MIRROR the version in src/__init__.py 
+
           5. Add a new section to the changelog with:
              - The new version number and today's date
              - A summary of changes, categorized by type (Features, Bug Fixes, Documentation, etc.)
-          
-          6. Write all changes back to the respective files.
-          
-          The context window already has information about the repository from checkout. Explore the repository first to understand its structure before making changes.
-          
-          Please respond with a JSON object containing:
-          {
-            \"old_version\": \"x.y.z\",
-            \"new_version\": \"x.y.z\",
-            \"changes_made\": true or false,
-            \"files_modified\": [\"list\", \"of\", \"files\", \"modified\"]
-          }"
-          
-          # Run Claude with unrestricted Bash access and plain text output
+
+          # Run Claude with unrestricted Bash access and plain json output
           OUTPUT=$(claude -p "$PROMPT" \
             --allowedTools \
             "Read" \
             "Write" \
             "Bash" \
-            --output-format text)
-          
-          # Extract JSON object from output
-          JSON_RESPONSE=$(echo "$OUTPUT" | grep -o '{.*}' || echo '{"changes_made": false}')
-          
-          # Log the response for debugging
-          echo "Claude response received"
-          echo "JSON extracted: $JSON_RESPONSE"
-          
-          # Extract key information from JSON response
-          CHANGES_MADE=$(echo "$JSON_RESPONSE" | grep -o '"changes_made":\s*true' || echo "")
-          NEW_VERSION=$(echo "$JSON_RESPONSE" | grep -o '"new_version":\s*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "")
-          
-          if [[ -n "$CHANGES_MADE" ]]; then
-            echo "Changes were made to changelog and version"
-            echo "New version: $NEW_VERSION"
-            echo "changes=true" >> $GITHUB_OUTPUT
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "No changes were needed"
-            echo "changes=false" >> $GITHUB_OUTPUT
-          fi
-      
+            --output-format json)
+
       - name: Commit changes
         if: steps.update.outputs.changes == 'true'
         run: |
@@ -117,7 +84,7 @@ jobs:
           git add CHANGELOG.md pyproject.toml src/__init__.py || true
           git commit -m "chore: Update changelog and bump version to ${{ steps.update.outputs.new_version }} [skip ci]"
           git push
-          
+
           # Create a version tag if changes were made and new_version is not empty
           if [ -n "${{ steps.update.outputs.new_version }}" ]; then
             git tag v${{ steps.update.outputs.new_version }}
