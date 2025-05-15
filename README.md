@@ -187,6 +187,15 @@ uv run black .
 uv run ruff check .
 ```
 
+## Working with Claude Code
+
+For the best experience working with this repository using Claude Code:
+
+1. Start a new session with the `/project:context-prime` command to help Claude understand the repository structure
+2. Refer to CLAUDE.md for specific instructions on working with this codebase
+
+The `/project:context-prime` command will help Claude analyze the repository structure, understand the purpose of each directory, and provide better assistance based on this understanding.
+
 ## Requirements
 
 - Python 3.8+

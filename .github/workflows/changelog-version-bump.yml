@@ -1,0 +1,144 @@
+name: Update Changelog and Version
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  update-changelog-and-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+      
+      - name: Install Claude Code CLI
+        run: |
+          curl -sSL https://github.com/anthropics/claude-cli/releases/latest/download/claude-cli_Linux_x86_64.tar.gz | tar xz
+          sudo mv claude /usr/local/bin/
+          chmod +x /usr/local/bin/claude
+      
+      - name: Configure Claude API key
+        run: |
+          mkdir -p ~/.config/anthropic
+          echo '{"api_key": "${{ secrets.ANTHROPIC_API_KEY }}"}' > ~/.config/anthropic/config.json
+
+      - name: Prepare Git data
+        id: git_data
+        run: |
+          # Get the last version tag or commit
+          LAST_VERSION_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          # If no tag exists, get the first commit hash
+          if [ -z "$LAST_VERSION_TAG" ]; then
+            COMPARE_POINT=$(git rev-list --max-parents=0 HEAD)
+          else
+            COMPARE_POINT=$LAST_VERSION_TAG
+          fi
+          
+          # Get recent commits since the comparison point
+          RECENT_COMMITS=$(git log --pretty=format:"%h %s" $COMPARE_POINT..HEAD | head -n 20)
+          
+          # Count commit types to determine release type
+          FEATURES=$(echo "$RECENT_COMMITS" | grep -c -E "feat(\(.*\))?:|add(\(.*\))?:")
+          FIXES=$(echo "$RECENT_COMMITS" | grep -c -E "fix(\(.*\))?:|bug(\(.*\))?:")
+          BREAKING=$(echo "$RECENT_COMMITS" | grep -c -E "BREAKING CHANGE|!:")
+          
+          # Determine release type
+          if [ $BREAKING -gt 0 ]; then
+            RELEASE_TYPE="major"
+          elif [ $FEATURES -gt 0 ]; then
+            RELEASE_TYPE="minor"
+          else
+            RELEASE_TYPE="patch"
+          fi
+          
+          echo "compare_point=$COMPARE_POINT" >> $GITHUB_OUTPUT
+          echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
+          
+          # Check if any significant changes since last release
+          if [ -z "$(git log $COMPARE_POINT..HEAD --oneline)" ]; then
+            echo "significant_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "significant_changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Update Changelog and Bump Version
+        id: update
+        if: steps.git_data.outputs.significant_changes == 'true'
+        run: |
+          # Get determined release type
+          RELEASE_TYPE="${{ steps.git_data.outputs.release_type }}"
+          COMPARE_POINT="${{ steps.git_data.outputs.compare_point }}"
+          
+          # Run Claude in headless mode with focused prompt and limited scope
+          OUTPUT=$(claude -p "You are tasked with updating the changelog and bumping the version of this project.
+          Be concise and focus only on the required tasks.
+
+          Release Type: $RELEASE_TYPE (determined from commit analysis)
+          Compare Point: $COMPARE_POINT
+
+          Please follow these steps:
+          1. Check if CHANGELOG.md exists. If not, create it with proper headers following the Keep a Changelog format.
+          2. Read the current version from pyproject.toml.
+          3. Bump the $RELEASE_TYPE version number (e.g., for minor: 0.1.0 -> 0.2.0).
+          4. Update the version in pyproject.toml.
+          5. Update the version in src/__init__.py if it exists.
+          6. Analyze only the commits since $COMPARE_POINT.
+          7. Categorize the commits by type (Features, Bug Fixes, Documentation, etc.) - focus only on meaningful changes.
+          8. Add a new section to the changelog with the new version, today's date, and categorized commits.
+          9. Write the changes back to the respective files.
+
+          Please respond with a JSON object containing:
+          {
+            \"old_version\": \"x.y.z\",
+            \"new_version\": \"x.y.z\",
+            \"changes_made\": true or false,
+            \"files_modified\": [\"list\", \"of\", \"files\", \"modified\"]
+          }" \
+          --allowedTools \
+          "Read" \
+          "Write" \
+          "Bash(git log:$COMPARE_POINT..HEAD)" \
+          "Bash(git diff:$COMPARE_POINT..HEAD)" \
+          --output-format json)
+          
+          # Extract results from JSON output
+          CHANGES_MADE=$(echo "$OUTPUT" | jq -r '.messages[-1].content.text' | grep -o '"changes_made":\s*true' || echo "")
+          NEW_VERSION=$(echo "$OUTPUT" | jq -r '.messages[-1].content.text' | grep -o '"new_version":\s*"[^"]*"' | cut -d'"' -f4 || echo "")
+          
+          if [[ -n "$CHANGES_MADE" ]]; then
+            echo "Changes were made to changelog and version"
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "No changes were needed"
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit changes
+        if: steps.update.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add CHANGELOG.md pyproject.toml src/__init__.py || true
+          git commit -m "chore: Update changelog and bump version to ${{ steps.update.outputs.new_version }} [skip ci]"
+          git push
+          
+          # Create a version tag if changes were made
+          git tag v${{ steps.update.outputs.new_version }}
+          git push origin v${{ steps.update.outputs.new_version }}
