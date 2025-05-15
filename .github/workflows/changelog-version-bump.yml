@@ -4,139 +4,74 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   update-changelog-and-version:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history for changelog generation
-
+          fetch-depth: 0  # Fetch all history for changelog generation
+      
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
-
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-
+          node-version: '22'
+      
       - name: Install Claude Code CLI
         run: |
           npm install -g @anthropic-ai/claude-code
-
+      
       - name: Configure Claude API key
         run: |
           mkdir -p ~/.config/anthropic
           echo '{"api_key": "${{ secrets.ANTHROPIC_API_KEY }}"}' > ~/.config/anthropic/config.json
 
-      - name: Prepare Git data
-        id: git_data
-        run: |
-          # Set default values
-          RELEASE_TYPE="minor"
-          COMPARE_POINT=""
-
-          # Check if repository has commits
-          if git rev-parse HEAD >/dev/null 2>&1; then
-            # Try to get the last version tag
-            LAST_VERSION_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            
-            # If no tag exists, use the initial commit
-            if [ -z "$LAST_VERSION_TAG" ]; then
-              echo "No tags found, using first commit as comparison point"
-              FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD 2>/dev/null || echo "")
-              if [ -n "$FIRST_COMMIT" ]; then
-                COMPARE_POINT=$FIRST_COMMIT
-              else
-                # No commits found, use empty string
-                COMPARE_POINT=""
-              fi
-            else
-              COMPARE_POINT=$LAST_VERSION_TAG
-            fi
-            
-            # Only analyze commit types if we have a valid comparison point
-            if [ -n "$COMPARE_POINT" ]; then
-              # Get recent commits since the comparison point
-              RECENT_COMMITS=$(git log --pretty=format:"%h %s" "$COMPARE_POINT"..HEAD 2>/dev/null | head -n 20 || echo "")
-              
-              # Count commit types to determine release type
-              FEATURES=0
-              FIXES=0
-              BREAKING=0
-              
-              if [ -n "$RECENT_COMMITS" ]; then
-                FEATURES=$(echo "$RECENT_COMMITS" | grep -c -E "feat(\(.*\))?:|add(\(.*\))?:" || echo "0")
-                FIXES=$(echo "$RECENT_COMMITS" | grep -c -E "fix(\(.*\))?:|bug(\(.*\))?:" || echo "0")
-                BREAKING=$(echo "$RECENT_COMMITS" | grep -c -E "BREAKING CHANGE|!:" || echo "0")
-              fi
-              
-              # Determine release type
-              if [ "$BREAKING" -gt 0 ]; then
-                RELEASE_TYPE="major"
-              elif [ "$FEATURES" -gt 0 ]; then
-                RELEASE_TYPE="minor"
-              elif [ "$FIXES" -gt 0 ]; then
-                RELEASE_TYPE="patch"
-              else
-                RELEASE_TYPE="patch"  # Default to patch if no recognized commits
-              fi
-              
-              # Check if any significant changes since last release
-              HAS_CHANGES=$(git log "$COMPARE_POINT"..HEAD --oneline 2>/dev/null || echo "")
-              if [ -z "$HAS_CHANGES" ]; then
-                echo "significant_changes=false" >> $GITHUB_OUTPUT
-              else
-                echo "significant_changes=true" >> $GITHUB_OUTPUT
-              fi
-            else
-              echo "significant_changes=true" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "No commits found, using default values"
-            echo "significant_changes=true" >> $GITHUB_OUTPUT
-          fi
-
-          echo "compare_point=$COMPARE_POINT" >> $GITHUB_OUTPUT
-          echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
-
       - name: Update Changelog and Bump Version
         id: update
-        if: steps.git_data.outputs.significant_changes == 'true'
         run: |
-          # Get determined release type
-          RELEASE_TYPE="${{ steps.git_data.outputs.release_type }}"
-          COMPARE_POINT="${{ steps.git_data.outputs.compare_point }}"
-
-          # Run Claude in headless mode with focused prompt and limited scope
+          # Run Claude in headless mode to analyze repo and update changelog
           PROMPT="You are tasked with updating the changelog and bumping the version of this project.
-          Be concise and focus only on the required tasks.
-
-          Release Type: $RELEASE_TYPE (determined from commit analysis)
-          Compare Point: $COMPARE_POINT
-
+          
           Please follow these steps:
-          1. Check if CHANGELOG.md exists. If not, create it with proper headers following the Keep a Changelog format.
-          2. Read the current version from pyproject.toml.
-          3. Bump the $RELEASE_TYPE version number (e.g., for minor: 0.1.0 -> 0.2.0).
-          4. Update the version in pyproject.toml.
-          5. Update the version in src/__init__.py if it exists.
-          6. Analyze the commits since $COMPARE_POINT. If COMPARE_POINT is empty, use all commits.
-          7. Categorize the commits by type (Features, Bug Fixes, Documentation, etc.) - focus only on meaningful changes.
-          8. Add a new section to the changelog with the new version, today's date, and categorized commits.
-          9. Write the changes back to the respective files.
-
+          
+          1. Analyze the git repository history to understand the recent changes:
+             - Use git commands to view recent commits
+             - Determine if these changes are features, bug fixes, or breaking changes
+             - Based on semantic versioning principles, decide whether to bump the major, minor, or patch version
+          
+          2. Check if CHANGELOG.md exists. If not, create it with proper headers following the Keep a Changelog format.
+          
+          3. Read the current version from pyproject.toml and determine the new version:
+             - If you found breaking changes, bump the major version
+             - If you found new features but no breaking changes, bump the minor version
+             - If you found only bug fixes, documentation updates, or other minor changes, bump the patch version
+          
+          4. Update the version in:
+             - pyproject.toml
+             - src/__init__.py if it exists
+          
+          5. Add a new section to the changelog with:
+             - The new version number and today's date
+             - A summary of changes, categorized by type (Features, Bug Fixes, Documentation, etc.)
+          
+          6. Write all changes back to the respective files.
+          
+          The context window already has information about the repository from checkout. Explore the repository first to understand its structure before making changes.
+          
           Please respond with a JSON object containing:
           {
             \"old_version\": \"x.y.z\",
@@ -144,26 +79,26 @@ jobs:
             \"changes_made\": true or false,
             \"files_modified\": [\"list\", \"of\", \"files\", \"modified\"]
           }"
-
-          # Run Claude and capture output as plain text
+          
+          # Run Claude with unrestricted Bash access and plain text output
           OUTPUT=$(claude -p "$PROMPT" \
             --allowedTools \
             "Read" \
             "Write" \
             "Bash" \
             --output-format text)
-
+          
           # Extract JSON object from output
           JSON_RESPONSE=$(echo "$OUTPUT" | grep -o '{.*}' || echo '{"changes_made": false}')
-
-          # Extract key information from JSON response
-          CHANGES_MADE=$(echo "$JSON_RESPONSE" | grep -o '"changes_made":\s*true' || echo "")
-          NEW_VERSION=$(echo "$JSON_RESPONSE" | grep -o '"new_version":\s*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "")
-
+          
           # Log the response for debugging
           echo "Claude response received"
           echo "JSON extracted: $JSON_RESPONSE"
-
+          
+          # Extract key information from JSON response
+          CHANGES_MADE=$(echo "$JSON_RESPONSE" | grep -o '"changes_made":\s*true' || echo "")
+          NEW_VERSION=$(echo "$JSON_RESPONSE" | grep -o '"new_version":\s*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "")
+          
           if [[ -n "$CHANGES_MADE" ]]; then
             echo "Changes were made to changelog and version"
             echo "New version: $NEW_VERSION"
@@ -173,7 +108,7 @@ jobs:
             echo "No changes were needed"
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
-
+      
       - name: Commit changes
         if: steps.update.outputs.changes == 'true'
         run: |
@@ -182,7 +117,7 @@ jobs:
           git add CHANGELOG.md pyproject.toml src/__init__.py || true
           git commit -m "chore: Update changelog and bump version to ${{ steps.update.outputs.new_version }} [skip ci]"
           git push
-
+          
           # Create a version tag if changes were made and new_version is not empty
           if [ -n "${{ steps.update.outputs.new_version }}" ]; then
             git tag v${{ steps.update.outputs.new_version }}
