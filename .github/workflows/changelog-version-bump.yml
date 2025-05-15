@@ -125,4 +125,4 @@ jobs:
           if [ -n "${{ steps.update.outputs.new_version }}" ]; then
             git tag v${{ steps.update.outputs.new_version }}
             git push origin v${{ steps.update.outputs.new_version }}
-          fi¨
+          fi
