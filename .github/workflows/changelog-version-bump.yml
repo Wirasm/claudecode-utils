@@ -4,37 +4,37 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   update-changelog-and-version:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for changelog generation
-      
+          fetch-depth: 0 # Fetch all history for changelog generation
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      
+          node-version: "22"
+
       - name: Install Claude Code CLI
         run: |
           npm install -g @anthropic-ai/claude-code
-      
+
       - name: Configure Claude API key
         run: |
           mkdir -p ~/.config/anthropic
@@ -46,7 +46,7 @@ jobs:
           # Set default values
           RELEASE_TYPE="minor"
           COMPARE_POINT=""
-          
+
           # Check if repository has commits
           if git rev-parse HEAD >/dev/null 2>&1; then
             # Try to get the last version tag
@@ -107,10 +107,10 @@ jobs:
             echo "No commits found, using default values"
             echo "significant_changes=true" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "compare_point=$COMPARE_POINT" >> $GITHUB_OUTPUT
           echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
-      
+
       - name: Update Changelog and Bump Version
         id: update
         if: steps.git_data.outputs.significant_changes == 'true'
@@ -118,7 +118,7 @@ jobs:
           # Get determined release type
           RELEASE_TYPE="${{ steps.git_data.outputs.release_type }}"
           COMPARE_POINT="${{ steps.git_data.outputs.compare_point }}"
-          
+
           # Run Claude in headless mode with focused prompt and limited scope
           PROMPT="You are tasked with updating the changelog and bumping the version of this project.
           Be concise and focus only on the required tasks.
@@ -144,27 +144,26 @@ jobs:
             \"changes_made\": true or false,
             \"files_modified\": [\"list\", \"of\", \"files\", \"modified\"]
           }"
-          
+
           # Run Claude and capture output as plain text
           OUTPUT=$(claude -p "$PROMPT" \
             --allowedTools \
             "Read" \
             "Write" \
-            "Bash(git log:*)" \
-            "Bash(git diff:*)" \
+            "Bash" \
             --output-format text)
-          
+
           # Extract JSON object from output
           JSON_RESPONSE=$(echo "$OUTPUT" | grep -o '{.*}' || echo '{"changes_made": false}')
-          
+
           # Extract key information from JSON response
           CHANGES_MADE=$(echo "$JSON_RESPONSE" | grep -o '"changes_made":\s*true' || echo "")
           NEW_VERSION=$(echo "$JSON_RESPONSE" | grep -o '"new_version":\s*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "")
-          
+
           # Log the response for debugging
           echo "Claude response received"
           echo "JSON extracted: $JSON_RESPONSE"
-          
+
           if [[ -n "$CHANGES_MADE" ]]; then
             echo "Changes were made to changelog and version"
             echo "New version: $NEW_VERSION"
@@ -174,7 +173,7 @@ jobs:
             echo "No changes were needed"
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Commit changes
         if: steps.update.outputs.changes == 'true'
         run: |
@@ -183,7 +182,7 @@ jobs:
           git add CHANGELOG.md pyproject.toml src/__init__.py || true
           git commit -m "chore: Update changelog and bump version to ${{ steps.update.outputs.new_version }} [skip ci]"
           git push
-          
+
           # Create a version tag if changes were made and new_version is not empty
           if [ -n "${{ steps.update.outputs.new_version }}" ]; then
             git tag v${{ steps.update.outputs.new_version }}
