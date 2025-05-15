@@ -76,9 +76,19 @@ jobs:
 
           7. Commit your changes to this branch with a descriptive commit message
 
-          8. Create a pull request to merge these changes into the main branch with:
-             - Title: 'Update changelog and bump version to X.Y.Z'
-             - Body that includes a summary of the changes
+          8. Create a pull request using the GitHub CLI:
+             - Use 'gh pr create' to create the PR
+             - Set the title to 'Update changelog and bump version to X.Y.Z'
+             - Include a summary of changes in the PR description
+             - Add an appropriate label if available
+             - IMPORTANT: DO NOT JUST PROVIDE THE URL or SUGGEST MANUAL CREATION - YOU MUST USE 'gh pr create' TO AUTOMATICALLY CREATE THE PR
 
-          9. Finally, print the URL of the created PR or a message indicating no changes were needed." \
+          9. Finally, print the URL of the created PR or a message indicating no changes were needed.
+          
+          Note that GitHub CLI (gh) is already authenticated with appropriate permissions in this environment, so you can use it directly.
+          To create a PR, use a command like:
+          
+          gh pr create --title \"Update changelog and bump version to X.Y.Z\" --body \"## Summary\\n- Key changes...\" --base main --head your-branch-name
+          
+          This will automatically create the PR and return its URL." \
             --allowedTools "Read" "Write" "Bash" "Bash(git:*)" "Bash(gh:*)"
