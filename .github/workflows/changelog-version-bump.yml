@@ -43,42 +43,65 @@ jobs:
       - name: Prepare Git data
         id: git_data
         run: |
-          # Get the last version tag or commit
-          LAST_VERSION_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # Set default values
+          RELEASE_TYPE="minor"
+          COMPARE_POINT=""
           
-          # If no tag exists, get the first commit hash
-          if [ -z "$LAST_VERSION_TAG" ]; then
-            COMPARE_POINT=$(git rev-list --max-parents=0 HEAD)
+          # Check if repository has commits
+          if git rev-parse HEAD >/dev/null 2>&1; then
+            # Try to get the last version tag
+            LAST_VERSION_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            
+            # If no tag exists, use the initial commit
+            if [ -z "$LAST_VERSION_TAG" ]; then
+              echo "No tags found, using first commit as comparison point"
+              FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD 2>/dev/null || echo "")
+              if [ -n "$FIRST_COMMIT" ]; then
+                COMPARE_POINT=$FIRST_COMMIT
+              else
+                # No commits found, use empty string
+                COMPARE_POINT=""
+              fi
+            else
+              COMPARE_POINT=$LAST_VERSION_TAG
+            fi
+            
+            # Only analyze commit types if we have a valid comparison point
+            if [ -n "$COMPARE_POINT" ]; then
+              # Get recent commits since the comparison point
+              RECENT_COMMITS=$(git log --pretty=format:"%h %s" $COMPARE_POINT..HEAD 2>/dev/null | head -n 20)
+              
+              # Count commit types to determine release type
+              FEATURES=$(echo "$RECENT_COMMITS" | grep -c -E "feat(\(.*\))?:|add(\(.*\))?:" || echo "0")
+              FIXES=$(echo "$RECENT_COMMITS" | grep -c -E "fix(\(.*\))?:|bug(\(.*\))?:" || echo "0")
+              BREAKING=$(echo "$RECENT_COMMITS" | grep -c -E "BREAKING CHANGE|!:" || echo "0")
+              
+              # Determine release type
+              if [ "$BREAKING" -gt 0 ]; then
+                RELEASE_TYPE="major"
+              elif [ "$FEATURES" -gt 0 ]; then
+                RELEASE_TYPE="minor"
+              else
+                RELEASE_TYPE="patch"
+              fi
+              
+              # Check if any significant changes since last release
+              HAS_CHANGES=$(git log $COMPARE_POINT..HEAD --oneline 2>/dev/null || echo "")
+              if [ -z "$HAS_CHANGES" ]; then
+                echo "significant_changes=false" >> $GITHUB_OUTPUT
+              else
+                echo "significant_changes=true" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "significant_changes=true" >> $GITHUB_OUTPUT
+            fi
           else
-            COMPARE_POINT=$LAST_VERSION_TAG
-          fi
-          
-          # Get recent commits since the comparison point
-          RECENT_COMMITS=$(git log --pretty=format:"%h %s" $COMPARE_POINT..HEAD | head -n 20)
-          
-          # Count commit types to determine release type
-          FEATURES=$(echo "$RECENT_COMMITS" | grep -c -E "feat(\(.*\))?:|add(\(.*\))?:")
-          FIXES=$(echo "$RECENT_COMMITS" | grep -c -E "fix(\(.*\))?:|bug(\(.*\))?:")
-          BREAKING=$(echo "$RECENT_COMMITS" | grep -c -E "BREAKING CHANGE|!:")
-          
-          # Determine release type
-          if [ $BREAKING -gt 0 ]; then
-            RELEASE_TYPE="major"
-          elif [ $FEATURES -gt 0 ]; then
-            RELEASE_TYPE="minor"
-          else
-            RELEASE_TYPE="patch"
+            echo "No commits found, using default values"
+            echo "significant_changes=true" >> $GITHUB_OUTPUT
           fi
           
           echo "compare_point=$COMPARE_POINT" >> $GITHUB_OUTPUT
           echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
-          
-          # Check if any significant changes since last release
-          if [ -z "$(git log $COMPARE_POINT..HEAD --oneline)" ]; then
-            echo "significant_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "significant_changes=true" >> $GITHUB_OUTPUT
-          fi
       
       - name: Update Changelog and Bump Version
         id: update
@@ -101,7 +124,7 @@ jobs:
           3. Bump the $RELEASE_TYPE version number (e.g., for minor: 0.1.0 -> 0.2.0).
           4. Update the version in pyproject.toml.
           5. Update the version in src/__init__.py if it exists.
-          6. Analyze only the commits since $COMPARE_POINT.
+          6. Analyze the commits since $COMPARE_POINT. If COMPARE_POINT is empty, use all commits.
           7. Categorize the commits by type (Features, Bug Fixes, Documentation, etc.) - focus only on meaningful changes.
           8. Add a new section to the changelog with the new version, today's date, and categorized commits.
           9. Write the changes back to the respective files.
@@ -118,6 +141,8 @@ jobs:
           "Write" \
           "Bash(git log:$COMPARE_POINT..HEAD)" \
           "Bash(git diff:$COMPARE_POINT..HEAD)" \
+          "Bash(git log:*)" \
+          "Bash(git diff:*)" \
           --output-format json)
           
           # Extract results from JSON output
