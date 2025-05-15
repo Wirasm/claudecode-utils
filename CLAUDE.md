@@ -12,6 +12,65 @@ Dependency Inversion: High-level modules should not depend on low-level modules.
 
 Open/Closed Principle: Software entities should be open for extension but closed for modification. Design your systems so that new functionality can be added with minimal changes to existing code.
 
+KEEP early versions of new concepts in the concept_library/ directory very light and simple.
+we add complexity step by step and only if needed.
+
+Minimal claude code wrappers with 0 to minimal validation.
+
+Example:
+
+```bash
+claude -p "make a hello.js script that prints hello" --allowedTools "Write" "Edit"
+```
+
+```python
+#!/usr/bin/env -S uv run --script
+
+import subprocess
+
+prompt = """
+
+GIT checkout a NEW branch.
+
+CREATE src/cc_todo/todo.py: a zero library CLI todo app with basic CRUD.
+
+THEN GIT stage, commit and SWITCH back to main.
+
+"""
+
+command = ["claude", "-p", prompt, "--allowedTools", "Edit", "Bash", "Write"]
+
+process = subprocess.run(command, check=True)
+
+print(f"Claude process exited with output: {process.stdout}")
+```
+
+Claude code tools:
+Tools available to Claude
+Claude Code has access to a set of powerful tools that help it understand and modify your codebase:
+
+| Tool         | Description                                          | Permission Required |
+| ------------ | ---------------------------------------------------- | ------------------- |
+| Agent        | Runs a sub-agent to handle complex, multi-step tasks | No                  |
+| Bash         | Executes shell commands in your environment          | Yes                 |
+| Glob         | Finds files based on pattern matching                | No                  |
+| Grep         | Searches for patterns in file contents               | No                  |
+| LS           | Lists files and directories                          | No                  |
+| Read         | Reads the contents of files                          | No                  |
+| Edit         | Makes targeted edits to specific files               | Yes                 |
+| MultiEdit    | Makes targeted edits to multiple files               | Yes                 |
+| Write        | Creates or overwrites files                          | Yes                 |
+| NotebookEdit | Modifies Jupyter notebook cells                      | Yes                 |
+| NotebookRead | Reads and displays Jupyter notebook contents         | No                  |
+| WebFetch     | Fetches content from a specified URL                 | Yes                 |
+| WebSearch    | Searches the web for information                     | Yes                 |
+| TodoRead     | Reads todo files                                     | No                  |
+| TodoWrite    | Writes to todo files                                 | Yes                 |
+
+Permission rules can be configured using /allowed-tools or in permission settings.
+
+So as you can see we can get claude code to do almost anything just using natural language and explicit prompting.
+
 ## Core Commands
 
 ### Environment Setup
@@ -115,16 +174,20 @@ The claudecode-utility is a modular library for code review and development usin
 The architecture follows a pipeline approach with these main components:
 
 1. **Simple Review**: Code review tool generating feedback for git branches or commits
+
    - `simple_review_poc.py`: Proof-of-concept implementation
    - `simple_review.py`: Enhanced implementation with config options
 
 2. **Simple Developer**: Implements fixes based on review feedback
+
    - Prioritizes critical and high-priority issues identified in reviews
 
 3. **Simple Validator**: Validates that fixes properly address review issues
+
    - Generates validation reports with PASS/FAIL determinations
 
 4. **Simple PR**: Creates pull requests based on validated changes
+
    - Generates comprehensive PR descriptions from development reports
 
 5. **Full Review Loop**: Orchestrates complete workflow with multiple Claude instances
@@ -132,6 +195,7 @@ The architecture follows a pipeline approach with these main components:
    - Implements iterative improvement cycles: Review → Develop → Re-Review → Validate
 
 Key architectural principles:
+
 - Each component is designed to function independently
 - Components communicate through structured markdown reports
 - Safety features include temporary branch creation and worktree isolation
@@ -144,6 +208,7 @@ The PRP Flow is a sophisticated agentic engineering workflow for implementing co
 - **Key Concept**: "Over-specifying what to build while under-specifying the context is why so many AI-driven coding attempts stall at 80%. A Product Requirement Prompt (PRP) fixes that by fusing the disciplined scope of a traditional Product Requirements Document (PRD) with the 'context-is-king' mindset of modern prompt engineering."
 
 - **Structure**:
+
   - **Context**: Precise file paths, library versions, code snippets
   - **Implementation Details**: Clear guidance on how to build the feature
   - **Validation Gates**: Deterministic checks for quality control

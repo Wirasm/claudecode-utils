@@ -1,4 +1,10 @@
-Please read through the key files in this repository to understand its structure and purpose. This will help you provide better assistance for this specific codebase.
+Please read through the key files in this repository to understand its structure and purpose.
+
+This repository is a concept library for building Claude Code CLI utilities.
+We explore whats possible with claude code in the concept_library/ directory.
+building minimal wrappers with 0 to minimal validation.
+
+improve step by step, and if we like the concept in the concept_library/ directory, we move it to the src/ directory and build it into the main CLI.
 
 Follow these steps:
 
@@ -12,11 +18,10 @@ Follow these steps:
 4. Review CLAUDE.md for specific guidelines on working with this codebase
 
 After analyzing these files, provide a summary of:
+
 - The repository's purpose and design philosophy
 - The key concepts being explored in concept_library/
 - The purpose of each directory within the repository
 - How the src/ directory implements these concepts
 - How these components work together
 - What tasks I might be working on based on recent commits
-
-Please be concise and specific to this codebase in your response. Focus on understanding that this is a testing ground for concepts that may eventually be implemented in the main CLI utility. The transition from concept to implementation follows specific patterns that should be maintained when working on this code.
