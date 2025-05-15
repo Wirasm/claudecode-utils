@@ -1,3 +1,453 @@
+Claude Code
+Claude Code overview
+Learn about Claude Code, an agentic coding tool made by Anthropic. Currently in beta as a research preview.
+
+Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster through natural language commands. By integrating directly with your development environment, Claude Code streamlines your workflow without requiring additional servers or complex setup.
+
+npm install -g @anthropic-ai/claude-code
+Claude Code’s key capabilities include:
+
+Editing files and fixing bugs across your codebase
+Answering questions about your code’s architecture and logic
+Executing and fixing tests, linting, and other commands
+Searching through git history, resolving merge conflicts, and creating commits and PRs
+Works with Amazon Bedrock and Google Vertex AI for enterprise deployments
+Research preview
+
+Code is in beta as a research preview. We’re gathering developer feedback on AI collaboration preferences, which workflows benefit most from AI assistance, and how to improve the agent experience.
+
+This early version will evolve based on user feedback. We plan to enhance tool execution reliability, support for long-running commands, terminal rendering, and Claude’s self-knowledge of its capabilities in the coming weeks.
+
+Report bugs directly with the /bug command or through our GitHub repository.
+
+​
+Why Claude Code?
+Claude Code operates directly in your terminal, understanding your project context and taking real actions. No need to manually add files to context - Claude will explore your codebase as needed. Claude Code uses claude-3-7-sonnet-20250219 by default.
+
+​
+Enterprise integration
+Claude Code seamlessly integrates with enterprise AI platforms. You can connect to Amazon Bedrock or Google Vertex AI for secure, compliant deployments that meet your organization’s requirements.
+
+​
+Security and privacy by design
+Your code’s security is paramount. Claude Code’s architecture ensures:
+
+Direct API connection: Your queries go straight to Anthropic’s API without intermediate servers
+Works where you work: Operates directly in your terminal
+Understands context: Maintains awareness of your entire project structure
+Takes action: Performs real operations like editing files and creating commits
+​
+Getting started
+To get started with Claude Code, follow our installation guide which covers system requirements, installation steps, and authentication process.
+
+​
+Quick tour
+Here’s what you can accomplish with Claude Code:
+
+​
+From questions to solutions in seconds
+
+# Ask questions about your codebase
+
+claude
+
+> how does our authentication system work?
+
+# Create a commit with one command
+
+claude commit
+
+# Fix issues across multiple files
+
+claude "fix the type errors in the auth module"
+​
+Understand unfamiliar code
+
+> what does the payment processing system do?
+> find where user permissions are checked
+> explain how the caching layer works
+> ​
+> Automate Git operations
+
+> commit my changes
+> create a pr
+> which commit added tests for markdown back in December?
+> rebase on main and resolve any merge conflicts
+> ​
+> Next steps
+> Getting started
+> Install Claude Code and get up and running
+
+Core features
+Explore what Claude Code can do for you
+
+Commands
+Learn about CLI commands and controls
+
+Configuration
+Customize Claude Code for your workflow
+
+​
+Additional resources
+Claude Code tutorials
+Step-by-step guides for common tasks
+
+Troubleshooting
+Solutions for common issues with Claude Code
+
+Bedrock & Vertex integrations
+Configure Claude Code with Amazon Bedrock or Google Vertex AI
+
+Reference implementation
+Clone our development container reference implementation.
+
+​
+License and data usage
+Claude Code is provided as a Beta research preview under Anthropic’s Commercial Terms of Service.
+
+​
+How we use your data
+We aim to be fully transparent about how we use your data. We may use feedback to improve our products and services, but we will not train generative models using your feedback from Claude Code. Given their potentially sensitive nature, we store user feedback transcripts for only 30 days.
+
+​
+Feedback transcripts
+If you choose to send us feedback about Claude Code, such as transcripts of your usage, Anthropic may use that feedback to debug related issues and improve Claude Code’s functionality (e.g., to reduce the risk of similar bugs occurring in the future). We will not train generative models using this feedback.
+
+​
+Privacy safeguards
+We have implemented several safeguards to protect your data, including limited retention periods for sensitive information, restricted access to user session data, and clear policies against using feedback for model training.
+
+For full details, please review our Commercial Terms of Service and Privacy Policy.
+
+​Claude Code
+Getting started with Claude Code
+Learn how to install, authenticate, and start using Claude Code.
+
+​
+Check system requirements
+Operating Systems: macOS 10.15+, Ubuntu 20.04+/Debian 10+, or Windows via WSL
+Hardware: 4GB RAM minimum
+Software:
+Node.js 18+
+git 2.23+ (optional)
+GitHub or GitLab CLI for PR workflows (optional)
+ripgrep (rg) for enhanced file search (optional)
+Network: Internet connection required for authentication and AI processing
+Location: Available only in supported countries
+Troubleshooting WSL installation
+
+Currently, Claude Code does not run directly in Windows, and instead requires WSL. If you encounter issues in WSL:
+
+OS/platform detection issues: If you receive an error during installation, WSL may be using Windows npm. Try:
+
+Run npm config set os linux before installation
+Install with npm install -g @anthropic-ai/claude-code --force --no-os-check (Do NOT use sudo)
+Node not found errors: If you see exec: node: not found when running claude, your WSL environment may be using a Windows installation of Node.js. You can confirm this with which npm and which node, which should point to Linux paths starting with /usr/ rather than /mnt/c/. To fix this, try installing Node via your Linux distribution’s package manager or via nvm.
+
+​
+Install and authenticate
+1
+Install Claude Code
+
+Install NodeJS 18+, then run:
+
+npm install -g @anthropic-ai/claude-code
+Do NOT use sudo npm install -g as this can lead to permission issues and security risks. If you encounter permission errors, see configure Claude Code for recommended solutions.
+
+2
+Navigate to your project
+
+cd your-project-directory
+3
+Start Claude Code
+
+claude
+4
+Complete authentication
+
+Claude Code offers multiple authentication options:
+
+Anthropic Console: The default option. Connect through the Anthropic Console and complete the OAuth process. Requires active billing at console.anthropic.com.
+Claude App (with Max plan): Subscribe to Claude’s Max plan for a single subscription that includes both Claude Code and the web interface. Get more value at the same price point while managing your account in one place. Log in with your Claude.ai account. During launch, choose the option that matches your subscription type.
+Enterprise platforms: Configure Claude Code to use Amazon Bedrock or Google Vertex AI for enterprise deployments with your existing cloud infrastructure.
+​
+Initialize your project
+For first-time users, we recommend:
+
+1
+Start Claude Code
+
+claude
+2
+Run a simple command
+
+summarize this project
+3
+Generate a CLAUDE.md project guide
+
+/init
+4
+Commit the generated CLAUDE.md file
+
+Ask Claude to commit the generated CLAUDE.md file to your repository.
+
+Claude Code
+Core tasks and workflows
+Explore Claude Code’s powerful features for editing, searching, testing, and automating your development workflow.
+
+Claude Code operates directly in your terminal, understanding your project context and taking real actions. No need to manually add files to context - Claude will explore your codebase as needed.
+
+​
+Understand unfamiliar code
+
+> what does the payment processing system do?
+> find where user permissions are checked
+> explain how the caching layer works
+> ​
+> Automate Git operations
+
+> commit my changes
+> create a pr
+> which commit added tests for markdown back in December?
+> rebase on main and resolve any merge conflicts
+> ​
+> Edit code intelligently
+
+> add input validation to the signup form
+> refactor the logger to use the new API
+> fix the race condition in the worker queue
+> ​
+> Test and debug your code
+
+> run tests for the auth module and fix failures
+> find and fix security vulnerabilities
+> explain why this test is failing
+> ​
+> Encourage deeper thinking
+> For complex problems, explicitly ask Claude to think more deeply:
+
+> think about how we should architect the new payment service
+> think hard about the edge cases in our authentication flow
+> Claude Code will show when Claude (3.7 Sonnet) is using extended thinking. You can proactively prompt Claude to “think” or “think deeply” for more planning-intensive tasks. We suggest that you first tell Claude about your task and let it gather context from your project. Then, ask it to “think” to create a plan.
+
+Claude will think more based on the words you use. For example, “think hard” will trigger more extended thinking than saying “think” alone.
+
+For more tips, see Extended thinking tips.
+
+​
+Automate CI and infra workflows
+Claude Code comes with a non-interactive mode for headless execution. This is especially useful for running Claude Code in non-interactive contexts like scripts, pipelines, and Github Actions.
+
+Use --print (-p) to run Claude in non-interactive mode. In this mode, you can set the ANTHROPIC_API_KEY environment variable to provide a custom API key.
+
+Non-interactive mode is especially useful when you pre-configure the set of commands Claude is allowed to use:
+
+export ANTHROPIC*API_KEY=sk*...
+claude -p "update the README with the latest changes" --allowedTools "Bash(git diff:_)" "Bash(git log:_)" Write --disallowedTools ...
+
+Claude Code
+CLI usage and controls
+Learn how to use Claude Code from the command line, including CLI commands, flags, and slash commands.
+
+​
+Getting started
+Claude Code provides two main ways to interact:
+
+Interactive mode: Run claude to start a REPL session
+One-shot mode: Use claude -p "query" for quick commands
+
+# Start interactive mode
+
+claude
+
+# Start with an initial query
+
+claude "explain this project"
+
+# Run a single command and exit
+
+claude -p "what does this function do?"
+
+# Process piped content
+
+cat logs.txt | claude -p "analyze these errors"
+​
+CLI commands
+Command Description Example
+claude Start interactive REPL claude
+claude "query" Start REPL with initial prompt claude "explain this project"
+claude -p "query" Run one-off query, then exit claude -p "explain this function"
+cat file | claude -p "query" Process piped content cat logs.txt | claude -p "explain"
+claude -c Continue most recent conversation claude -c
+claude -c -p "query" Continue in print mode claude -c -p "Check for type errors"
+claude -r "<session-id>" "query" Resume session by ID claude -r "abc123" "Finish this PR"
+claude config Configure settings claude config set --global theme dark
+claude update Update to latest version claude update
+claude mcp Configure Model Context Protocol servers See MCP section in tutorials
+​
+CLI flags
+Customize Claude Code’s behavior with these command-line flags:
+
+Flag Description Example
+--print, -p Print response without interactive mode (see detailed print mode documentation below) claude -p "query"
+--output-format Specify output format for print mode (options: text, json, stream-json) claude -p "query" --output-format json
+--verbose Enable verbose logging, shows full turn-by-turn output (helpful for debugging in both print and interactive modes) claude --verbose
+--max-turns Limit the number of agentic turns in non-interactive mode claude -p --max-turns 3 "query"
+--permission-prompt-tool Specify an MCP tool to handle permission prompts in non-interactive mode claude -p --permission-prompt-tool mcp_auth_tool "query"
+--resume Resume a specific session by ID, or by choosing in interactive mode claude --resume abc123 "query"
+--continue Load the most recent conversation in the current directory claude --continue
+--dangerously-skip-permissions Skip permission prompts (use with caution) claude --dangerously-skip-permissions
+The --output-format json flag is particularly useful for scripting and automation, allowing you to parse Claude’s responses programmatically.
+
+​
+Print mode details
+The -p (or --print) flag enables non-interactive mode in Claude Code, allowing you to pipe input and output for programmatic use. This flag supports various output formats for different use cases.
+
+​
+Basic usage
+
+# Basic print mode - outputs just the final response text
+
+claude -p "Explain how to use the print flag"
+
+# With stdin input
+
+echo "What is 2+2?" | claude -p
+
+# Resume a session in print mode with a prompt
+
+claude -p --resume <session-id> "Resume session with this prompt"
+​
+Output formats
+The --output-format option (used with -p) supports three formats:
+
+1. Text Output (default)
+
+claude -p "Explain the output formats"
+
+# Outputs just the response text
+
+2. JSON Output
+
+claude -p --output-format json "Explain how to use JSON output"
+Outputs a structured JSON object:
+
+{
+"cost_usd": 0.003,
+"duration_ms": 1234,
+"duration_api_ms": 800,
+"result": "The response text here...",
+"session_id": "abc123"
+} 3. Streaming JSON Output
+
+claude -p --output-format stream-json "Create a Python script"
+In streaming mode, each message is output as a separate JSON object as it’s received:
+
+Tool use messages
+Assistant text messages
+Tool result messages
+Final system message with stats
+​
+Verbose output with print mode
+When using --verbose with -p, it must be paired with --output-format json or --output-format stream-json:
+
+claude -p --verbose --output-format json "Debug this code"
+In verbose JSON mode, the output includes the full conversation transcript:
+
+[
+{
+"role": "user",
+"content": "Debug this code"
+},
+{
+"role": "assistant",
+"content": "I'll help you debug that code..."
+},
+{
+"role": "system",
+"cost_usd": 0.003,
+"duration_ms": 1234,
+"duration_api_ms": 800,
+"result": "The response text here...",
+"session_id": "abc123"
+}
+]
+​
+Additional options for print mode
+Max Turns
+
+claude -p --max-turns 3 "Fix this code" < file.py
+Limits the number of agentic turns in non-interactive mode.
+
+Permission Prompt Tool
+
+claude -p --permission-prompt-tool mcp_auth_tool "Create a file"
+Specifies an MCP tool to handle permission prompts in non-interactive mode.
+
+Resume Session
+
+claude -p --resume abc123 "Resume session with this prompt"
+Resume a specific session by ID in print mode with a new prompt.
+
+​
+Continue Session
+
+claude -c -p "Continue with this next task"
+Continue the last conversation in this project.
+
+​
+Slash commands
+Control Claude’s behavior during an interactive session:
+
+Command Purpose
+/bug Report bugs (sends conversation to Anthropic)
+/clear Clear conversation history
+/compact [instructions] Compact conversation with optional focus instructions
+/config View/modify configuration
+/cost Show token usage statistics
+/doctor Checks the health of your Claude Code installation
+/help Get usage help
+/init Initialize project with CLAUDE.md guide
+/login Switch Anthropic accounts
+/logout Sign out from your Anthropic account
+/memory Edit CLAUDE.md memory files
+/pr_comments View pull request comments
+/review Request code review
+/status View account and system statuses
+/terminal-setup Install Shift+Enter key binding for newlines (iTerm2 and VSCode only)
+/vim Enter vim mode for alternating insert and command modes
+​
+Special shortcuts
+​
+Quick memory with #
+Add memories instantly by starting your input with #:
+
+# Always use descriptive variable names
+
+You’ll be prompted to select which memory file to store this in.
+
+​
+Line breaks in terminal
+Enter multiline commands using:
+
+Quick escape: Type \ followed by Enter
+Keyboard shortcut: Option+Enter (or Shift+Enter if configured)
+To set up Option+Enter in your terminal:
+
+For Mac Terminal.app:
+
+Open Settings → Profiles → Keyboard
+Check “Use Option as Meta Key”
+For iTerm2 and VSCode terminal:
+
+Open Settings → Profiles → Keys
+Under General, set Left/Right Option key to “Esc+”
+Tip for iTerm2 and VSCode users: Run /terminal-setup within Claude Code to automatically configure Shift+Enter as a more intuitive alternative.
+
+See terminal setup in settings for configuration details.
+
+​
+
 Claude Code: Best practices for agentic coding
 Published Apr 18, 2025
 

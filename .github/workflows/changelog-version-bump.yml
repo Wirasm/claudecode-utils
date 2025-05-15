@@ -44,7 +44,8 @@ jobs:
         id: update
         run: |
           # Run Claude in headless mode to analyze repo and update changelog
-          PROMPT="You are tasked with updating the changelog and bumping the version of this project.
+          PROMPT=$(cat <<'CLAUDEPROMPT'
+          You are tasked with updating the changelog and bumping the version of this project.
 
           Please follow these steps:
 
@@ -62,11 +63,25 @@ jobs:
 
           4. Update the version in:
              - pyproject.toml
-             - then MIRROR the version in src/__init__.py 
+             - src/__init__.py if it exists
 
           5. Add a new section to the changelog with:
              - The new version number and today's date
              - A summary of changes, categorized by type (Features, Bug Fixes, Documentation, etc.)
+
+          6. Write all changes back to the respective files.
+
+          The context window already has information about the repository from checkout. Explore the repository first to understand its structure before making changes.
+
+          Please respond with a JSON object containing:
+          {
+            "old_version": "x.y.z",
+            "new_version": "x.y.z",
+            "changes_made": true or false,
+            "files_modified": ["list", "of", "files", "modified"]
+          }
+          CLAUDEPROMPT
+          )
 
           # Run Claude with unrestricted Bash access and plain json output
           OUTPUT=$(claude -p "$PROMPT" \
@@ -75,6 +90,27 @@ jobs:
             "Write" \
             "Bash" \
             --output-format json)
+
+          # Extract JSON object from output
+          JSON_RESPONSE=$(echo "$OUTPUT" | grep -o '{.*}' || echo '{"changes_made": false}')
+
+          # Log the response for debugging
+          echo "Claude response received"
+          echo "JSON extracted: $JSON_RESPONSE"
+
+          # Extract key information from JSON response
+          CHANGES_MADE=$(echo "$JSON_RESPONSE" | grep -o '"changes_made":\s*true' || echo "")
+          NEW_VERSION=$(echo "$JSON_RESPONSE" | grep -o '"new_version":\s*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "")
+
+          if [[ -n "$CHANGES_MADE" ]]; then
+            echo "Changes were made to changelog and version"
+            echo "New version: $NEW_VERSION"
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "No changes were needed"
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit changes
         if: steps.update.outputs.changes == 'true'
@@ -89,4 +125,4 @@ jobs:
           if [ -n "${{ steps.update.outputs.new_version }}" ]; then
             git tag v${{ steps.update.outputs.new_version }}
             git push origin v${{ steps.update.outputs.new_version }}
-          fi
+          fi¨
