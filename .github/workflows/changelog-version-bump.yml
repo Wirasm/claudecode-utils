@@ -84,11 +84,11 @@ jobs:
              - IMPORTANT: DO NOT JUST PROVIDE THE URL or SUGGEST MANUAL CREATION - YOU MUST USE 'gh pr create' TO AUTOMATICALLY CREATE THE PR
 
           9. Finally, print the URL of the created PR or a message indicating no changes were needed.
-          
+
           Note that GitHub CLI (gh) is already authenticated with appropriate permissions in this environment, so you can use it directly.
           To create a PR, use a command like:
-          
+
           gh pr create --title \"Update changelog and bump version to X.Y.Z\" --body \"## Summary\\n- Key changes...\" --base main --head your-branch-name
-          
+
           This will automatically create the PR and return its URL." \
-            --allowedTools "Read" "Write" "Bash" "Bash(git:*)" "Bash(gh:*)"
+            --allowedTools "Read" "Write" "Edit" "Bash" "Bash(git:*)" "Bash(gh:*)"
