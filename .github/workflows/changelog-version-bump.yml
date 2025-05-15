@@ -27,13 +27,13 @@ jobs:
           python-version-file: "pyproject.toml"
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
       
       - name: Install Claude Code CLI
         run: |
-          npm install -g @anthropic-ai/claude-cli
+          npm install -g @anthropic-ai/claude-code
       
       - name: Configure Claude API key
         run: |
