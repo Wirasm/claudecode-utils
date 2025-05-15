@@ -60,7 +60,7 @@ jobs:
           2. Check if CHANGELOG.md exists. If not, create it with proper headers following the Keep a Changelog format.
 
           3. Read the current version from pyproject.toml and determine the new version:
-             - If you found breaking changes, bump the major version
+             - Only bump the major version if its explicitly mentioned in the commit history
              - If you found new features but no breaking changes, bump the minor version
              - If you found only bug fixes, documentation updates, or other minor changes, bump the patch version
 

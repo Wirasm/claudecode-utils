@@ -4,11 +4,12 @@ A collection of standalone scripts and utilities for automating code workflows w
 
 ## Core Concepts
 
-The Claude Code Utility Library explores three core concepts for enhancing AI-driven software development:
+The Claude Code Utility Library explores these core concepts for enhancing AI-driven software development:
 
 1. **Automated Review Flow**: A comprehensive solution for code reviews, fixes, validation, and PR creation
 2. **Product Requirement Prompt (PRP) Flow**: A sophisticated agentic engineering workflow for implementing complete features
 3. **Standup Automation**: A tool for generating daily standup reports from git activity
+4. **Automated Bug Triage**: A tool for analyzing GitHub issues, categorizing them by severity, and providing structured bug reports
 
 ## Directory Structure
 
@@ -18,6 +19,7 @@ The Claude Code Utility Library explores three core concepts for enhancing AI-dr
 - [`concept_library/simple_validator/`](#simple-validator): Validator agent that checks if fixes are correct
 - [`concept_library/simple_pr/`](#simple-pr): PR creation tool
 - [`concept_library/cc_PRP_flow/`](#prp-flow): Product Requirement Prompt workflow
+- [`concept_library/automated_bug_triage/`](#bug-triage): Automated GitHub issue analysis and triage
 - [`src/utility_library/cc_standup/`](#standup): Standup report generator
 
 ## Concept Details
@@ -90,6 +92,32 @@ uv run python concept_library/cc_PRP_flow/scripts/cc_runner_simple.py --prp-path
   - **Validation Gates**: Deterministic checks for quality control
 - PRP runner script for executing PRPs with Claude Code
 - Support for both interactive and headless modes
+
+### <a name="bug-triage"></a>Automated Bug Triage
+
+The Bug Triage tool uses Claude to analyze GitHub issues, categorize them by severity and type, and generate structured reports to help teams prioritize and address bugs efficiently.
+
+**Quick Start**
+
+```bash
+# Analyze all open issues in a repository
+uv run python concept_library/automated_bug_triage/bug_triage_poc.py --repo owner/repo
+
+# Analyze a specific issue
+uv run python concept_library/automated_bug_triage/bug_triage_poc.py --repo owner/repo --issue 123
+
+# Use the Claude-driven implementation
+uv run python concept_library/automated_bug_triage/bug_triage_claude_poc.py --repo owner/repo --output report.md
+```
+
+**Key Features**
+
+- Fetches GitHub issues from a repository
+- Uses Claude to categorize issues by severity and type
+- Assigns issues to components based on codebase analysis
+- Generates clear reproduction steps from bug descriptions
+- Suggests potential fixes to accelerate debugging
+- Provides two implementations: structured Python code and a minimal Claude-driven approach
 
 ### <a name="standup"></a>Standup Report Generator
 
