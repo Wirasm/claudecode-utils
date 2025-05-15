@@ -34,64 +34,72 @@ jobs:
       - name: Install Claude Code CLI
         run: |
           npm install -g @anthropic-ai/claude-code
+          # Verify installation
+          which claude
+          claude --version
+          echo "Claude Code installed successfully"
 
       - name: Configure Claude API key
         run: |
           mkdir -p ~/.config/anthropic
           echo '{"api_key": "${{ secrets.ANTHROPIC_API_KEY }}"}' > ~/.config/anthropic/config.json
+          echo "Configuration completed"
+          
+      - name: Test Claude CLI
+        run: |
+          # Test if Claude CLI works with a simple prompt
+          echo "Testing Claude CLI..."
+          claude -p "Say hello" || echo "Claude test failed with exit code $?"
+
+      - name: Debug information
+        run: |
+          echo "Environment information:"
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Python version: $(python --version)"
+          echo "System info: $(uname -a)"
+          echo "Working directory: $(pwd)"
+          echo "API Key configured: $(test -f ~/.config/anthropic/config.json && echo 'Yes' || echo 'No')"
+          echo "Files in directory:"
+          ls -la
+
+      - name: Simple Claude Test
+        run: |
+          # Plain text output to standard output
+          claude -p "What is 2+2?" || echo "Exit code: $?"
 
       - name: Update Changelog
-        id: update
         run: |
-          # Simple prompt for Claude to update changelog only, not commit
-          PROMPT="You are tasked with updating the changelog and version of this project.
-
-          Follow these steps:
-          1. Examine the repository structure using git commands
-          2. Check if CHANGELOG.md exists and create it if not
-          3. Find the current version in pyproject.toml
-          4. Analyze recent git commits to determine if you should bump major, minor, or patch version following semantic versioning
-          5. Update the version in pyproject.toml and src/__init__.py if it exists
-          6. Add a new section to the changelog with today's date and categorized changes
-
-          Follow semantic versioning principles:
-          - Major: breaking changes
-          - Minor: new features without breaking changes
-          - Patch: bug fixes and minor improvements
-
-          After making the changes, print the new version number on a line by itself."
-
-          # Run Claude with basic tools
-          OUTPUT=$(claude -p "$PROMPT" --allowedTools "Read" "Write" "Bash")
+          # Simplest possible command
+          claude -p "Update the changelog based on recent git commits and increment the version in pyproject.toml. When done, print the new version number." \
+            --allowedTools "Read" "Write" "Bash"
           
-          # Extract the version number from the output (assuming it's on a line by itself)
-          NEW_VERSION=$(echo "$OUTPUT" | grep -o '^[0-9]\+\.[0-9]\+\.[0-9]\+$' | tail -1)
-
-          # Only set output if we got a version
-          if [ -n "$NEW_VERSION" ]; then
-            echo "New version: $NEW_VERSION"
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          # Check claude exit code
+          CLAUDE_EXIT=$?
+          echo "Claude exit code: $CLAUDE_EXIT"
+          
+          if [ $CLAUDE_EXIT -ne 0 ]; then
+            echo "Claude failed to update changelog"
+            exit 1
           fi
 
-      - name: Commit changes
+      - name: Commit Changes
         run: |
           # Check if any changes were made
           if ! git diff --quiet; then
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
             
-            # Get version from output or from file if not provided
-            NEW_VERSION="${{ steps.update.outputs.new_version }}"
-            if [ -z "$NEW_VERSION" ]; then
-              NEW_VERSION=$(grep -o 'version = "[^"]*"' pyproject.toml | head -1 | cut -d'"' -f2)
-            fi
+            # Extract new version from pyproject.toml
+            NEW_VERSION=$(grep -o 'version = "[^"]*"' pyproject.toml | head -1 | cut -d'"' -f2)
+            echo "New version from pyproject.toml: $NEW_VERSION"
             
             # Commit the changes
             git add CHANGELOG.md pyproject.toml src/__init__.py || true
             git commit -m "chore: Update changelog and bump version to $NEW_VERSION [skip ci]"
             git push
             
-            # Create a version tag if we have a version
+            # Create a version tag
             if [ -n "$NEW_VERSION" ]; then
               git tag v$NEW_VERSION
               git push origin v$NEW_VERSION
