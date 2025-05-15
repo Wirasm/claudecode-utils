@@ -26,11 +26,14 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
       - name: Install Claude Code CLI
         run: |
-          curl -sSL https://github.com/anthropics/claude-cli/releases/latest/download/claude-cli_Linux_x86_64.tar.gz | tar xz
-          sudo mv claude /usr/local/bin/
-          chmod +x /usr/local/bin/claude
+          npm install -g @anthropic-ai/claude-cli
       
       - name: Configure Claude API key
         run: |
