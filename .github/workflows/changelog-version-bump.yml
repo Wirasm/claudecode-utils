@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
     steps:
       - name: Checkout code
@@ -39,17 +42,27 @@ jobs:
           claude --version
           echo "Claude Code installed successfully"
 
-      - name: Configure Claude API key
+      - name: Configure Claude API key (multiple methods)
         run: |
+          # Method 1: Config file
           mkdir -p ~/.config/anthropic
           echo '{"api_key": "${{ secrets.ANTHROPIC_API_KEY }}"}' > ~/.config/anthropic/config.json
-          echo "Configuration completed"
           
+          # Method 2: Direct environment variable (already set at job level)
+          echo "API key env var is set: $([ -n \"$ANTHROPIC_API_KEY\" ] && echo 'Yes' || echo 'No')"
+          echo "CLAUDE_API_KEY env var is set: $([ -n \"$CLAUDE_API_KEY\" ] && echo 'Yes' || echo 'No')"
+          
+          # Method 3: Store in credentials file as well
+          mkdir -p ~/.anthropic
+          echo "${{ secrets.ANTHROPIC_API_KEY }}" > ~/.anthropic/api_key
+          
+          echo "Multiple configuration methods completed"
+
       - name: Test Claude CLI
         run: |
-          # Test if Claude CLI works with a simple prompt
+          # Test with API key directly in command
           echo "Testing Claude CLI..."
-          claude -p "Say hello" || echo "Claude test failed with exit code $?"
+          ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" CLAUDE_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" claude -p "Say hello" || echo "Claude test failed with exit code $?"
 
       - name: Debug information
         run: |
@@ -59,18 +72,27 @@ jobs:
           echo "Python version: $(python --version)"
           echo "System info: $(uname -a)"
           echo "Working directory: $(pwd)"
-          echo "API Key configured: $(test -f ~/.config/anthropic/config.json && echo 'Yes' || echo 'No')"
-          echo "Files in directory:"
-          ls -la
-
-      - name: Simple Claude Test
-        run: |
-          # Plain text output to standard output
-          claude -p "What is 2+2?" || echo "Exit code: $?"
+          
+          # Check if config exists
+          echo "API Key config file exists: $(test -f ~/.config/anthropic/config.json && echo 'Yes' || echo 'No')"
+          echo "API Key credentials file exists: $(test -f ~/.anthropic/api_key && echo 'Yes' || echo 'No')"
+          
+          # Check env vars (safely without revealing)
+          echo "ANTHROPIC_API_KEY env var is set: $([ -n \"$ANTHROPIC_API_KEY\" ] && echo 'Yes' || echo 'No')"
+          echo "CLAUDE_API_KEY env var is set: $([ -n \"$CLAUDE_API_KEY\" ] && echo 'Yes' || echo 'No')"
+          
+          # List config directories
+          echo "Contents of ~/.config/anthropic:"
+          ls -la ~/.config/anthropic || echo "Directory not found"
+          
+          echo "Contents of ~/.anthropic:"
+          ls -la ~/.anthropic || echo "Directory not found"
 
       - name: Update Changelog
         run: |
-          # Simplest possible command
+          # Try using the API key explicitly in an environment variable
+          # Note: Using both env var keys since claude-code might check for either
+          ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" CLAUDE_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
           claude -p "Update the changelog based on recent git commits and increment the version in pyproject.toml. When done, print the new version number." \
             --allowedTools "Read" "Write" "Bash"
           
