@@ -2,91 +2,79 @@
   "report_metadata": {
     "report_file_name": "review_report.json",
     "report_relative_path": "./review_report.json",
-    "branch_name": "main",
+    "branch_name": "add-review-report-json",
     "changed_files": [
-      "CHANGELOG.md",
-      "README.md",
-      "pyproject.toml",
-      "src/__init__.py",
-      "src/cli.py",
-      "src/utility_library/cc_review/README.md",
-      "src/utility_library/cc_review/__init__.py",
-      "src/utility_library/cc_review/cc_review_cli.py",
-      "src/utility_library/cc_review/cc_review_runner.py",
-      "src/utility_library/cc_review/cc_review_utils.py",
-      "src/utility_library/cc_standup/standup_typer.py",
-      "uv.lock"
+      "src/utility_library/cc_review/cc_review_cli.py"
     ],
     "date_range": "2025-05-16",
-    "number_of_commits": 1,
-    "number_of_files_changed": 12,
-    "number_of_lines_added": 273,
-    "number_of_lines_removed": 2
-  },
-  "issue_metadata": {
-    "issue_types_found": ["style", "documentation", "consistency"],
-    "overall_severity": "low",
-    "number_of_issues_found": 4,
-    "status": "open"
+    "number_of_commits": 0,
+    "number_of_files_changed": 1,
+    "number_of_lines_added": 3,
+    "number_of_lines_removed": 6
   },
   "issues": [
     {
       "issue_id": "001",
       "severity": "low",
       "type": "style",
-      "short_description": "Missing newline at end of __init__.py file",
-      "affected_files": ["src/__init__.py"],
-      "affected_lines": ["line 3"],
+      "status": "open",
+      "description": "Inconsistent code formatting with project style",
+      "affected_files": [
+        "src/utility_library/cc_review/cc_review_cli.py"
+      ],
+      "affected_lines": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
       "suggested_fixes": [
-        "Add a newline character at the end of the file to follow Python style conventions"
+        "Keep multi-line function parameter definitions for better readability and consistency with the rest of the codebase",
+        "Maintain the original formatting style to preserve code consistency"
       ]
     },
     {
       "issue_id": "002",
-      "severity": "medium",
-      "type": "consistency",
-      "short_description": "Version inconsistency in uv.lock file",
-      "affected_files": ["uv.lock"],
-      "affected_lines": ["line 108"],
-      "suggested_fixes": [
-        "The uv.lock file still references version 0.4.0 for claudecode-utility-library while pyproject.toml has been updated to 1.0.0",
-        "Run 'uv lock --update' to synchronize dependency versions"
-      ]
-    },
-    {
-      "issue_id": "003",
-      "severity": "low",
-      "type": "documentation",
-      "short_description": "JSON prompt escaping instructions could be clearer",
-      "affected_files": ["src/utility_library/cc_review/cc_review_runner.py"],
-      "affected_lines": ["lines 83-87"],
-      "suggested_fixes": [
-        "Consider improving the JSON escaping documentation to include more specific examples",
-        "Add examples of common problematic characters that need escaping"
-      ]
-    },
-    {
-      "issue_id": "004",
       "severity": "low",
       "type": "style",
-      "short_description": "Inconsistent error handling in run_claude_review",
-      "affected_files": ["src/utility_library/cc_review/cc_review_runner.py"],
-      "affected_lines": ["lines 55-60"],
+      "status": "open",
+      "description": "Unnecessary blank line added after imports",
+      "affected_files": [
+        "src/utility_library/cc_review/cc_review_cli.py"
+      ],
+      "affected_lines": [
+        14
+      ],
       "suggested_fixes": [
-        "Consider using logging instead of print statements for error handling",
-        "The error message could include more context about the failed command"
+        "Remove the extra blank line to maintain consistent import spacing"
       ]
     }
   ],
-  "summary": {
-    "most_critical_issues": [
-      "Version inconsistency in uv.lock file (issue_id: 002) - This could cause dependency resolution issues"
+  "issue_metadata": {
+    "issue_types_found": [
+      "style"
     ],
-    "overall_assessment": "The version 1.0.0 release introduces the new code review command successfully. The code is well-structured with proper Typer integration. Only minor style and documentation issues were found, with one medium-severity version inconsistency issue in the lock file.",
-    "recommendations": [
-      "Update the uv.lock file to match the new version",
-      "Address the minor style issues for better code consistency",
-      "Consider expanding error handling and logging capabilities"
+    "overall_severity": "low",
+    "number_of_issues_found": 2,
+    "issue_ranking": [
+      {
+        "issue_id": "001",
+        "severity": "low",
+        "description": "Inconsistent code formatting with project style"
+      },
+      {
+        "issue_id": "002",
+        "severity": "low",
+        "description": "Unnecessary blank line added after imports"
+      }
     ]
+  },
+  "summary": {
+    "critical_issues": [],
+    "high_priority_issues": [],
+    "overall_assessment": "The changes consist only of minor formatting modifications to the cc_review_cli.py file. While these changes don't affect functionality, they introduce inconsistency with the existing code style in the project. The changes replace multi-line function parameter definitions with single-line formatting and add an unnecessary blank line after imports.",
+    "recommendation": "Consider reverting these formatting changes to maintain consistency with the existing codebase style. If a formatting change is desired, it should be applied consistently across the entire project using an automated formatter."
   }
 }
