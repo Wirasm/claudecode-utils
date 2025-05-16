@@ -92,10 +92,14 @@ def main():
         help=f"Maximum number of issues to analyze (default: {DEFAULT_MAX_ISSUES})",
     )
     parser.add_argument(
-        "--output", default=DEFAULT_OUTPUT, help=f"Output file path for the report (default: {DEFAULT_OUTPUT})"
+        "--output",
+        default=DEFAULT_OUTPUT,
+        help=f"Output file path for the report (default: {DEFAULT_OUTPUT})",
     )
     parser.add_argument(
-        "--claude-model", default=DEFAULT_MODEL, help=f"Claude CLI executable name (default: {DEFAULT_MODEL})"
+        "--claude-model",
+        default=DEFAULT_MODEL,
+        help=f"Claude CLI executable name (default: {DEFAULT_MODEL})",
     )
     parser.add_argument("--verbose", action="store_true", help="Print detailed logs")
 

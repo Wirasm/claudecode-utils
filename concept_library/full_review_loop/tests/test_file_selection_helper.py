@@ -25,8 +25,8 @@ class TestFileSelectionHelper(unittest.TestCase):
 
         # Add the method we're testing to the mock instance
         # This is required because we can't create a real instance easily
-        self.loop.get_appropriate_review_file = AgenticReviewLoop.get_appropriate_review_file.__get__(
-            self.loop, AgenticReviewLoop
+        self.loop.get_appropriate_review_file = (
+            AgenticReviewLoop.get_appropriate_review_file.__get__(self.loop, AgenticReviewLoop)
         )
 
     def test_initial_review_iteration_1(self) -> None:

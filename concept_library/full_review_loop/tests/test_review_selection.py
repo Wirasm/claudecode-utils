@@ -33,11 +33,15 @@ class TestReviewFileSelection(unittest.TestCase):
 
         # Create a loop instance with required parameters
         with patch("pathlib.Path.mkdir"):  # Prevent actual directory creation
-            with patch.object(AgenticReviewLoop, "_get_repo_root", return_value=Path("/tmp/fake_repo")):
+            with patch.object(
+                AgenticReviewLoop, "_get_repo_root", return_value=Path("/tmp/fake_repo")
+            ):
                 with patch.object(AgenticReviewLoop, "_get_current_branch", return_value="main"):
                     with patch.object(AgenticReviewLoop, "_setup_environment"):
                         # Use /tmp/test_output as output_dir to avoid directory creation
-                        self.loop = AgenticReviewLoop(latest_commit=True, output_dir="/tmp/test_output")
+                        self.loop = AgenticReviewLoop(
+                            latest_commit=True, output_dir="/tmp/test_output"
+                        )
                         # Make sure output_dir is a Path object
                         self.loop.output_dir = Path("/tmp/test_output")
 

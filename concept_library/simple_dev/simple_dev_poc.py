@@ -230,7 +230,9 @@ def main():
             output_file = f"tmp/dev_report_{args.branch}.md"
 
     # Run the development process
-    success = run_development(args.review, output_file, args.branch, args.verbose, args.latest_commit)
+    success = run_development(
+        args.review, output_file, args.branch, args.verbose, args.latest_commit
+    )
 
     sys.exit(0 if success else 1)
 
