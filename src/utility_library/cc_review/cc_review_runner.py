@@ -13,13 +13,20 @@ Command-line usage:
     # With additional options
     uv run src/utility_library/cc_review/cc_review_runner.py feature-branch --tools Read,Bash,LS
 
+    # Get structured output with JSON format
+    uv run src/utility_library/cc_review/cc_review_runner.py feature-branch --format json
+
 Options:
     branch        Optional branch name to review (positional argument)
     --tools       Comma-separated list of allowed tools (default: Read,Glob,Grep,LS,Bash)
+    --format      Output format: text, json, stream-json (default: text)
 
 Example:
     # Review changes in 'develop' branch with limited tools
     uv run src/utility_library/cc_review/cc_review_runner.py develop --tools Read,Bash
+
+    # Get JSON output for parsing/automation
+    uv run src/utility_library/cc_review/cc_review_runner.py develop --format json
 
 Python API usage:
     from src.utility_library.cc_review.cc_review_runner import run_claude_review, generate_review_prompt
@@ -28,15 +35,14 @@ Python API usage:
     prompt = generate_review_prompt()
     run_claude_review(prompt)
 
-    # Review specific branch with custom tools
+    # Review specific branch with custom tools and JSON output
     prompt = generate_review_prompt(branch="feature-branch")
-    run_claude_review(prompt, allowed_tools=["Bash", "Read", "LS"])
+    run_claude_review(prompt, allowed_tools=["Bash", "Read", "LS"], output_format="json")
 """
 
 import argparse
 import subprocess
 import sys
-from pathlib import Path
 from typing import List, Optional
 
 
@@ -44,13 +50,15 @@ def run_claude_review(
     prompt: str,
     allowed_tools: Optional[List[str]] = None,
     branch: Optional[str] = None,
+    output_format: str = "text",
 ) -> None:
     """Run Claude code with a review prompt and specified tools.
 
     Args:
         prompt: The review prompt to send to Claude
-        allowed_tools: List of allowed tools (defaults to Read, Glob, Grep)
+        allowed_tools: List of allowed tools (defaults to Read, Glob, Grep, LS, Bash)
         branch: Optional branch to review (defaults to current branch)
+        output_format: Output format (text, json, stream-json)
     """
     # Default safe tools for review
     if allowed_tools is None:
@@ -58,6 +66,10 @@ def run_claude_review(
 
     # Build the command
     command = ["claude", "-p", prompt]
+
+    # Add output format
+    if output_format != "text":
+        command.extend(["--output-format", output_format])
 
     # Add allowed tools
     if allowed_tools:
@@ -95,7 +107,32 @@ Please:
 3. Provide specific feedback with file and line references
 4. Suggest concrete fixes where applicable
 
-Output your review as a markdown report and save it in the root of the repository.
+Provide your review with the following metadata:
+- Report metadata:
+    - Branch name
+    - List of changed files
+    - Date range
+    - Number of commits
+    - Number of files changed
+    - Number of lines added
+    - Number of lines removed
+- Issue metadata:
+    - Affected files list
+    - Issue types found (bug, security, performance, style, etc.)
+    - Overall severity (critical, high, medium, low)
+    - Number of issues found
+    - Status (open, fixed, in progress)
+
+Rank the issues by severity and provide a summary of the most critical issues.
+
+For each issue, provide:
+- A short description
+- A list of affected files
+- A list of affected lines
+- A list of suggested fixes
+
+
+Output your report and save it in the root of the repository.
 """
 
 
@@ -114,12 +151,19 @@ Examples:
 
   # Review branch with specific tools
   %(prog)s develop --tools Read,Bash
+
+  # Review with JSON output for structured data
+  %(prog)s feature-branch --format json
         """,
     )
 
     parser.add_argument("branch", nargs="?", help="Branch to review (optional, defaults to latest changes)")
 
     parser.add_argument("--tools", default="Read,Glob,Grep,LS,Bash", help="Comma-separated list of allowed tools")
+
+    parser.add_argument(
+        "--format", default="text", choices=["text", "json", "stream-json"], help="Output format (default: text)"
+    )
 
     args = parser.parse_args()
 
@@ -130,7 +174,7 @@ Examples:
     prompt = generate_review_prompt(branch=args.branch)
 
     # Run review
-    run_claude_review(prompt, allowed_tools=allowed_tools)
+    run_claude_review(prompt, allowed_tools=allowed_tools, output_format=args.format)
 
 
 if __name__ == "__main__":
