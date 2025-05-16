@@ -11,6 +11,7 @@ from rich import print
 from .cc_review_runner import generate_review_prompt, run_claude_review
 from .cc_review_utils import pretty_print_json_file
 
+
 def review(
     branch: Optional[str] = typer.Argument(
         None, help="Branch to review (optional, defaults to latest changes)"
