@@ -1,0 +1,136 @@
+{
+  "report_metadata": {
+    "report_file_name": "review_report.json",
+    "report_relative_path": "./review_report.json",
+    "branch_name": "main",
+    "changed_files": [
+      "CHANGELOG.md",
+      "pyproject.toml",
+      "src/__init__.py",
+      "README.md",
+      "src/cli.py",
+      "src/utility_library/cc_review/__init__.py",
+      "src/utility_library/cc_review/cc_review_cli.py",
+      "src/utility_library/cc_review/cc_review_runner.py",
+      "src/utility_library/cc_review/cc_review_utils.py",
+      "src/utility_library/cc_standup/README.md",
+      "src/utility_library/cc_standup/provider.py",
+      "src/utility_library/cc_standup/standup_cli.py",
+      "src/utility_library/cc_standup/standup_typer.py",
+      "standup_2025-05-16.md",
+      "uv.lock"
+    ],
+    "date_range": "2025-05-15 to 2025-05-16",
+    "number_of_commits": 16,
+    "number_of_files_changed": 15,
+    "number_of_lines_added": 783,
+    "number_of_lines_removed": 554
+  },
+  "issues": [
+    {
+      "issue_id": "001",
+      "severity": "high",
+      "type": ["security", "maintenance"],
+      "status": "open",
+      "description": "Subprocess execution without proper input validation",
+      "affected_files": ["src/utility_library/cc_review/cc_review_runner.py"],
+      "affected_lines": ["43-44"],
+      "suggested_fixes": [
+        "Add validation for command and tools parameters before passing to subprocess",
+        "Consider using subprocess with shell=False (already implemented, but need to validate inputs)",
+        "Add a whitelist check for allowed_tools to prevent arbitrary command injection"
+      ]
+    },
+    {
+      "issue_id": "002",
+      "severity": "medium",
+      "type": ["architecture", "maintainability"],
+      "status": "open",
+      "description": "Inconsistent CLI framework usage - argparse vs Typer",
+      "affected_files": [
+        "src/utility_library/cc_standup/standup_cli.py",
+        "src/utility_library/cc_standup/standup_typer.py"
+      ],
+      "affected_lines": ["standup_typer.py:44-50"],
+      "suggested_fixes": [
+        "Fully migrate to Typer framework for consistency",
+        "Remove argparse dependency and refactor standup_cli.py to use Typer directly",
+        "Simplify the standup_typer.py wrapper to avoid sys.argv manipulation"
+      ]
+    },
+    {
+      "issue_id": "003",
+      "severity": "medium",
+      "type": ["quality", "maintainability"],
+      "status": "open",
+      "description": "JSON escaping instructions in prompt are too complex and error-prone",
+      "affected_files": ["src/utility_library/cc_review/cc_review_runner.py"],
+      "affected_lines": ["80-86"],
+      "suggested_fixes": [
+        "Move JSON escaping logic to a utility function",
+        "Let the AI handle JSON generation natively without manual escape instructions",
+        "Test the JSON output generation thoroughly"
+      ]
+    },
+    {
+      "issue_id": "004",
+      "severity": "low",
+      "type": ["documentation", "maintainability"],
+      "status": "open",
+      "description": "Version information scattered across multiple files",
+      "affected_files": [
+        "pyproject.toml",
+        "src/__init__.py"
+      ],
+      "affected_lines": ["pyproject.toml:7", "src/__init__.py:3"],
+      "suggested_fixes": [
+        "Consolidate version info in pyproject.toml only",
+        "Use importlib.metadata to read version at runtime if needed",
+        "Add automated version sync check in CI/CD"
+      ]
+    },
+    {
+      "issue_id": "005",
+      "severity": "low",
+      "type": ["performance", "style"],
+      "status": "open",
+      "description": "Unused branch parameter in run_claude_review function",
+      "affected_files": ["src/utility_library/cc_review/cc_review_runner.py"],
+      "affected_lines": ["28"],
+      "suggested_fixes": [
+        "Remove the unused branch parameter",
+        "Or implement branch checkout logic if intended for future use",
+        "Document why the parameter exists if it's a placeholder"
+      ]
+    },
+    {
+      "issue_id": "006",
+      "severity": "low",
+      "type": ["style", "best-practice"],
+      "status": "open",
+      "description": "Inconsistent shebang usage across Python files",
+      "affected_files": [
+        "src/utility_library/cc_review/cc_review_cli.py",
+        "src/utility_library/cc_review/cc_review_runner.py",
+        "src/utility_library/cc_review/cc_review_utils.py"
+      ],
+      "affected_lines": ["Line 1 in each file"],
+      "suggested_fixes": [
+        "Remove shebang from library modules that aren't executed directly",
+        "Keep shebang only in entry point scripts",
+        "Use consistent format '#!/usr/bin/env python3' where needed"
+      ]
+    }
+  ],
+  "summary": {
+    "critical_issues": 0,
+    "high_issues": 1,
+    "medium_issues": 2,
+    "low_issues": 3,
+    "total_issues": 6,
+    "most_critical": [
+      "Subprocess execution without proper input validation could lead to security issues",
+      "Inconsistent CLI framework usage creates maintenance overhead"
+    ]
+  }
+}
