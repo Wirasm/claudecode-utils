@@ -95,7 +95,7 @@ Please:
 3. Provide specific feedback with file and line references
 4. Suggest concrete fixes where applicable
 
-Output your review as a markdown report.
+Output your review as a markdown report and save it in the root of the repository.
 """
 
 
