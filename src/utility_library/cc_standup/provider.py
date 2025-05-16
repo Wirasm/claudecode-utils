@@ -35,7 +35,9 @@ class ClaudeProvider(Provider):
         if "CLAUDE_API_KEY" not in os.environ:
             print("Note: CLAUDE_API_KEY environment variable not set.", file=sys.stderr)
             print("      Using existing Claude Code authentication if available.", file=sys.stderr)
-            print("      For Claude Code Max users this should work automatically.", file=sys.stderr)
+            print(
+                "      For Claude Code Max users this should work automatically.", file=sys.stderr
+            )
 
         try:
             return subprocess.check_output(cmd, text=True)
@@ -60,7 +62,9 @@ class ClaudeProvider(Provider):
         if "CLAUDE_API_KEY" not in os.environ:
             print("Note: CLAUDE_API_KEY environment variable not set.", file=sys.stderr)
             print("      Using existing Claude Code authentication if available.", file=sys.stderr)
-            print("      For Claude Code Max users this should work automatically.", file=sys.stderr)
+            print(
+                "      For Claude Code Max users this should work automatically.", file=sys.stderr
+            )
 
         try:
             # Run Claude with the prompt - use text mode to get the response directly

@@ -1,235 +1,127 @@
 # Claude Code Utility Library
 
-A collection of standalone scripts and utilities for automating code workflows with Claude. This project explores various ways to script and automate Claude Code for software development tasks.
+A collection of CLI utilities and experimental concepts for enhancing development workflows with Claude Code. This project serves as both a production-ready CLI application and a concept exploration library.
 
-## Core Concepts
+## Core Application
 
-The Claude Code Utility Library explores these core concepts for enhancing AI-driven software development:
-
-1. **Automated Review Flow**: A comprehensive solution for code reviews, fixes, validation, and PR creation
-2. **Product Requirement Prompt (PRP) Flow**: A sophisticated agentic engineering workflow for implementing complete features
-3. **Standup Automation**: A tool for generating daily standup reports from git activity
-4. **Automated Bug Triage**: A tool for analyzing GitHub issues, categorizing them by severity, and providing structured bug reports
-
-## Directory Structure
-
-- [`concept_library/full_review_loop/`](#full-review-loop): Integrated review-dev-validate-PR workflow
-- [`concept_library/simple_review/`](#simple-review): Standalone code review tool
-- [`concept_library/simple_dev/`](#simple-dev): Developer agent that implements fixes
-- [`concept_library/simple_validator/`](#simple-validator): Validator agent that checks if fixes are correct
-- [`concept_library/simple_pr/`](#simple-pr): PR creation tool
-- [`concept_library/cc_PRP_flow/`](#prp-flow): Product Requirement Prompt workflow
-- [`concept_library/automated_bug_triage/`](#bug-triage): Automated GitHub issue analysis and triage
-- [`src/utility_library/cc_standup/`](#standup): Standup report generator
-
-## Concept Details
-
-### <a name="automated-review-flow"></a>Automated Review Flow
-
-The Review Flow comes in two variants: a complete integrated workflow and modular components.
-
-#### <a name="full-review-loop"></a>Full Review Loop
-
-The full review loop orchestrates multiple Claude instances to review, develop, validate, and create PRs within safe, isolated environments.
-
-**Quick Start**
+The main CLI (`claudecode`) provides integrated access to production-ready utilities:
 
 ```bash
-# Review latest commit
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --latest --verbose
-
-# Review a specific branch against main
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --verbose
-
-# Use a git worktree for isolation
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --worktree
-
-# Specify base branch and keep temporary branch after run
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --base-branch develop --keep-branch
+# Main CLI with sub-commands
+claudecode review feature-branch    # Run AI code reviews
+claudecode standup                 # Generate standup reports
 ```
 
-**Key Features**
+### Available Commands
 
-- Automatic branching and worktree isolation
-- Iterative improvement cycles
-- Feedback loops between agents
-- PR creation upon successful validation
-- Safety features to prevent destructive changes
-
-#### Individual Components
-
-Each component of the review flow can be used independently:
-
-- **[Simple Review](#simple-review)**: Generates comprehensive code reviews for git branches or specific commits
-- **[Simple Developer](#simple-dev)**: Implements code fixes based on review feedback
-- **[Simple Validator](#simple-validator)**: Validates that fixes properly address review issues
-- **[Simple PR](#simple-pr)**: Creates well-documented pull requests based on validated changes
-
-### <a name="prp-flow"></a>Product Requirement Prompt (PRP) Flow
-
-The PRP Flow is a highly sophisticated agentic engineering workflow concept for implementing vertical slices of working software.
-
-**Key Concept:**
-
-"Over-specifying what to build while under-specifying the context is why so many AI-driven coding attempts stall at 80%. A Product Requirement Prompt (PRP) fixes that by fusing the disciplined scope of a traditional Product Requirements Document (PRD) with the 'context-is-king' mindset of modern prompt engineering."
-
-**Quick Start**
+#### `claudecode review` - AI Code Review
+Analyzes git diffs and provides comprehensive code reviews with:
+- Issue identification by severity (critical, high, medium, low)
+- File and line-specific feedback
+- Suggested fixes
+- JSON output support for automation
 
 ```bash
-# Run a PRP in interactive mode
-uv run python concept_library/cc_PRP_flow/scripts/cc_runner_simple.py --prp test --interactive
-
-# Run a specific PRP file
-uv run python concept_library/cc_PRP_flow/scripts/cc_runner_simple.py --prp-path PRPs/custom_feature.md
+claudecode review feature-branch --format json
 ```
 
-**Key Features**
-
-- Structured prompt templates that provide complete context
-- Three AI-critical layers:
-  - **Context**: Precise file paths, library versions, code snippets
-  - **Implementation Details**: Clear guidance on how to build the feature
-  - **Validation Gates**: Deterministic checks for quality control
-- PRP runner script for executing PRPs with Claude Code
-- Support for both interactive and headless modes
-
-### <a name="bug-triage"></a>Automated Bug Triage
-
-The Bug Triage tool uses Claude to analyze GitHub issues, categorize them by severity and type, and generate structured reports to help teams prioritize and address bugs efficiently.
-
-**Quick Start**
+#### `claudecode standup` - Daily Standup Reports
+Generates formatted standup reports from:
+- Recent git commits
+- GitHub PRs (if configured)
+- Customizable time ranges
 
 ```bash
-# Analyze all open issues in a repository
-uv run python concept_library/automated_bug_triage/bug_triage_poc.py --repo owner/repo
-
-# Analyze a specific issue
-uv run python concept_library/automated_bug_triage/bug_triage_poc.py --repo owner/repo --issue 123
-
-# Use the Claude-driven implementation
-uv run python concept_library/automated_bug_triage/bug_triage_claude_poc.py --repo owner/repo --output report.md
+claudecode standup --since yesterday --open
 ```
 
-**Key Features**
-
-- Fetches GitHub issues from a repository
-- Uses Claude to categorize issues by severity and type
-- Assigns issues to components based on codebase analysis
-- Generates clear reproduction steps from bug descriptions
-- Suggests potential fixes to accelerate debugging
-- Provides two implementations: structured Python code and a minimal Claude-driven approach
-
-### <a name="standup"></a>Standup Report Generator
-
-The Standup tool automates the creation of daily standup reports by analyzing git commits and GitHub PR activity.
-
-**Quick Start**
+## Installation
 
 ```bash
-# Generate a standup report for today
-uv run python -m utility_library.cc_standup
+# Install as a development tool
+uv tool install -e /path/to/claudecode-utility
 
-# Generate for a specific date
-uv run python -m utility_library.cc_standup --since "2023-05-01T09:00:00"
-
-# Open the report after generation
-uv run python -m utility_library.cc_standup --open
+# Use anywhere
+claudecode --help
+cc-review --help
+standup --help
 ```
 
-**Key Features**
+## Concept Library
 
-- Collects recent git commits and PR activity
-- Uses Claude to generate structured Markdown reports
-- Supports customizable date ranges
-- Automatically formats reports with Yesterday/Today/Blockers sections
-- Minimal dependencies with graceful fallbacks
+The `concept_library/` directory contains experimental ideas and proof-of-concepts exploring Claude Code's capabilities:
 
-## Component Usage
+### Core Concepts
 
-### <a name="simple-review"></a>Simple Review
+1. **Automated Review Flow** - Multi-stage code review, development, and PR creation
+2. **Product Requirement Prompt (PRP) Flow** - Structured prompt engineering for feature implementation
+3. **Automated Bug Triage** - GitHub issue analysis and categorization
 
-A standalone tool that uses Claude to review code changes and identify issues.
+### Key Components
 
-```bash
-# Review all changes in a branch
-uv run python concept_library/simple_review/simple_review.py development
+- `simple_review/` - Standalone code review generation
+- `simple_dev/` - Automated fix implementation
+- `simple_validator/` - Fix validation
+- `simple_pr/` - PR creation
+- `full_review_loop/` - Orchestrated workflow
+- `cc_PRP_flow/` - Product requirement workflows
+- `automated_bug_triage/` - Issue triaging
 
-# Review only the latest commit
-uv run python concept_library/simple_review/simple_review.py development --latest-commit
+## Project Structure
+
 ```
-
-### <a name="simple-dev"></a>Simple Dev
-
-A standalone developer agent that implements fixes based on a code review.
-
-```bash
-# Implement fixes from a review
-uv run python concept_library/simple_dev/simple_dev_poc.py tmp/review.md
-```
-
-### <a name="simple-validator"></a>Simple Validator
-
-Validates that implemented changes correctly address issues found in a code review.
-
-```bash
-# Validate fixes
-uv run python concept_library/simple_validator/simple_validator_poc.py tmp/review.md tmp/dev_report.md
-```
-
-### <a name="simple-pr"></a>Simple PR
-
-Creates a pull request based on changes implemented to address review feedback.
-
-```bash
-# Create a PR
-uv run python concept_library/simple_pr/simple_pr_poc.py tmp/validation.md
+claudecode-utility/
+├── src/                    # Production CLI and utilities
+│   ├── cli.py             # Main CLI entry point
+│   └── utility_library/    
+│       ├── cc_review/     # Code review utility
+│       └── cc_standup/    # Standup report generator
+├── concept_library/       # Experimental concepts
+└── PRPs/                  # Product Requirement Prompts
 ```
 
 ## Development
 
-This project uses [uv](https://github.com/astral-sh/uv) for Python package management.
-
 ```bash
-# Clone the repository
+# Setup
 git clone https://github.com/yourusername/claudecode-utility.git
 cd claudecode-utility
-
-# Create a virtual environment
 uv venv
-source .venv/bin/activate  # On Unix/macOS
-# .venv\Scripts\activate  # On Windows
+source .venv/bin/activate
 
-# Install dependencies
-uv sync
-
-# Install package in development mode
-uv pip install -e .
+# Install development dependencies
+uv pip install -e ".[dev]"
 
 # Run tests
 uv run pytest
 
 # Format code
 uv run black .
-
-# Run linter
-uv run ruff check .
 ```
 
-## Working with Claude Code
+## Philosophy
 
-For the best experience working with this repository using Claude Code:
+This project follows these principles:
+- **KISS**: Keep implementations simple
+- **YAGNI**: Build only what's needed now
+- **Modular Design**: Separate concerns clearly
+- **Progressive Enhancement**: Start simple, add complexity when proven useful
 
-1. Start a new session with the `/project:context-prime` command to help Claude understand the repository structure
-2. Refer to CLAUDE.md for specific instructions on working with this codebase
-
-The `/project:context-prime` command will help Claude analyze the repository structure, understand the purpose of each directory, and provide better assistance based on this understanding.
+Concepts begin in `concept_library/` as minimal implementations. Once proven valuable, they graduate to `src/` as production utilities.
 
 ## Requirements
 
-- Python 3.8+
-- Claude CLI installed and configured
+- Python 3.12+
+- Claude Code CLI (`npm i -g @anthropic-ai/claude-code`)
 - Git
-- GitHub CLI (gh) for PR creation and GitHub operations
+- GitHub CLI (optional, for PR features)
+
+## Working with Claude Code
+
+For the best experience:
+1. Start with `/project:context-prime` to help Claude understand the repository
+2. Refer to CLAUDE.md for project-specific instructions
+3. Use the concept library to explore new ideas
 
 ## License
 

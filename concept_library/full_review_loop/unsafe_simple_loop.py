@@ -129,8 +129,12 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
                         log(
                             f"  WARNING: Agent '{step_name}' did NOT create the output file '{output_file_path.resolve()}' as instructed."
                         )
-                        log(f"  Saving Claude's stdout to '{output_file_path.resolve()}' as a fallback.")
-                        output_file_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure parent exists
+                        log(
+                            f"  Saving Claude's stdout to '{output_file_path.resolve()}' as a fallback."
+                        )
+                        output_file_path.parent.mkdir(
+                            parents=True, exist_ok=True
+                        )  # Ensure parent exists
                         with open(output_file_path, "w") as f:
                             f.write(result.stdout)
                         log(f"  Fallback save completed for {step_name}.")
@@ -161,9 +165,7 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
         return output_file_path.read_text()
 
     except subprocess.CalledProcessError as e:
-        error_msg = (
-            f"Error running agent '{step_name}' (Exit Code {e.returncode}):\nStdout:\n{e.stdout}\nStderr:\n{e.stderr}"
-        )
+        error_msg = f"Error running agent '{step_name}' (Exit Code {e.returncode}):\nStdout:\n{e.stdout}\nStderr:\n{e.stderr}"
         log(error_msg)
         # Save error details to the intended output file if possible, with file locking
         lock_file = f"{output_file_path}.lock"
@@ -201,7 +203,9 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
             if os.path.exists(lock_file):
                 os.remove(lock_file)
         except Exception as save_err:
-            log(f"  Additionally, failed to save timeout error details to {output_file_path}: {save_err}")
+            log(
+                f"  Additionally, failed to save timeout error details to {output_file_path}: {save_err}"
+            )
         return error_msg  # Propagate error state
     except Exception as e:
         error_msg = f"An unexpected error occurred while running agent '{step_name}': {e}"
@@ -220,7 +224,9 @@ def run_claude_agent(step_name, prompt_content, output_filename, allowed_tools_c
             if os.path.exists(lock_file):
                 os.remove(lock_file)
         except Exception as save_err:
-            log(f"  Additionally, failed to save unexpected error details to {output_file_path}: {save_err}")
+            log(
+                f"  Additionally, failed to save unexpected error details to {output_file_path}: {save_err}"
+            )
         return error_msg  # Propagate error state
 
 
@@ -285,7 +291,9 @@ def parse_decision_from_file_content(file_content, file_path_for_log, pass_strin
     """
     # Check for empty or None content
     if not file_content:
-        log(f"ERROR: Empty or None content received from '{file_path_for_log.name}'. Assuming failure.")
+        log(
+            f"ERROR: Empty or None content received from '{file_path_for_log.name}'. Assuming failure."
+        )
         return False
 
     try:
@@ -349,7 +357,9 @@ def main():
     source_group = parser.add_mutually_exclusive_group(required=True)
     source_group.add_argument("--latest", action="store_true", help="Review latest commit")
     source_group.add_argument("--branch", help="Review branch against base branch")
-    parser.add_argument("--base-branch", default="main", help="Base branch for comparison (default: main)")
+    parser.add_argument(
+        "--base-branch", default="main", help="Base branch for comparison (default: main)"
+    )
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -362,7 +372,9 @@ def main():
         default=1200,
         help="Timeout in seconds for Claude calls (default: 1200)",
     )
-    parser.add_argument("--max-loops", type=int, default=2, help="Maximum review-develop cycles (default: 2)")
+    parser.add_argument(
+        "--max-loops", type=int, default=2, help="Maximum review-develop cycles (default: 2)"
+    )
     parser.add_argument("--skip-pr", action="store_true", help="Skip PR creation at the end")
     args = parser.parse_args()
 
@@ -532,7 +544,9 @@ Use the 'Write' tool. Start your report with "## Re-review - Iteration {loop_cou
         else:
             log(f"Re-review (Iteration {loop_count}) still needs fixes.")
             if loop_count >= MAX_REVIEW_LOOPS:
-                log(f"Maximum review loops ({MAX_REVIEW_LOOPS}) reached. Process did not pass this stage.")
+                log(
+                    f"Maximum review loops ({MAX_REVIEW_LOOPS}) reached. Process did not pass this stage."
+                )
                 final_success_achieved = False  # Ensure it's marked as not successful
 
     # --- Validation Step (if all reviews passed) ---
@@ -631,7 +645,9 @@ Use the 'Write' tool. Start your report with "## Pull Request Creation Attempt a
             pr_filename,
             "Bash,Grep,Read,LS,Glob,Write",  # Bash for gh command, Write for temp file and final report
         )
-        log(f"PR creation attempt report saved to '{pr_filename}'. Check this file for the outcome.")
+        log(
+            f"PR creation attempt report saved to '{pr_filename}'. Check this file for the outcome."
+        )
     elif not args.skip_pr:
         log("Skipping PR creation step due to failures in review or validation.")
 

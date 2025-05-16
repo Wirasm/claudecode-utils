@@ -144,7 +144,9 @@ class TestBugTriage(unittest.TestCase):
         mock_run.return_value = mock_process
 
         # Call the function
-        analysis = analyze_issue_with_claude(self.sample_issue, self.sample_repo_structure, verbose=True)
+        analysis = analyze_issue_with_claude(
+            self.sample_issue, self.sample_repo_structure, verbose=True
+        )
 
         # Verify results
         self.assertIsNotNone(analysis)

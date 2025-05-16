@@ -265,11 +265,19 @@ def main():
         default="development-wip",
         help="Git branch containing changes (default: development-wip)",
     )
-    parser.add_argument("--base", default="main", help="Base branch to merge changes into (default: main)")
-    parser.add_argument("--title", help="Title for the pull request (default: generated from branch name)")
-    parser.add_argument("--output", help="Output file path for the PR report (default: tmp/pr_<branch>.md)")
+    parser.add_argument(
+        "--base", default="main", help="Base branch to merge changes into (default: main)"
+    )
+    parser.add_argument(
+        "--title", help="Title for the pull request (default: generated from branch name)"
+    )
+    parser.add_argument(
+        "--output", help="Output file path for the PR report (default: tmp/pr_<branch>.md)"
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--dry-run", action="store_true", help="Generate PR description without creating the PR")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Generate PR description without creating the PR"
+    )
 
     args = parser.parse_args()
 

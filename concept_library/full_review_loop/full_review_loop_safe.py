@@ -194,9 +194,13 @@ class AgenticReviewLoop:
 
         # Validate branch names before assigning
         if branch and not validate_git_branch_name(branch):
-            sys.exit(f"Error: Invalid source branch name '{branch}'. Branch names must follow Git naming rules.")
+            sys.exit(
+                f"Error: Invalid source branch name '{branch}'. Branch names must follow Git naming rules."
+            )
         if not validate_git_branch_name(base_branch):
-            sys.exit(f"Error: Invalid base branch name '{base_branch}'. Branch names must follow Git naming rules.")
+            sys.exit(
+                f"Error: Invalid base branch name '{base_branch}'. Branch names must follow Git naming rules."
+            )
 
         self.source_branch = branch  # The branch to start FROM
         self.base_branch = base_branch  # The branch to compare AGAINST and PR INTO
@@ -242,7 +246,9 @@ class AgenticReviewLoop:
         self.current_validation_for_dev = None  # Tracks which validation file developer should use
 
         self.log(f"Initialized Agentic Review Loop [session: {self.session_id}]")
-        self.log(f"Source Reference: {'Latest commit' if latest_commit else f'Branch {self.source_branch}'}")
+        self.log(
+            f"Source Reference: {'Latest commit' if latest_commit else f'Branch {self.source_branch}'}"
+        )
         self.log(f"Base Branch: {self.base_branch}")
         self.log(f"Temporary Work Branch: {self.work_branch}")
         self.log(f"Using Worktree: {self.use_worktree} ({self.worktree_path})")
@@ -265,7 +271,9 @@ class AgenticReviewLoop:
         # Ensure effective_cwd actually exists
         effective_cwd_path = Path(effective_cwd)
         if not effective_cwd_path.exists():
-            sys.exit(f"Error: Directory '{effective_cwd}' does not exist for git command execution.")
+            sys.exit(
+                f"Error: Directory '{effective_cwd}' does not exist for git command execution."
+            )
         if not effective_cwd_path.is_dir():
             sys.exit(f"Error: Path '{effective_cwd}' is not a directory for git command execution.")
 
@@ -295,7 +303,9 @@ class AgenticReviewLoop:
 
     def _get_current_branch(self):
         """Get the name of the current git branch."""
-        return self._run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], capture=True, cwd=self.repo_root)
+        return self._run_git_command(
+            ["rev-parse", "--abbrev-ref", "HEAD"], capture=True, cwd=self.repo_root
+        )
 
     def _get_repo_root(self):
         """Get the root directory of the git repository."""
@@ -339,7 +349,9 @@ class AgenticReviewLoop:
 
         # 3. Create the Branch
         # Check if branch already exists
-        if self._run_git_command(["show-ref", "--verify", "--quiet", f"refs/heads/{self.work_branch}"], check=False):
+        if self._run_git_command(
+            ["show-ref", "--verify", "--quiet", f"refs/heads/{self.work_branch}"], check=False
+        ):
             self.log(f"Warning: Work branch '{self.work_branch}' already exists")
             # Delete the existing branch forcefully if it's not checked out
             current_branch = self._get_current_branch()
@@ -349,7 +361,9 @@ class AgenticReviewLoop:
                 # Now create the branch
                 self._run_git_command(["branch", self.work_branch, starting_point])
             else:
-                sys.exit(f"Error: Cannot delete work branch '{self.work_branch}' because it is currently checked out.")
+                sys.exit(
+                    f"Error: Cannot delete work branch '{self.work_branch}' because it is currently checked out."
+                )
         else:
             # Branch doesn't exist, create it
             self._run_git_command(["branch", self.work_branch, starting_point])
@@ -360,9 +374,13 @@ class AgenticReviewLoop:
             self.log(f"Setting up worktree at: {self.worktree_path}")
 
             # First check if the worktree path is already registered
-            worktree_list = self._run_git_command(["worktree", "list", "--porcelain"], capture=True, cwd=self.repo_root)
+            worktree_list = self._run_git_command(
+                ["worktree", "list", "--porcelain"], capture=True, cwd=self.repo_root
+            )
             if str(self.worktree_path) in worktree_list:
-                self.log(f"Worktree already exists at {self.worktree_path}, attempting to remove...")
+                self.log(
+                    f"Worktree already exists at {self.worktree_path}, attempting to remove..."
+                )
 
             # Remove existing worktree if present (e.g., from failed previous run)
             remove_result = self._run_git_command(
@@ -384,7 +402,9 @@ class AgenticReviewLoop:
 
                 # If still fails, try manual directory removal if the directory exists
                 if remove_result is None and self.worktree_path.exists():
-                    self.log(f"Git worktree remove failed, trying manual directory removal of {self.worktree_path}")
+                    self.log(
+                        f"Git worktree remove failed, trying manual directory removal of {self.worktree_path}"
+                    )
                     try:
                         shutil.rmtree(self.worktree_path)
                     except OSError as e:
@@ -438,12 +458,16 @@ class AgenticReviewLoop:
                 try:
                     shutil.rmtree(self.worktree_path)
                 except OSError as e:
-                    self.log(f"Warning: Could not remove worktree directory {self.worktree_path}: {e}")
+                    self.log(
+                        f"Warning: Could not remove worktree directory {self.worktree_path}: {e}"
+                    )
 
         # 3. Delete Temporary Branch (if not keeping)
         if not self.keep_branch:
             self.log(f"Deleting temporary branch '{self.work_branch}'")
-            self._run_git_command(["branch", "-D", self.work_branch], check=False, cwd=self.repo_root)
+            self._run_git_command(
+                ["branch", "-D", self.work_branch], check=False, cwd=self.repo_root
+            )
         else:
             self.log(f"Keeping temporary branch '{self.work_branch}' as requested.")
 
@@ -458,7 +482,9 @@ class AgenticReviewLoop:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp} AgenticLoop:DEBUG] {message}")
 
-    def get_appropriate_review_file(self, is_rereview=False, for_developer=False, for_validator=False, required=False):
+    def get_appropriate_review_file(
+        self, is_rereview=False, for_developer=False, for_validator=False, required=False
+    ):
         """
         Get the appropriate review file based on context and availability.
 
@@ -533,19 +559,13 @@ class AgenticReviewLoop:
         # Default tools per role
         if allowed_tools is None:
             if role == AgentRole.REVIEWER:
-                allowed_tools = (
-                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
-                )
+                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
             elif role == AgentRole.DEVELOPER:
                 allowed_tools = "Bash,Grep,Read,LS,Glob,Task,Edit,MultiEdit,Write,TodoRead,TodoWrite,WebSearch,WebFetch"  # Edit + web access + agent delegation
             elif role == AgentRole.VALIDATOR:
-                allowed_tools = (
-                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
-                )
+                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Read-only focus + web access + agent delegation
             elif role == AgentRole.PR_MANAGER:
-                allowed_tools = (
-                    "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Bash for gh + web access + agent delegation
-                )
+                allowed_tools = "Bash,Grep,Read,LS,Glob,Task,WebSearch,WebFetch"  # Bash for gh + web access + agent delegation
 
         prompt_file_path = None  # Keep track of path for cleanup
         prompt_content = ""  # To store the prompt read from file
@@ -620,7 +640,9 @@ class AgenticReviewLoop:
 
             # Make sure the working directory exists
             if not os.path.exists(self.cwd_for_tasks) or not os.path.isdir(self.cwd_for_tasks):
-                raise ValueError(f"Invalid working directory for Claude command: {self.cwd_for_tasks}")
+                raise ValueError(
+                    f"Invalid working directory for Claude command: {self.cwd_for_tasks}"
+                )
 
             result = subprocess.run(
                 cmd,
@@ -714,7 +736,9 @@ class AgenticReviewLoop:
             if not priority_sections:
                 # Try alternative format where issues are listed with priority prefix
                 issue_items = re.findall(
-                    r"(?:^|\n)- (CRITICAL|HIGH|MEDIUM|LOW):(.*?)(?=\n-|\Z)", issue_section, re.DOTALL
+                    r"(?:^|\n)- (CRITICAL|HIGH|MEDIUM|LOW):(.*?)(?=\n-|\Z)",
+                    issue_section,
+                    re.DOTALL,
                 )
 
                 for priority, issue_text in issue_items:
@@ -884,7 +908,9 @@ class AgenticReviewLoop:
                 timeline_content.append("")
 
                 # Add initial description
-                timeline_content.append(f"**Initial Report (Iteration {issue_data['iteration_found']}):**")
+                timeline_content.append(
+                    f"**Initial Report (Iteration {issue_data['iteration_found']}):**"
+                )
                 timeline_content.append("")
                 timeline_content.append("```")
                 timeline_content.append(issue_data["description"])
@@ -908,7 +934,9 @@ class AgenticReviewLoop:
                         status = issue_data["status"]
                     else:
                         # For intermediate iterations, try to infer from next iteration's status
-                        next_iter = next((i for i in issue_data["iterations"] if i > iter_num), None)
+                        next_iter = next(
+                            (i for i in issue_data["iterations"] if i > iter_num), None
+                        )
                         if next_iter:
                             if "Fixed" in issue_data["status"]:
                                 status = "In Progress"
@@ -932,7 +960,13 @@ class AgenticReviewLoop:
 
             # Count issues by priority and status
             priority_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
-            status_counts = {"Fixed": 0, "Pending": 0, "Identified": 0, "Regression": 0, "Validated": 0}
+            status_counts = {
+                "Fixed": 0,
+                "Pending": 0,
+                "Identified": 0,
+                "Regression": 0,
+                "Validated": 0,
+            }
 
             for issue_data in self.issue_tracker.values():
                 # Handle any priority or status value
@@ -966,7 +1000,9 @@ class AgenticReviewLoop:
             fix_rate = (fixed_issues / total_issues * 100) if total_issues > 0 else 0
 
             timeline_content.append("")
-            timeline_content.append(f"**Overall Fix Rate:** {fix_rate:.1f}% ({fixed_issues}/{total_issues})")
+            timeline_content.append(
+                f"**Overall Fix Rate:** {fix_rate:.1f}% ({fixed_issues}/{total_issues})"
+            )
 
             # Write the timeline to file
             with open(self.timeline_file, "w") as f:
@@ -1115,7 +1151,9 @@ IMPORTANT:
         has_validation_feedback = self.iteration > 1 and previous_validation_file.exists()
 
         # Store the validation file for reference
-        self.current_validation_for_dev = previous_validation_file if has_validation_feedback else None
+        self.current_validation_for_dev = (
+            previous_validation_file if has_validation_feedback else None
+        )
 
         prompt = f"""
 Think hard about this task. You are Iteration #{self.iteration}.
@@ -1206,7 +1244,9 @@ IMPORTANT:
             self.log(f"Error: Latest re-review file ({rereview_file}) not found for Validator.")
             return False, False
         if not self.dev_report_file or not self.dev_report_file.exists():
-            self.log(f"Error: Latest dev report file ({self.dev_report_file}) not found for Validator.")
+            self.log(
+                f"Error: Latest dev report file ({self.dev_report_file}) not found for Validator."
+            )
             return False, False
 
         # Also check if we have the initial review for reference
@@ -1313,7 +1353,9 @@ IMPORTANT:
 
         # Check required input files from the final successful iteration
         if not self.validation_file or not self.validation_file.exists():
-            self.log(f"Error: Final validation file ({self.validation_file}) not found for PR Manager.")
+            self.log(
+                f"Error: Final validation file ({self.validation_file}) not found for PR Manager."
+            )
             return False
 
         # Find the reports from the last iteration
@@ -1330,7 +1372,11 @@ IMPORTANT:
         title = self.pr_title
         if not title:
             # Use the temporary branch name for a reasonable default
-            clean_branch = self.work_branch.replace("-agentic-" + self.session_id, "").replace("-", " ").title()
+            clean_branch = (
+                self.work_branch.replace("-agentic-" + self.session_id, "")
+                .replace("-", " ")
+                .title()
+            )
             title = f"Agentic Loop Changes for {clean_branch} (Iter {self.iteration})"
 
         prompt = f"""
@@ -1417,7 +1463,9 @@ IMPORTANT:
             self.log(f"PR creation reported successfully: {pr_url}")
             return True
         else:
-            self.log("PR URL not found in the report. PR creation might have failed. Check the PR report.")
+            self.log(
+                "PR URL not found in the report. PR creation might have failed. Check the PR report."
+            )
             return False
 
     def run(self):
@@ -1438,10 +1486,14 @@ IMPORTANT:
                     # --- Step 1: Initial Review ---
                     review_success = self.run_reviewer(is_rereview=(self.iteration > 1))
                     if not review_success:
-                        self.log(f"Review phase failed on iteration {self.iteration}. Stopping loop.")
+                        self.log(
+                            f"Review phase failed on iteration {self.iteration}. Stopping loop."
+                        )
                         break
                 else:
-                    self.log(f"Skipping initial review as we're continuing after a validation failure")
+                    self.log(
+                        f"Skipping initial review as we're continuing after a validation failure"
+                    )
                     # When continuing after validation failure, the developer will use the
                     # latest re-review and validation feedback from previous iteration
 
@@ -1449,14 +1501,18 @@ IMPORTANT:
                 # Developer uses the latest review and potentially previous validation feedback
                 dev_success = self.run_developer()
                 if not dev_success:
-                    self.log(f"Development phase failed on iteration {self.iteration}. Stopping loop.")
+                    self.log(
+                        f"Development phase failed on iteration {self.iteration}. Stopping loop."
+                    )
                     break
 
                 # --- Step 3: Re-Review (Review the developer's changes) ---
                 # This creates a separate rereview_file, distinct from the initial review_file
                 rereview_success = self.run_reviewer(is_rereview=True)
                 if not rereview_success:
-                    self.log(f"Re-Review phase failed on iteration {self.iteration}. Stopping loop.")
+                    self.log(
+                        f"Re-Review phase failed on iteration {self.iteration}. Stopping loop."
+                    )
                     break
                 # Note: The validation step will use the report from this re-review (stored in rereview_file)
 
@@ -1464,7 +1520,9 @@ IMPORTANT:
                 # Validator uses the latest (re-review) report and the latest dev report
                 validation_success, validation_passed = self.run_validator()
                 if not validation_success:
-                    self.log(f"Validation phase failed on iteration {self.iteration}. Stopping loop.")
+                    self.log(
+                        f"Validation phase failed on iteration {self.iteration}. Stopping loop."
+                    )
                     break
 
                 # --- Check Validation Result ---
@@ -1537,7 +1595,9 @@ Examples:
     )
     # Source selection (mutually exclusive)
     source_group = parser.add_mutually_exclusive_group(required=True)
-    source_group.add_argument("--latest", action="store_true", help="Source from the latest commit (HEAD)")
+    source_group.add_argument(
+        "--latest", action="store_true", help="Source from the latest commit (HEAD)"
+    )
     source_group.add_argument(
         "--branch", metavar="BRANCH", help="Source branch to create the temporary work branch from"
     )
@@ -1564,9 +1624,13 @@ Examples:
         default=3,
         help="Maximum number of improvement cycles (default: 3)",
     )
-    parser.add_argument("--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP_UUID)")
+    parser.add_argument(
+        "--output-dir", help="Directory for output files (default: tmp/agentic_loop_TIMESTAMP_UUID)"
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Show verbose debug output")
-    parser.add_argument("--no-pr", action="store_true", help="Skip PR creation even if validation passes")
+    parser.add_argument(
+        "--no-pr", action="store_true", help="Skip PR creation even if validation passes"
+    )
     parser.add_argument("--pr-title", help="Custom title for PR (default: auto-generated)")
     parser.add_argument(
         "--timeout",
