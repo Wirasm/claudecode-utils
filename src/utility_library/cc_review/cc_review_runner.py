@@ -105,6 +105,7 @@ Provide your review with the following metadata:
     - List of changed files
     - Date range
     - Number of commits
+    - List of commits and their id and message
     - Number of files changed
     - Number of lines added
     - Number of lines removed
