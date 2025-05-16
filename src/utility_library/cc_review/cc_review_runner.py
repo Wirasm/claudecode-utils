@@ -84,11 +84,12 @@ def run_claude_review(
         sys.exit(1)
 
 
-def generate_review_prompt(branch: Optional[str] = None) -> str:
+def generate_review_prompt(branch: Optional[str] = None, output_format: str = "text") -> str:
     """Generate a simple review prompt.
 
     Args:
         branch: Optional branch to review
+        output_format: Output format (text, json, stream-json)
 
     Returns:
         The review prompt string
@@ -97,6 +98,12 @@ def generate_review_prompt(branch: Optional[str] = None) -> str:
         base_prompt = f"Review the changes in branch '{branch}' compared to main."
     else:
         base_prompt = "Review the latest changes in this repository."
+
+    # Determine file format and name based on output format
+    if output_format == "json":
+        file_instruction = "Save your report as a JSON file named 'review_report.json' in the root of the repository with the structured data format described above."
+    else:
+        file_instruction = "Save your report as a markdown file named 'review_report.md' in the root of the repository."
 
     return f"""
 {base_prompt}
@@ -131,8 +138,7 @@ For each issue, provide:
 - A list of affected lines
 - A list of suggested fixes
 
-
-Output your report and save it in the root of the repository.
+{file_instruction}
 """
 
 
@@ -171,7 +177,7 @@ Examples:
     allowed_tools = [tool.strip() for tool in args.tools.split(",")]
 
     # Generate prompt
-    prompt = generate_review_prompt(branch=args.branch)
+    prompt = generate_review_prompt(branch=args.branch, output_format=args.format)
 
     # Run review
     run_claude_review(prompt, allowed_tools=allowed_tools, output_format=args.format)
