@@ -1,0 +1,92 @@
+{
+  "report_metadata": {
+    "report_file_name": "review_report.json",
+    "report_relative_path": "./review_report.json",
+    "branch_name": "main",
+    "changed_files": [
+      "CHANGELOG.md",
+      "README.md",
+      "pyproject.toml",
+      "src/__init__.py",
+      "src/cli.py",
+      "src/utility_library/cc_review/README.md",
+      "src/utility_library/cc_review/__init__.py",
+      "src/utility_library/cc_review/cc_review_cli.py",
+      "src/utility_library/cc_review/cc_review_runner.py",
+      "src/utility_library/cc_review/cc_review_utils.py",
+      "src/utility_library/cc_standup/standup_typer.py",
+      "uv.lock"
+    ],
+    "date_range": "2025-05-16",
+    "number_of_commits": 1,
+    "number_of_files_changed": 12,
+    "number_of_lines_added": 273,
+    "number_of_lines_removed": 2
+  },
+  "issue_metadata": {
+    "issue_types_found": ["style", "documentation", "consistency"],
+    "overall_severity": "low",
+    "number_of_issues_found": 4,
+    "status": "open"
+  },
+  "issues": [
+    {
+      "issue_id": "001",
+      "severity": "low",
+      "type": "style",
+      "short_description": "Missing newline at end of __init__.py file",
+      "affected_files": ["src/__init__.py"],
+      "affected_lines": ["line 3"],
+      "suggested_fixes": [
+        "Add a newline character at the end of the file to follow Python style conventions"
+      ]
+    },
+    {
+      "issue_id": "002",
+      "severity": "medium",
+      "type": "consistency",
+      "short_description": "Version inconsistency in uv.lock file",
+      "affected_files": ["uv.lock"],
+      "affected_lines": ["line 108"],
+      "suggested_fixes": [
+        "The uv.lock file still references version 0.4.0 for claudecode-utility-library while pyproject.toml has been updated to 1.0.0",
+        "Run 'uv lock --update' to synchronize dependency versions"
+      ]
+    },
+    {
+      "issue_id": "003",
+      "severity": "low",
+      "type": "documentation",
+      "short_description": "JSON prompt escaping instructions could be clearer",
+      "affected_files": ["src/utility_library/cc_review/cc_review_runner.py"],
+      "affected_lines": ["lines 83-87"],
+      "suggested_fixes": [
+        "Consider improving the JSON escaping documentation to include more specific examples",
+        "Add examples of common problematic characters that need escaping"
+      ]
+    },
+    {
+      "issue_id": "004",
+      "severity": "low",
+      "type": "style",
+      "short_description": "Inconsistent error handling in run_claude_review",
+      "affected_files": ["src/utility_library/cc_review/cc_review_runner.py"],
+      "affected_lines": ["lines 55-60"],
+      "suggested_fixes": [
+        "Consider using logging instead of print statements for error handling",
+        "The error message could include more context about the failed command"
+      ]
+    }
+  ],
+  "summary": {
+    "most_critical_issues": [
+      "Version inconsistency in uv.lock file (issue_id: 002) - This could cause dependency resolution issues"
+    ],
+    "overall_assessment": "The version 1.0.0 release introduces the new code review command successfully. The code is well-structured with proper Typer integration. Only minor style and documentation issues were found, with one medium-severity version inconsistency issue in the lock file.",
+    "recommendations": [
+      "Update the uv.lock file to match the new version",
+      "Address the minor style issues for better code consistency",
+      "Consider expanding error handling and logging capabilities"
+    ]
+  }
+}
