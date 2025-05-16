@@ -3,30 +3,7 @@
 Simple Claude Code review runner.
 Builds on concept_library/full_review_loop concepts but starts minimal.
 
-Command-line usage:
-    # Review latest changes (default)
-    uv run src/utility_library/cc_review/cc_review_runner.py
-
-    # Review a specific branch
-    uv run src/utility_library/cc_review/cc_review_runner.py feature-branch
-
-    # With additional options
-    uv run src/utility_library/cc_review/cc_review_runner.py feature-branch --tools Read,Bash,LS
-
-    # Get structured output with JSON format
-    uv run src/utility_library/cc_review/cc_review_runner.py feature-branch --format json
-
-Options:
-    branch        Optional branch name to review (positional argument)
-    --tools       Comma-separated list of allowed tools (default: Read,Glob,Grep,LS,Bash)
-    --format      Output format: text, json, stream-json (default: text)
-
-Example:
-    # Review changes in 'develop' branch with limited tools
-    uv run src/utility_library/cc_review/cc_review_runner.py develop --tools Read,Bash
-
-    # Get JSON output for parsing/automation
-    uv run src/utility_library/cc_review/cc_review_runner.py develop --format json
+This module provides the core review functionality. For CLI usage, use cc_review_cli.py
 
 Python API usage:
     from src.utility_library.cc_review.cc_review_runner import run_claude_review, generate_review_prompt
@@ -40,7 +17,6 @@ Python API usage:
     run_claude_review(prompt, allowed_tools=["Bash", "Read", "LS"], output_format="json")
 """
 
-import argparse
 import subprocess
 import sys
 from typing import List, Optional
@@ -56,13 +32,13 @@ def run_claude_review(
 
     Args:
         prompt: The review prompt to send to Claude
-        allowed_tools: List of allowed tools (defaults to Read, Glob, Grep, LS, Bash)
+        allowed_tools: List of allowed tools (defaults to Read, Glob, Grep, LS, Bash, Write)
         branch: Optional branch to review (defaults to current branch)
         output_format: Output format (text, json, stream-json)
     """
     # Default safe tools for review
     if allowed_tools is None:
-        allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash"]
+        allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write"]
 
     # Build the command
     command = ["claude", "-p", prompt]
@@ -101,7 +77,14 @@ def generate_review_prompt(branch: Optional[str] = None, output_format: str = "t
 
     # Determine file format and name based on output format
     if output_format == "json":
-        file_instruction = "Save your report as a JSON file named 'review_report.json' in the root of the repository with the structured data format described above."
+        file_instruction = """Save your report as a JSON file named 'review_report.json' in the root of the
+        repository with the structured data format described above.
+
+IMPORTANT: When generating JSON output valid JSON, ensure proper escaping:
+- Escape all backslashes (\\) as double backslashes (\\\\)
+- Use proper JSON escaping for special characters
+- Be careful with strings containing Unix paths or regex patterns
+- Test that the output is valid JSON before saving"""
     else:
         file_instruction = "Save your report as a markdown file named 'review_report.md' in the root of the repository."
 
@@ -116,6 +99,8 @@ Please:
 
 Provide your review with the following metadata:
 - Report metadata:
+    - Report file name
+    - Report relative path
     - Branch name
     - List of changed files
     - Date range
@@ -124,6 +109,7 @@ Provide your review with the following metadata:
     - Number of lines added
     - Number of lines removed
 - Issue metadata:
+    - Issue ID (FORMAT: 001, 002, ...)
     - Affected files list
     - Issue types found (bug, security, performance, style, etc.)
     - Overall severity (critical, high, medium, low)
@@ -139,49 +125,5 @@ For each issue, provide:
 - A list of suggested fixes
 
 {file_instruction}
+**ENSURE YOU ALWAYS RETURN THE FILE NAME AND RELATIVE PATH AS PART OF THE REPORT METADATA**
 """
-
-
-def main():
-    """Main entry point for the review runner."""
-    parser = argparse.ArgumentParser(
-        description="Run Claude Code review on repository changes",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Review latest changes
-  %(prog)s
-
-  # Review specific branch
-  %(prog)s feature-branch
-
-  # Review branch with specific tools
-  %(prog)s develop --tools Read,Bash
-
-  # Review with JSON output for structured data
-  %(prog)s feature-branch --format json
-        """,
-    )
-
-    parser.add_argument("branch", nargs="?", help="Branch to review (optional, defaults to latest changes)")
-
-    parser.add_argument("--tools", default="Read,Glob,Grep,LS,Bash", help="Comma-separated list of allowed tools")
-
-    parser.add_argument(
-        "--format", default="text", choices=["text", "json", "stream-json"], help="Output format (default: text)"
-    )
-
-    args = parser.parse_args()
-
-    # Parse tools
-    allowed_tools = [tool.strip() for tool in args.tools.split(",")]
-
-    # Generate prompt
-    prompt = generate_review_prompt(branch=args.branch, output_format=args.format)
-
-    # Run review
-    run_claude_review(prompt, allowed_tools=allowed_tools, output_format=args.format)
-
-
-if __name__ == "__main__":
-    main()

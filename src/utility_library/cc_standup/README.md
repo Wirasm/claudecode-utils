@@ -39,8 +39,14 @@ uv pip install -e ".[dev]"
 # Install as a UV tool to use on any directory
 uv tool install -e /path/to/repo/root
 
-# Run in any git repository
+# Run in any git repository as standalone
 standup
+
+# Run with the main CLI
+claudecode standup
+
+# Reinstall as a global tool if any updates are made
+uv tool install -e . --force
 ```
 
 ### Using pip
@@ -87,6 +93,19 @@ standup --since 2025-05-10T00:00:00
 standup --out custom_report.md
 ```
 
+### Using the integrated CLI
+
+```bash
+# Using the main CLI
+claudecode standup
+
+# With options
+claudecode standup --since 2025-05-10T00:00:00 --open
+
+# Specify output path
+claudecode standup --out custom_report.md
+```
+
 ### From Python code
 
 ```python
@@ -118,6 +137,16 @@ The report format can be customized by editing the prompt template in `report.py
 2. **CLAUDE_API_KEY not set**: Export your API key in your environment
 3. **No git repository found**: Run the tool inside a git repository
 4. **No activity found**: The tool will exit if no commits or PRs are found in the specified time range
+
+## Architecture
+
+The cc_standup tool is split into modular components:
+
+- `standup_cli.py`: Main CLI logic using argparse
+- `standup_typer.py`: Typer wrapper for integration with main CLI
+- `activity.py`: Git commit and GitHub PR collection
+- `provider.py`: Claude Code provider interface
+- `report.py`: Report generation and formatting
 
 ## License
 
