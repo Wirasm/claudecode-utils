@@ -23,7 +23,9 @@ console = Console()
 def main():
     """Main entry point for the standup command."""
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Generate a stand-up report from git commits and GitHub PRs.")
+    parser = argparse.ArgumentParser(
+        description="Generate a stand-up report from git commits and GitHub PRs."
+    )
     parser.add_argument(
         "--since",
         "-s",

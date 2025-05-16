@@ -104,7 +104,9 @@ class TestGitOperations(unittest.TestCase):
     @patch.object(AgenticReviewLoop, "_setup_environment")  # Skip setup environment
     @patch.object(AgenticReviewLoop, "_get_repo_root", return_value=Path("/tmp/fake_repo"))
     @patch.object(AgenticReviewLoop, "_get_current_branch", return_value="main")
-    def test_run_git_command_validates_cwd(self, mock_get_branch, mock_get_root, mock_setup, mock_mkdir, mock_exit):
+    def test_run_git_command_validates_cwd(
+        self, mock_get_branch, mock_get_root, mock_setup, mock_mkdir, mock_exit
+    ):
         """Test that _run_git_command validates the cwd parameter."""
         # Create a loop instance with required parameters - using temp_dir output to avoid creation
         loop = AgenticReviewLoop(latest_commit=True, output_dir=str(self.temp_dir))
@@ -133,7 +135,9 @@ class TestGitOperations(unittest.TestCase):
     @patch("pathlib.Path.mkdir")  # Prevent actual directory creation
     @patch.object(AgenticReviewLoop, "_get_repo_root", return_value=Path("/tmp/fake_repo"))
     @patch.object(AgenticReviewLoop, "_get_current_branch", return_value="main")
-    def test_setup_environment_handles_existing_branch(self, mock_get_branch, mock_get_root, mock_mkdir, mock_exit):
+    def test_setup_environment_handles_existing_branch(
+        self, mock_get_branch, mock_get_root, mock_mkdir, mock_exit
+    ):
         """Test that _setup_environment handles the case where the branch already exists."""
         # Create a new instance with our temp directory to prevent actual directory creation
         loop = AgenticReviewLoop(latest_commit=True, output_dir=str(self.temp_dir))
@@ -164,10 +168,14 @@ class TestGitOperations(unittest.TestCase):
     @patch("pathlib.Path.mkdir")  # Prevent actual directory creation
     @patch.object(AgenticReviewLoop, "_get_repo_root", return_value=Path("/tmp/fake_repo"))
     @patch.object(AgenticReviewLoop, "_get_current_branch", return_value="main")
-    def test_setup_environment_handles_existing_worktree(self, mock_get_branch, mock_get_root, mock_mkdir, mock_exit):
+    def test_setup_environment_handles_existing_worktree(
+        self, mock_get_branch, mock_get_root, mock_mkdir, mock_exit
+    ):
         """Test that _setup_environment handles the case where the worktree already exists."""
         # Create a new instance with our temp directory to prevent actual directory creation
-        loop = AgenticReviewLoop(latest_commit=True, use_worktree=True, output_dir=str(self.temp_dir))
+        loop = AgenticReviewLoop(
+            latest_commit=True, use_worktree=True, output_dir=str(self.temp_dir)
+        )
         # Don't run setup yet to avoid creating directories
         loop._setup_environment = MagicMock()
 

@@ -97,8 +97,12 @@ def run_model(prompt: str, model: str = "claude", interactive: bool = False) -> 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a PRP with an LLM agent.")
     parser.add_argument("--prp-path", help="Relative path to PRP file eg: PRPs/feature.md")
-    parser.add_argument("--prp", help="The file name of the PRP without the .md extension eg: feature")
-    parser.add_argument("--interactive", action="store_true", help="Launch interactive chat session")
+    parser.add_argument(
+        "--prp", help="The file name of the PRP without the .md extension eg: feature"
+    )
+    parser.add_argument(
+        "--interactive", action="store_true", help="Launch interactive chat session"
+    )
     parser.add_argument(
         "--model", default="claude", help="Model CLI executable name"
     )  # can be replaced with other CLI based coders, you would just have to construct the command differently

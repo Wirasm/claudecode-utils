@@ -36,7 +36,8 @@ package-dir = {"" = "."}
 
 [project.scripts]   
 claudecode = "src.cli:app"
-cc-review = "src.utility_library.cc_review.cli:main"
+# Standalone entry points (optional - can be removed if not needed)
+cc-review = "src.utility_library.cc_review.cc_review_cli:main"
 standup = "src.utility_library.cc_standup.standup_cli:main"
 
 [tool.black]

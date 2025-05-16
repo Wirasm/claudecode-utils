@@ -62,7 +62,9 @@ def log(message, verbose=False):
         print(f"[BUG TRIAGE] {message}")
 
 
-def fetch_issues_with_pygithub(repo_name, issue_number=None, label=None, max_issues=DEFAULT_MAX_ISSUES, verbose=False):
+def fetch_issues_with_pygithub(
+    repo_name, issue_number=None, label=None, max_issues=DEFAULT_MAX_ISSUES, verbose=False
+):
     """Fetch issues from GitHub using PyGithub."""
     log(f"Fetching issues from {repo_name} using PyGithub", verbose)
 
@@ -378,11 +380,21 @@ def generate_report(issues, analyses, output_file, verbose=False):
         if analysis:
             # Display severity with appropriate formatting
             severity = analysis.get("severity", "unknown").lower()
-            severity_emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢", "unknown": "⚪"}
+            severity_emoji = {
+                "critical": "🔴",
+                "high": "🟠",
+                "medium": "🟡",
+                "low": "🟢",
+                "unknown": "⚪",
+            }
 
             report.append(f"**Severity**: {severity_emoji.get(severity, '⚪')} {severity.title()}")
-            report.append(f"**Bug Type**: {analysis.get('bug_type', 'Unknown').replace('_', ' ').title()}")
-            report.append(f"**Component**: {analysis.get('component', 'Unknown').replace('_', ' ').title()}")
+            report.append(
+                f"**Bug Type**: {analysis.get('bug_type', 'Unknown').replace('_', ' ').title()}"
+            )
+            report.append(
+                f"**Component**: {analysis.get('component', 'Unknown').replace('_', ' ').title()}"
+            )
 
             # Reproduction steps
             report.append("\n#### Reproduction Steps")
@@ -430,10 +442,18 @@ def main():
         help=f"Maximum number of issues to analyze (default: {DEFAULT_MAX_ISSUES})",
     )
     parser.add_argument(
-        "--output", default=DEFAULT_OUTPUT, help=f"Output file path for the report (default: {DEFAULT_OUTPUT})"
+        "--output",
+        default=DEFAULT_OUTPUT,
+        help=f"Output file path for the report (default: {DEFAULT_OUTPUT})",
     )
-    parser.add_argument("--model", default=DEFAULT_MODEL, help=f"Claude CLI executable name (default: {DEFAULT_MODEL})")
-    parser.add_argument("--dry-run", action="store_true", help="Fetch issues but don't analyze with Claude")
+    parser.add_argument(
+        "--model",
+        default=DEFAULT_MODEL,
+        help=f"Claude CLI executable name (default: {DEFAULT_MODEL})",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Fetch issues but don't analyze with Claude"
+    )
     parser.add_argument("--verbose", action="store_true", help="Print detailed logs")
 
     args = parser.parse_args()
@@ -453,13 +473,21 @@ def main():
 
     if GITHUB_AVAILABLE:
         issues = fetch_issues_with_pygithub(
-            args.repo, issue_number=args.issue, label=args.label, max_issues=args.max_issues, verbose=args.verbose
+            args.repo,
+            issue_number=args.issue,
+            label=args.label,
+            max_issues=args.max_issues,
+            verbose=args.verbose,
         )
 
     # Fall back to GitHub CLI if PyGithub failed or is not available
     if issues is None:
         issues = fetch_issues_with_github_cli(
-            args.repo, issue_number=args.issue, label=args.label, max_issues=args.max_issues, verbose=args.verbose
+            args.repo,
+            issue_number=args.issue,
+            label=args.label,
+            max_issues=args.max_issues,
+            verbose=args.verbose,
         )
 
     # Check if we successfully fetched issues
@@ -483,7 +511,9 @@ def main():
             issue_num = issue["number"]
             print(f"Analyzing issue #{issue_num}: {issue['title']}")
 
-            analysis = analyze_issue_with_claude(issue, repo_structure, model=args.model, verbose=args.verbose)
+            analysis = analyze_issue_with_claude(
+                issue, repo_structure, model=args.model, verbose=args.verbose
+            )
 
             analyses[issue_num] = analysis
 

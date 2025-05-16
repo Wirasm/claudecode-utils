@@ -18,7 +18,9 @@ class TestWorkflowSequence(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up test environment."""
-        self.loop_patcher = patch("full_review_loop.full_review_loop_safe.AgenticReviewLoop", autospec=True)
+        self.loop_patcher = patch(
+            "full_review_loop.full_review_loop_safe.AgenticReviewLoop", autospec=True
+        )
         self.mock_loop_class = self.loop_patcher.start()
 
         # Create a partially mocked instance that will use our patched methods
@@ -27,13 +29,17 @@ class TestWorkflowSequence(unittest.TestCase):
         self.loop.max_iterations = 2  # Set to 2 to test exactly 2 iterations
         self.loop.log = MagicMock()
         self.loop.debug = MagicMock()
-        self.loop.output_dir = Path("/tmp/test_output")  # Set a fixed output dir that won't be created
+        self.loop.output_dir = Path(
+            "/tmp/test_output"
+        )  # Set a fixed output dir that won't be created
         self.loop._cleanup_environment = MagicMock()  # Mock cleanup to avoid errors
 
         # Mock the main workflow methods
         self.loop.run_reviewer = MagicMock(return_value=True)
         self.loop.run_developer = MagicMock(return_value=True)
-        self.loop.run_validator = MagicMock(return_value=(True, False))  # (success, validation_passed)
+        self.loop.run_validator = MagicMock(
+            return_value=(True, False)
+        )  # (success, validation_passed)
         self.loop.run_pr_manager = MagicMock(return_value=True)
         self.loop._cleanup_environment = MagicMock()
 
@@ -53,7 +59,9 @@ class TestWorkflowSequence(unittest.TestCase):
             try:
                 while self_ref.iteration < self_ref.max_iterations:
                     self_ref.iteration += 1
-                    self_ref.log(f"\n=== Starting Iteration {self_ref.iteration}/{self_ref.max_iterations} ===")
+                    self_ref.log(
+                        f"\n=== Starting Iteration {self_ref.iteration}/{self_ref.max_iterations} ==="
+                    )
 
                     # For the first iteration, or when not continuing after validation failure,
                     # start with review
@@ -61,10 +69,14 @@ class TestWorkflowSequence(unittest.TestCase):
                         # --- Step 1: Initial Review ---
                         review_success = self_ref.run_reviewer(is_rereview=(self_ref.iteration > 1))
                         if not review_success:
-                            self_ref.log(f"Review phase failed on iteration {self_ref.iteration}. Stopping loop.")
+                            self_ref.log(
+                                f"Review phase failed on iteration {self_ref.iteration}. Stopping loop."
+                            )
                             break
                     else:
-                        self_ref.log(f"Skipping initial review as we're continuing after a validation failure")
+                        self_ref.log(
+                            f"Skipping initial review as we're continuing after a validation failure"
+                        )
                         # When continuing after validation failure, the developer will use the
                         # latest re-review and validation feedback from previous iteration
 
@@ -72,21 +84,27 @@ class TestWorkflowSequence(unittest.TestCase):
                     # Developer uses the latest review and potentially previous validation feedback
                     dev_success = self_ref.run_developer()
                     if not dev_success:
-                        self_ref.log(f"Development phase failed on iteration {self_ref.iteration}. Stopping loop.")
+                        self_ref.log(
+                            f"Development phase failed on iteration {self_ref.iteration}. Stopping loop."
+                        )
                         break
 
                     # --- Step 3: Re-Review (Review the developer's changes) ---
                     # This creates a separate rereview_file, distinct from the initial review_file
                     rereview_success = self_ref.run_reviewer(is_rereview=True)
                     if not rereview_success:
-                        self_ref.log(f"Re-Review phase failed on iteration {self_ref.iteration}. Stopping loop.")
+                        self_ref.log(
+                            f"Re-Review phase failed on iteration {self_ref.iteration}. Stopping loop."
+                        )
                         break
 
                     # --- Step 4: Validate ---
                     # Validator uses the latest (re-review) report and the latest dev report
                     validation_success, validation_passed = self_ref.run_validator()
                     if not validation_success:
-                        self_ref.log(f"Validation phase failed on iteration {self_ref.iteration}. Stopping loop.")
+                        self_ref.log(
+                            f"Validation phase failed on iteration {self_ref.iteration}. Stopping loop."
+                        )
                         break
 
                     # --- Check Validation Result ---
