@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-05-16
+
+### Added
+- Added enhanced code review command-line interface with Typer framework
+- Implemented multi-format support for review reports (JSON and Markdown)
+- Added simple Claude Code review runner CLI tool
+- Added functionality to save code review reports to repository root directory
+- Added JSON output format option for code review reports
+
+### Changed
+- Improved CLI structure to use Typer for better command organization
+- Enhanced documentation for the review runner module
+
 ## [1.0.0] - 2025-05-16
 
 ### Added
