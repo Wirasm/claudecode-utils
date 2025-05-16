@@ -11,10 +11,6 @@ from rich import print
 from .cc_review_runner import generate_review_prompt, run_claude_review
 from .cc_review_utils import pretty_print_json_file
 
-review_cmd = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
-
-
-@review_cmd.callback(invoke_without_command=True)
 def review(
     branch: Optional[str] = typer.Argument(
         None, help="Branch to review (optional, defaults to latest changes)"
