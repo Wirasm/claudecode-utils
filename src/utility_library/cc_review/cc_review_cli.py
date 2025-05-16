@@ -13,8 +13,12 @@ from .cc_review_utils import pretty_print_json_file
 
 
 def review(
-    branch: Optional[str] = typer.Argument(None, help="Branch to review (optional, defaults to latest changes)"),
-    tools: str = typer.Option("Read,Glob,Grep,LS,Bash,Write", "--tools", help="Comma-separated list of allowed tools"),
+    branch: Optional[str] = typer.Argument(
+        None, help="Branch to review (optional, defaults to latest changes)"
+    ),
+    tools: str = typer.Option(
+        "Read,Glob,Grep,LS,Bash,Write", "--tools", help="Comma-separated list of allowed tools"
+    ),
     format: str = typer.Option("text", "--format", help="Output format: text, json, stream-json"),
     pretty_print: Optional[str] = typer.Option(
         None, "--pretty-print", help="Pretty print a JSON file instead of running a review"
