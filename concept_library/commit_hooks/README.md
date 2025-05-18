@@ -2,6 +2,18 @@
 
 This directory contains experimental git commit hooks that leverage Claude Code for various development workflow enhancements.
 
+## Directory Structure
+
+```
+commit_hooks/
+├── README.md
+├── __init__.py
+└── prepare_commit_msg/
+    ├── prepare_commit_msg.py         # The main hook script
+    ├── prepare_commit_msg_install.sh # Installation script
+    └── prepare_commit_msg_test.py    # Test script for development
+```
+
 ## Available Hooks
 
 ### 1. Prepare Commit Message (prepare-commit-msg)
@@ -18,10 +30,10 @@ Automatically generates conventional commit messages using Claude Code by analyz
 **Quick Install:**
 ```bash
 # Run the installer
-./concept_library/commit_hooks/install.sh
+./concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg_install.sh
 
 # Or manually:
-cp concept_library/commit_hooks/prepare_commit_msg.py .git/hooks/prepare-commit-msg
+cp concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg.py .git/hooks/prepare-commit-msg
 chmod +x .git/hooks/prepare-commit-msg
 ```
 
@@ -59,7 +71,10 @@ Following the concept library principles:
 To test hooks during development:
 
 ```bash
-# Create a test commit
+# Run the test script
+python concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg_test.py
+
+# Or test manually
 git add -A
-python concept_library/commit_hooks/prepare_commit_msg.py .git/COMMIT_EDITMSG
+python concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg.py .git/COMMIT_EDITMSG
 ```

@@ -22,7 +22,7 @@ with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix="_COMMIT_MSG") a
 
 # Run the hook
 result = subprocess.run(
-    [sys.executable, "concept_library/commit_hooks/prepare_commit_msg.py", commit_msg_file],
+    [sys.executable, "concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg.py", commit_msg_file],
     capture_output=True,
     text=True
 )
