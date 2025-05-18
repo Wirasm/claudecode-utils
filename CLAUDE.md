@@ -17,6 +17,8 @@ we add complexity step by step and only if needed.
 
 Minimal claude code wrappers with 0 to minimal validation.
 
+- Always remember to use uv run when we run scripts
+
 Example:
 
 ```bash

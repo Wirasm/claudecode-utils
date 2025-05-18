@@ -1,3 +1,6 @@
+## [0.3.1] - 2025-05-18
+- refactor(commit_hooks): reorganize prepare_commit_msg hook into subdirectory for better structure\n- chore: remove unused workflows and commit hook infrastructure\n- chore: remove experimental commit hooks and temporary artifacts\n- chore: bump dependencies and update versions
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -5,106 +8,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.3] - 2025-05-16
+## [Unreleased]
 
 ### Added
-- Added commit metadata tracking functionality
-- Added commit list to review runner report metadata
+- Added commit hooks concept library with Claude Code integration
+  - prepare-commit-msg hook for automatic conventional commit messages
+  - pre-push hook for semantic version bumping and changelog updates
+- Added automated bug triage concept
+- Added full review loop orchestration
+- Added PRP (Product Requirement Prompt) flow
 
 ### Changed
-- Reformatted CLI parameter definitions for better readability
-- Consolidated multi-line function parameters into single lines in cc_review_cli.py
+- Reorganized prepare_commit_msg hook into subdirectory structure
+- Updated project to use 0.x.x versioning during development phase
 
-## [1.1.2] - 2025-05-16
+## [0.3.0] - 2025-05-18
 
 ### Added
-- Added JSON format for review reports
-
-### Fixed
-- Fixed review CLI to support natural argument order (branch before options)
-
-## [1.1.1] - 2025-05-16
+- Commit hooks library for git workflow automation
+- Enhanced code review functionality with JSON output
+- Standup report generator integration
+- CLI commands consolidation under main `claudecode` command
 
 ### Changed
-- Updated version numbers in pyproject.toml and __init__.py
-- Maintenance release with no functional changes
+- Migrated from 1.x.x to 0.x.x versioning (development phase)
+- Improved project structure with concept_library and src separation
 
-## [1.1.0] - 2025-05-16
+## [0.2.0] - 2025-05-13
 
 ### Added
-- Added enhanced code review command-line interface with Typer framework
-- Implemented multi-format support for review reports (JSON and Markdown)
-- Added simple Claude Code review runner CLI tool
-- Added functionality to save code review reports to repository root directory
-- Added JSON output format option for code review reports
+- Initial concept library implementation
+- Simple review, dev, validator, and PR tools
+- Full review loop proof of concept
+- Basic CLI structure with Typer
 
 ### Changed
-- Improved CLI structure to use Typer for better command organization
-- Enhanced documentation for the review runner module
+- Refactored project structure for better modularity
+- Improved documentation and README
 
-## [1.0.0] - 2025-05-16
-
-### Added
-- Added code review command 
-- Refactored CLI structure with Typer
-- Added output format support for JSON and markdown review reports
-- Added JSON output format option to code review runner
-- Added ability to save code review report to repository root directory
-- Added simple Claude Code review runner CLI tool
-
-### Changed
-- Formatted long lines using black code formatter
-- Deleted code review report for cc-review-runner feature
-
-## [0.4.1] - 2025-05-16
-
-### Changed
-- Removed GitHub Actions workflow documentation from README
-
-## [0.4.0] - 2025-05-15
+## [0.1.0] - 2025-05-10
 
 ### Added
-- Added documentation for automated bug triaging
-- Added restriction for major version bumps to explicit breaking changes only
-
-## [0.3.0] - 2025-05-15
-
-### Added
-- Implemented automated bug triage tool with Claude integration
-- Added concept library with analysis, innovative ideas, and potential features for future development
-
-## [0.2.3] - 2025-05-15
-
-### Fixed
-- Updated workflow to explicitly create PR using GitHub CLI
-
-## [0.2.2] - 2025-05-15
-
-### Added
-- Added CODEOWNERS file to define code ownership and review responsibilities
-
-## [0.2.1] - 2025-05-15
-
-### Changed
-- Streamlined changelog workflow with GitHub CLI integration and PR automation
-
-## [0.2.0] - 2025-05-15
-
-### Added
-- Implemented multiple API key configuration methods
-- Enhanced debug logging
-- Added debug logging for better troubleshooting
-- Enhanced changelog automation with structured JSON response handling
-
-### Changed
-- Simplified changelog update workflow with streamlined version extraction
-- Simplified changelog update workflow with better error handling
-
-### Fixed
-- Removed invalid character from changelog workflow file
-
-## [0.1.0] - Initial Release
-
-### Added
-- Initial project structure
-- Basic functionality
+- Initial project setup
+- Basic utility functions for Claude Code
+- Project configuration and dependencies

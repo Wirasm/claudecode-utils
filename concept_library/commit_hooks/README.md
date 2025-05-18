@@ -8,10 +8,14 @@ This directory contains experimental git commit hooks that leverage Claude Code 
 commit_hooks/
 ├── README.md
 ├── __init__.py
-└── prepare_commit_msg/
-    ├── prepare_commit_msg.py         # The main hook script
-    ├── prepare_commit_msg_install.sh # Installation script
-    └── prepare_commit_msg_test.py    # Test script for development
+├── prepare_commit_msg/
+│   ├── prepare_commit_msg.py         # The main hook script
+│   ├── prepare_commit_msg_install.sh # Installation script
+│   └── prepare_commit_msg_test.py    # Test script for development
+└── pre_push/
+    ├── pre_push_version_bump.py     # Version bump hook script
+    ├── pre_push_install.sh          # Installation script
+    └── pre_push_test.py             # Test script for development
 ```
 
 ## Available Hooks
@@ -42,6 +46,32 @@ chmod +x .git/hooks/prepare-commit-msg
 rm .git/hooks/prepare-commit-msg
 ```
 
+### 2. Pre-Push Version Bump (pre-push)
+
+Automatically bumps version and updates CHANGELOG.md based on conventional commits.
+
+**Features:**
+- Analyzes commits since last version tag
+- Never bumps major version (development mode)
+- Updates pyproject.toml version
+- Prepends changes to CHANGELOG.md
+- Exits for review before push
+
+**Quick Install:**
+```bash
+# Run the installer
+./concept_library/commit_hooks/pre_push/pre_push_install.sh
+
+# Or manually:
+cp concept_library/commit_hooks/pre_push/pre_push_version_bump.py .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+```
+
+**Uninstall:**
+```bash
+rm .git/hooks/pre-push
+```
+
 ## Philosophy
 
 Following the concept library principles:
@@ -70,6 +100,7 @@ Following the concept library principles:
 
 To test hooks during development:
 
+**prepare-commit-msg:**
 ```bash
 # Run the test script
 python concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg_test.py
@@ -77,4 +108,13 @@ python concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg_test.p
 # Or test manually
 git add -A
 python concept_library/commit_hooks/prepare_commit_msg/prepare_commit_msg.py .git/COMMIT_EDITMSG
+```
+
+**pre-push:**
+```bash
+# Test the version bump logic
+python concept_library/commit_hooks/pre_push/pre_push_test.py
+
+# Or run directly
+python concept_library/commit_hooks/pre_push/pre_push_version_bump.py
 ```
