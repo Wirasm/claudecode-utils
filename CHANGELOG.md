@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2025-05-16
+
+### Added
+- Added commit metadata tracking functionality
+- Added commit list to review runner report metadata
+
+### Changed
+- Reformatted CLI parameter definitions for better readability
+- Consolidated multi-line function parameters into single lines in cc_review_cli.py
+
+## [1.1.2] - 2025-05-16
+
+### Added
+- Added JSON format for review reports
+
+### Fixed
+- Fixed review CLI to support natural argument order (branch before options)
+
 ## [1.1.1] - 2025-05-16
 
 ### Changed
