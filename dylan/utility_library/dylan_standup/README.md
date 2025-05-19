@@ -111,8 +111,8 @@ dylan standup --out custom_report.md
 ### From Python code
 
 ```python
-from src.utility_library.dylan_standup import activity, report
-from src.utility_library.provider_clis.provider_claude_code import get_provider
+from dylan.utility_library.dylan_standup import activity, report
+from dylan.utility_library.provider_clis.provider_claude_code import get_provider
 
 # Collect activities
 since_dt = datetime.datetime.now() - datetime.timedelta(days=1)

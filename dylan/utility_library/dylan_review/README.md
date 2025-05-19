@@ -106,8 +106,8 @@ dylan review --pretty-print review_report.json
 ### From Python code
 
 ```python
-from src.utility_library.dylan_review import run_claude_review, generate_review_prompt
-from src.utility_library.dylan_review.dylan_review_utils import pretty_print_json_file
+from dylan.utility_library.dylan_review import run_claude_review, generate_review_prompt
+from dylan.utility_library.dylan_review.dylan_review_utils import pretty_print_json_file
 
 # Generate and run a review
 prompt = generate_review_prompt(branch="feature-branch")
