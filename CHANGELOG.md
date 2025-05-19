@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-05-19
+
 ### Added
+- New `dylan pr` command for autonomous pull request creation (`90233e4`)
+  - Integrates with the main dylan CLI as a new subcommand
+  - Complete PR creation module with CLI and runner components
+  - Comprehensive prompt generation for autonomous PR workflow
+  - Support for automatic branch detection and PR analysis
+  - Follows dylan philosophy of minimal wrappers with complete Claude autonomy
 - New minimal autonomous pre-push hook implementation that trusts Claude completely
   - Gives Claude complete control over versioning decisions
   - Trusts Claude to format changelog entries appropriately
