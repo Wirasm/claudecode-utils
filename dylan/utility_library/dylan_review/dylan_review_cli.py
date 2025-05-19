@@ -9,7 +9,7 @@ from .dylan_review_runner import generate_review_prompt, run_claude_review
 
 def review(
     branch: str | None = typer.Argument(
-        None, help="Branch to review (optional, defaults to latest changes)"
+        default=None, help="Branch to review (optional, defaults to latest changes)"
     ),
     tools: str = typer.Option(
         "Read,Glob,Grep,LS,Bash,Write", "--tools", help="Comma-separated list of allowed tools"

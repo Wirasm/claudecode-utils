@@ -1,3 +1,6 @@
+## [0.3.2] - 2025-05-19
+- Removed unused pretty-print functionality from dylan_review module
+
 ## [0.3.1] - 2025-05-18
 - refactor(commit_hooks): reorganize prepare_commit_msg hook into subdirectory for better structure\n- chore: remove unused workflows and commit hook infrastructure\n- chore: remove experimental commit hooks and temporary artifacts\n- chore: bump dependencies and update versions
 
