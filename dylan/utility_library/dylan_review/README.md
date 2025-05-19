@@ -1,10 +1,10 @@
-# Claude Code Review Runner
+# Dylan Review
 
 A simple utility that runs code reviews using Claude Code on git branches and commits.
 
 ## Overview
 
-The dylan_review tool helps developers get AI-powered code reviews by:
+The Dylan Review tool helps developers get AI-powered code reviews by:
 
 1. Analyzing git diffs between branches or commits
 2. Identifying issues, bugs, and potential improvements
@@ -141,11 +141,11 @@ Issue types:
 
 ## Architecture
 
-The cc_review tool is split into modular components:
+The Dylan Review tool is split into modular components:
 
-- `cc_review_runner.py`: Core review functionality
-- `cc_review_cli.py`: Typer-based CLI interface
-- `cc_review_utils.py`: Utility functions (pretty-printing)
+- `dylan_review_runner.py`: Core review functionality
+- `dylan_review_cli.py`: Typer-based CLI interface
+- `dylan_review_utils.py`: Utility functions (pretty-printing)
 - `__init__.py`: Module exports
 
 ## License

@@ -37,6 +37,31 @@ dylan standup --out report.md
 
 See [dylan_standup README](utility_library/dylan_standup/README.md) for detailed options.
 
+### `dylan pr`
+
+Create and manage pull requests with AI-generated descriptions.
+
+```bash
+dylan pr                              # PR from current branch to main
+dylan pr feature-branch --target develop  # PR from specific branch
+dylan pr --changelog                  # Update changelog while creating PR
+```
+
+See [dylan_pr README](utility_library/dylan_pr/README.md) for detailed options.
+
+### `dylan release`
+
+Manage project releases with version bumping and changelog updates.
+
+```bash
+dylan release              # Create release with patch bump (default)
+dylan release --minor      # Minor version bump
+dylan release --major --tag # Major version bump with git tag
+dylan release --dry-run    # Preview changes without applying
+```
+
+See [dylan_release README](utility_library/dylan_release/README.md) for detailed options.
+
 ## Usage
 
 ```bash
@@ -46,17 +71,19 @@ dylan --help
 # Get help for a specific command
 dylan review --help
 dylan standup --help
+dylan pr --help
+dylan release --help
 ```
 
 ## Development
 
 The CLI is built using [Typer](https://typer.tiangolo.com/) and dispatches to modular utilities:
 
-- `src/cli.py` - Main CLI entry point
-- `src/utility_library/cc_review/` - Code review implementation
-- `src/utility_library/cc_standup/` - Standup report implementation
+- `dylan/cli.py` - Main CLI entry point
+- `dylan/utility_library/dylan_review/` - Code review implementation
+- `dylan/utility_library/dylan_standup/` - Standup report implementation
 
 Each utility can also be run standalone:
 
-- `cc-review` - Direct code review access
-- `standup` - Direct standup report access
+- `dylan review` - Direct code review access
+- `dylan standup` - Direct standup report access

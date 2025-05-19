@@ -35,6 +35,26 @@ Generates formatted standup reports from:
 dylan standup --since yesterday --open
 ```
 
+#### `dylan pr` - Pull Request Management
+Creates and manages pull requests with:
+- Automated PR title and description generation
+- Branch management and tracking
+- GitHub CLI integration
+
+```bash
+dylan pr feature-branch --target develop
+```
+
+#### `dylan release` - Release Management
+Manages project releases with:
+- Version bumping and changelog updates
+- Release notes generation
+- Git tag management
+
+```bash
+dylan release --minor --tag
+```
+
 ## Installation
 
 ```bash
@@ -75,7 +95,9 @@ dylan/
 │       ├── dylan_review/ # Code review utility
 │       ├── dylan_pr/     # Pull request creation
 │       ├── dylan_release/# Release management
-│       └── dylan_standup/# Standup report generator
+│       ├── dylan_standup/# Standup report generator
+│       ├── provider_clis/# Claude Code provider interfaces
+│       └── shared/       # Shared utilities and UI components
 ├── concept_library/      # Experimental concepts
 └── PRPs/                 # Product Requirement Prompts
 ```
@@ -84,7 +106,7 @@ dylan/
 
 ```bash
 # Setup
-git clone https://github.com/yourusername/dylan.git
+git clone https://github.com/Wirasm/dylan.git
 cd dylan
 uv venv
 source .venv/bin/activate

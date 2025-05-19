@@ -168,6 +168,41 @@ standup --since "2023-05-01T09:00:00"
 standup --open
 ```
 
+#### PR Creation
+
+```bash
+# Create a pull request from the current branch to main
+dylan pr
+
+# Create PR from a specific branch to a target branch
+dylan pr feature-branch --target develop
+
+# Update changelog while creating PR
+dylan pr --changelog
+
+# Create PR with custom target and tools
+dylan pr --target develop --tools "Read,Bash"
+```
+
+#### Release Management
+
+```bash
+# Create a new release with patch version bump (default)
+dylan release
+
+# Minor version bump
+dylan release --minor
+
+# Major version bump with git tag
+dylan release --major --tag
+
+# Dry run to preview changes
+dylan release --minor --dry-run
+
+# Release with specific merge strategy
+dylan release --minor --merge-strategy pr
+```
+
 ## Code Architecture
 
 Dylan is a modular CLI for AI-powered development utilities using Claude Code. The project explores three core concepts:
@@ -249,5 +284,7 @@ A tool for generating daily standup reports from git activity:
 - `dylan/utility_library/`: Contains the utility implementations
   - `dylan_standup/`: Standup report generator
   - `dylan_review/`: Code review tool
+  - `dylan_pr/`: Pull request creation and management
+  - `dylan_release/`: Release management and changelog generation
 - `PRPs/`: Contains Product Requirement Prompt templates
 - `ai_docs/`: Documentation for AI tools and best practices
