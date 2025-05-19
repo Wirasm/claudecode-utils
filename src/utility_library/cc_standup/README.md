@@ -11,6 +11,8 @@ The cc_standup tool helps developers generate daily stand-up reports by:
 3. Using Claude to create a formatted Markdown stand-up report
 4. Displaying a preview and saving the report to a file
 
+**Required Claude Code Tools**: Write (for saving the report)
+
 ## Requirements
 
 - Python 3.12+

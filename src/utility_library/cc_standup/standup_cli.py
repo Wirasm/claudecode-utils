@@ -77,7 +77,9 @@ def main():
     # Prompt Claude to generate and save the file
     provider = get_provider()  # only Claude for now
     prompt = build_prompt(commits, prs)
-    result = provider.generate(prompt, output_path=str(outfile))
+    # Standup needs Write tool to save the report
+    allowed_tools = ["Write"]
+    result = provider.generate(prompt, output_path=str(outfile), allowed_tools=allowed_tools)
 
     # Read the saved file and show preview
     if outfile.exists():

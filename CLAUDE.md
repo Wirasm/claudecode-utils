@@ -18,6 +18,7 @@ we add complexity step by step and only if needed.
 Minimal claude code wrappers with 0 to minimal validation.
 
 - Always remember to use uv run when we run scripts
+- We never write commit messages, we have a pre-commit hook for that so always commit with git commit nothing more
 
 Example:
 

@@ -12,6 +12,8 @@ The cc_review tool helps developers get AI-powered code reviews by:
 4. Generating structured review reports in markdown or JSON format
 5. Supporting pretty-printing for JSON outputs
 
+**Required Claude Code Tools**: Read, Glob, Grep, LS, Bash, Write (configurable via --allowed-tools)
+
 ## Requirements
 
 - Python 3.12+
