@@ -13,6 +13,9 @@ def pr(
     target: str = typer.Option(
         "main", "--target", "-t", help="Target branch for PR"
     ),
+    changelog: bool = typer.Option(
+        False, "--changelog", help="Update [Unreleased] section in CHANGELOG.md"
+    ),
     tools: str = typer.Option(
         "Read,Bash,Write,Glob,Grep", "--tools", help="Comma-separated list of allowed tools"
     ),
@@ -23,7 +26,12 @@ def pr(
     allowed_tools = [tool.strip() for tool in tools.split(",")]
 
     # Generate prompt
-    prompt = generate_pr_prompt(branch=branch, target_branch=target, output_format=format)
+    prompt = generate_pr_prompt(
+        branch=branch,
+        target_branch=target,
+        update_changelog=changelog,
+        output_format=format
+    )
 
     # Run PR creation
     run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format)

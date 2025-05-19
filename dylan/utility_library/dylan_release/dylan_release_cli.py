@@ -17,6 +17,9 @@ def release(
     tag: bool = typer.Option(False, "--tag", help="Create git tag after release"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without applying"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip git operations"),
+    merge_strategy: str = typer.Option(
+        "direct", "--merge-strategy", help="Merge strategy: direct, pr (default: direct)"
+    ),
     tools: str = typer.Option(
         "Read,Write,Edit,Bash,LS,Glob", "--tools", help="Comma-separated list of allowed tools"
     ),
@@ -40,6 +43,7 @@ def release(
         create_tag=tag,
         dry_run=dry_run,
         no_git=no_git,
+        merge_strategy=merge_strategy,
         output_format=format
     )
 
