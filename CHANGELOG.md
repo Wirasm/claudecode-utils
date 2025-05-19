@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Refactored pre-push hook to add branch-specific versioning rules (`5ee18c5`)
+  - Apply different versioning rules based on target branch
+  - Main branch: Bump version and create new changelog section  
+  - Feature branches: Append to [Unreleased] section without version bump
+  - Add clearer branch detection and file management instructions
+- Refactored dylan to improve pr and review file handling with tmp directory (`5ee18c5`)
+  - Move report outputs to tmp/ directory to avoid clutter
+  - Add timestamp-based filename generation for existing files
+  - Enhance file handling instructions in prompts
+  - Ensure proper directory creation before writing reports
+
+### Breaking Changes
+- Report files are now saved to tmp/ directory by default (`5ee18c5`)
+
 ## [0.4.0] - 2025-05-19
 
 ### Added

@@ -95,7 +95,7 @@ run_claude_review(prompt, output_format="json")
 
 ### Markdown (default)
 
-Creates a `review_report.md` file with:
+Creates a `tmp/review_[branch_name]_[timestamp].md` file (or `tmp/review_report.md` if no name collision) with:
 
 - Report metadata (branch, commits, file changes)
 - Issues ranked by severity
@@ -104,7 +104,7 @@ Creates a `review_report.md` file with:
 
 ### JSON
 
-Creates a `review_report.json` file with structured data:
+Creates a `tmp/review_[branch_name]_[timestamp].json` file (or `tmp/review_report.json` if no name collision) with structured data:
 
 - Report metadata
 - Issue metadata

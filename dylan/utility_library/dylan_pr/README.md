@@ -6,6 +6,8 @@ A minimal Claude Code utility for autonomous pull request creation.
 
 The `dylan pr` command gives Claude Code complete autonomy to analyze commits and create pull requests. It follows the same minimal philosophy as other dylan utilities.
 
+The command saves its report to the `tmp/` directory to avoid cluttering the project root.
+
 ## Usage
 
 ```bash
@@ -45,6 +47,7 @@ dylan pr --tools "Bash,Read,Write"
    - Testing notes
 5. Uses GitHub CLI to create the PR
 6. Reports results with PR URL
+7. Saves report to `tmp/pr_report.md` (or `tmp/pr_report_[timestamp].md` if file exists)
 
 ## Requirements
 
