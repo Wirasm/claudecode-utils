@@ -1,0 +1,3 @@
+release_branch: develop
+production_branch: main
+merge_strategy: direct
