@@ -8,7 +8,13 @@ import typer
 
 from .standup_cli import main as standup_main
 
+standup_app = typer.Typer(
+    context_settings={"help_option_names": ["-h", "--help"]},
+    pretty_exceptions_show_locals=False,
+)
 
+
+@standup_app.callback(invoke_without_command=True)
 def standup(
     since: str | None = typer.Option(
         None,

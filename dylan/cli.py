@@ -7,10 +7,10 @@ import typer
 from rich import print
 
 from .utility_library.dylan_review.dylan_review_cli import review
-from .utility_library.dylan_standup.standup_typer import standup
+from .utility_library.dylan_standup.standup_typer import standup_app
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
-app.command(name="standup", help="Generate Markdown stand-up report")(standup)
+app.add_typer(standup_app, name="standup", help="Generate Markdown stand-up report")
 app.command(name="review", help="Run code reviews using Claude Code")(review)
 
 
