@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- Updated README files for dylan pr and review commands (`05c9716`)
+## [0.5.0] - 2025-05-19
+
+### Added
+- New `dylan pr` command for autonomous pull request creation
+  - Complete PR creation module integrated into the main CLI
+  - Analyzes commits and creates PRs automatically
+  - Works with GitHub CLI for seamless integration
+  - Supports custom target branches and dry-run mode
 
 ### Changed
 - Refactored pre-push hook to add branch-specific versioning rules (`5ee18c5`)
@@ -21,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Add timestamp-based filename generation for existing files
   - Enhance file handling instructions in prompts
   - Ensure proper directory creation before writing reports
+
+### Fixed
+- Updated README files for dylan pr and review commands (`05c9716`)
 
 ### Breaking Changes
 - Report files are now saved to tmp/ directory by default (`5ee18c5`)
