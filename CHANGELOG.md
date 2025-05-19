@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-05-19
+
 ### Added
 - New `dylan release` command for automated project releases (`10bed2a`)
   - Introduces autonomous release management functionality
