@@ -119,6 +119,9 @@ uv run pytest
 
 # Format code
 uv run black .
+
+# Clean build artifacts (removes old egg-info, pycache, etc.)
+./scripts/clean_build_artifacts.sh
 ```
 
 ## Philosophy

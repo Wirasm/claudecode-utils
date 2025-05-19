@@ -29,7 +29,7 @@ app.command(name="pr", help="Create pull requests with AI-generated descriptions
 
 
 @app.callback(invoke_without_command=True)
-def _main(ctx: typer.Context):
+def _main(ctx: typer.Context) -> None:
     """Show welcome message when no command is provided."""
     if ctx.invoked_subcommand is None:
         # Welcome header with flair

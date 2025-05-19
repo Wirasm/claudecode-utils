@@ -4,7 +4,7 @@
 import typer
 from rich.console import Console
 
-from ..shared.ui_theme import create_box_header, create_header
+from ..shared.ui_theme import create_box_header, create_header, format_tool_count
 from .dylan_review_runner import generate_review_prompt, run_claude_review
 
 console = Console()
@@ -61,7 +61,7 @@ def review(
     console.print(create_box_header("Review Configuration", {
         "Branch": branch or "latest changes",
         "Format": format,
-        "Tools": f"{len(allowed_tools)} tools enabled"
+        "Tools": format_tool_count(allowed_tools)
     }))
     console.print()
 

@@ -4,7 +4,12 @@
 import typer
 from rich.console import Console
 
-from ..shared.ui_theme import create_box_header, create_header
+from ..shared.ui_theme import (
+    create_box_header,
+    create_header,
+    format_boolean_option,
+    format_tool_count,
+)
 from .dylan_pr_runner import generate_pr_prompt, run_claude_pr
 
 console = Console()
@@ -74,8 +79,8 @@ def pr(
     console.print(create_box_header("PR Configuration", {
         "Source": branch or "current branch",
         "Target": target,
-        "Changelog": "✓ Enabled" if changelog else "✗ Disabled",
-        "Tools": f"{len(allowed_tools)} tools enabled"
+        "Changelog": format_boolean_option(changelog),
+        "Tools": format_tool_count(allowed_tools)
     }))
     console.print()
 
