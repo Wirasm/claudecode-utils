@@ -105,7 +105,7 @@ wheels = [
 
 [[package]]
 name = "claudecode-utility-library"
-version = "0.6.1"
+
 source = { editable = "." }
 dependencies = [
     { name = "filelock" },

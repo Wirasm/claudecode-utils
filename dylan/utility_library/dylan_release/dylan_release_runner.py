@@ -83,10 +83,10 @@ def generate_release_prompt(
     extension = ".json" if output_format == "json" else ".md"
 
     git_instructions = "" if no_git else f"""
-5. GIT OPERATIONS:
+6. GIT OPERATIONS:
    - Create commit: "release: version X.Y.Z"
    {'- Create git tag: v{new_version}' if create_tag else '- Skip tag creation'}
-6. MERGE STRATEGY ({merge_strategy}):
+7. MERGE STRATEGY ({merge_strategy}):
    {"- If on release branch (e.g., develop):" + '\n' +
     "  * Commit changes on release branch" + '\n' +
     "  * Push release branch" + '\n' +
@@ -162,20 +162,36 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Use Edit tool for precise updates
    {'- PREVIEW changes only' if dry_run else ''}
 
-4. CHANGELOG UPDATE:
+4. PR REPORT EXTRACTION:
+   - Get current branch: git symbolic-ref --short HEAD
+   - Sanitize branch name (replace / with -)
+   - List PR reports matching branch: ls -1t tmp/pr_report_<branch>_*.md
+   - Find the most recent one by timestamp
+   - If found, read and extract:
+     * Branch name used for PR
+     * Target branch
+     * Changelog section content (if available)
+   - Use this information to enhance changelog entries
+   - If no PR report found, continue with standard changelog update
+
+5. CHANGELOG UPDATE:
    - Look for changelog in this order:
      a. CHANGELOG.md
      b. HISTORY.md
      c. NEWS.md
    - Find [Unreleased] section
    - Create new section: [X.Y.Z] - YYYY-MM-DD
-   - Move all [Unreleased] content to new section
+   - If PR report found with changelog section:
+     * Use the pre-formatted entries from PR report
+     * Add these under appropriate sections (Added/Changed/Fixed/Removed)
+   - Otherwise:
+     * Move all [Unreleased] content to new section
    - Keep [Unreleased] header for future changes
    {'- PREVIEW changes only' if dry_run else ''}
 
 {git_instructions if not no_git else ''}
 
-7. REPORT GENERATION:
+8. REPORT GENERATION:
    - Document all actions taken
    - Show before/after versions
    - List files modified
