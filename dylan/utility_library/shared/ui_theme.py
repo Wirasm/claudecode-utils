@@ -8,6 +8,44 @@ CHECK = "✓"
 CROSS = "✗"
 SPINNER = "◍"
 
+# Dylan's thinking spinner frames - ASCII art faces looking around
+DYLAN_SPINNER = {
+    "interval": 150,
+    "frames": [
+        "( o.o) ✧",
+        "( o.-)  ✧",
+        "( -.o)   ✧",
+        "( -.-) ⋄   ✧",
+        "(o.-')  •  ✧",
+        "(o.o )   •  ✧",
+        "('-.o)    • ✧",
+        "(-.-)     ⋄ ✧",
+        "( o.o)     • ✧",
+        "( o.-)    • ✧",
+        "( -.o)   • ✧",
+        "( -.-)  ⋄ ✧",
+        "(o.-') • ✧",
+        "(o.o ) • ✧",
+        "('-.o) • ✧",
+        "( -.-) ✧",
+        "( o.o) ✧",
+        "( >.o) ✧",
+        "( o.<) ✧",
+        "( ^.^) ✧",
+        "( o.~) ✧",
+        "( ~.o) ✧",
+        "( 0.0) ✧",
+        "( o.O) ✧",
+        "( O.o) ✧",
+        "( @.@) ✧",
+        "( *.o) ✧",
+        "( o.*) ✧",
+        "( ^_^) ✧",
+        "( -_-) ✧",
+        "( o_o) ✧",
+    ]
+}
+
 # Color scheme
 COLORS = {
     "primary": "#3B82F6",     # Blue

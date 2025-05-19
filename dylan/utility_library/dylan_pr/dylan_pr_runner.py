@@ -21,9 +21,9 @@ import sys
 from typing import Literal
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from ..provider_clis.provider_claude_code import get_provider
+from ..shared.progress import create_dylan_progress, create_task_with_dylan
 from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
 
 console = Console()
@@ -51,18 +51,9 @@ def run_claude_pr(
     # Get provider and run the PR creation
     provider = get_provider()
 
-    with Progress(
-        SpinnerColumn(spinner_name="dots", style=COLORS['primary']),
-        TextColumn("[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        console=console,
-        transient=True,
-    ) as progress:
+    with create_dylan_progress(console=console) as progress:
         # Start the PR task
-        task = progress.add_task(
-            f"[{COLORS['primary']}]Dylan is creating your pull request...[/]",
-            total=None
-        )
+        task = create_task_with_dylan(progress, "Dylan is creating your pull request...")
 
         try:
             result = provider.generate(

@@ -21,9 +21,9 @@ import sys
 from typing import Literal
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from ..provider_clis.provider_claude_code import get_provider
+from ..shared.progress import create_dylan_progress, create_task_with_dylan
 from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
 
 console = Console()
@@ -53,18 +53,9 @@ def run_claude_review(
     # Get provider and run the review
     provider = get_provider()
 
-    with Progress(
-        SpinnerColumn(spinner_name="dots", style=COLORS['primary']),
-        TextColumn("[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        console=console,
-        transient=True,
-    ) as progress:
+    with create_dylan_progress(console=console) as progress:
         # Start the review task
-        task = progress.add_task(
-            f"[{COLORS['primary']}]Dylan is working on the code review...[/]",
-            total=None
-        )
+        task = create_task_with_dylan(progress, "Dylan is working on the code review...")
 
         try:
             result = provider.generate(
