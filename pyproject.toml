@@ -20,6 +20,7 @@ dependencies = [
     "rich>=14.0.0",
     "gitpython>=3.1.44",
     "pygithub>=2.6.1",
+    "ruff>=0.11.10",
 ]
 
 [project.optional-dependencies]

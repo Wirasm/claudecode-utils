@@ -20,7 +20,13 @@ Python API usage:
 import sys
 from typing import Literal
 
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
 from ..provider_clis.provider_claude_code import get_provider
+from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
+
+console = Console()
 
 
 def run_claude_pr(
@@ -44,16 +50,61 @@ def run_claude_pr(
 
     # Get provider and run the PR creation
     provider = get_provider()
-    try:
-        result = provider.generate(
-            prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
+
+    with Progress(
+        SpinnerColumn(spinner_name="dots", style=COLORS['primary']),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+        transient=True,
+    ) as progress:
+        # Start the PR task
+        task = progress.add_task(
+            f"[{COLORS['primary']}]Dylan is creating your pull request...[/]",
+            total=None
         )
-        print("Claude process completed successfully")
-        if result:
-            print(result)
-    except Exception as e:
-        print(f"Error running Claude: {e}")
-        sys.exit(1)
+
+        try:
+            result = provider.generate(
+                prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
+            )
+
+            # Update task to complete
+            progress.update(task, completed=True)
+
+            # Success message with flair
+            console.print()
+            console.print(create_status("Pull request created successfully!", "success"))
+            console.print(f"[{COLORS['muted']}]Report saved to:[/] [{COLORS['accent']}]{output_file}[/]")
+            console.print()
+
+            # Show a nice completion message
+            console.print(f"[{COLORS['primary']}]{ARROW}[/] [bold]PR Summary[/bold] [{COLORS['accent']}]{SPARK}[/]")
+            console.print(f"[{COLORS['muted']}]Dylan has analyzed your commits and created a PR description.[/]")
+            console.print()
+
+            if result and "Mock" not in result:  # Don't show mock results
+                console.print(result)
+        except RuntimeError as e:
+            progress.update(task, completed=True)
+            console.print()
+            console.print(create_status(str(e), "error"))
+            sys.exit(1)
+        except FileNotFoundError:
+            progress.update(task, completed=True)
+            console.print()
+            console.print(create_status("Claude Code not found!", "error"))
+            console.print(f"\n[{COLORS['warning']}]Please install Claude Code:[/]")
+            console.print(f"[{COLORS['muted']}]  npm install -g @anthropic-ai/claude-code[/]")
+            console.print(f"\n[{COLORS['muted']}]For more info: https://github.com/anthropics/claude-code[/]")
+            sys.exit(1)
+        except Exception as e:
+            progress.update(task, completed=True)
+            console.print()
+            console.print(create_status(f"Unexpected error: {e}", "error"))
+            console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
+            console.print(f"[{COLORS['primary']}]https://github.com/Wirasm/claudecode-utils/issues[/]")
+            sys.exit(1)
 
 
 def generate_pr_prompt(
