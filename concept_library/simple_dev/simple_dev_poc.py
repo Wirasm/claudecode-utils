@@ -67,12 +67,10 @@ def run_development(review_file, output_file, branch_name, verbose=False, latest
 
     # Determine what to work on
     if latest_commit:
-        work_target = f"the latest commit in branch '{branch_name}'"
-        compare_cmd = f"HEAD~1...HEAD"
+        compare_cmd = "HEAD~1...HEAD"
         if verbose:
-            print(f"Working on only the latest commit")
+            print("Working on only the latest commit")
     else:
-        work_target = f"branch '{branch_name}' compared to main"
         compare_cmd = f"main...{branch_name}"
         if verbose:
             print(f"Working on all changes between main and {branch_name}")
@@ -142,8 +140,8 @@ Your report will be automatically saved to a file, so focus on implementing high
 
         # Debug prompt if verbose
         if verbose:
-            print(f"Review file contents first few lines:")
-            with open(review_file, "r") as f:
+            print("Review file contents first few lines:")
+            with open(review_file) as f:
                 print(f.readlines()[:5])
 
         # Run Claude and capture output
@@ -185,7 +183,7 @@ Your report will be automatically saved to a file, so focus on implementing high
 
         return True
     except subprocess.TimeoutExpired:
-        print(f"Error: Claude development process timed out after 30 minutes")
+        print("Error: Claude development process timed out after 30 minutes")
         return False
     except subprocess.CalledProcessError as e:
         print(f"Error running Claude: {e}")
@@ -225,7 +223,7 @@ def main():
         os.makedirs("tmp", exist_ok=True)
 
         if args.latest_commit:
-            output_file = f"tmp/dev_report_latest_commit.md"
+            output_file = "tmp/dev_report_latest_commit.md"
         else:
             output_file = f"tmp/dev_report_{args.branch}.md"
 

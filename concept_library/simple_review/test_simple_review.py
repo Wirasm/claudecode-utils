@@ -9,9 +9,6 @@ These tests cover the key functionality of the script, including:
 - Command execution
 """
 
-import os
-import re
-import shlex
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -21,7 +18,6 @@ import pytest
 # Import the module under test
 from simple_review import (
     DEFAULT_BRANCH_NAME,
-    TIMEOUT_SECONDS,
     check_base_branch_exists,
     check_branch_exists,
     check_git_repo,

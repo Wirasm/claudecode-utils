@@ -1,5 +1,5 @@
-"""
-Lightweight data collectors for git commits and GitHub pull requests.
+"""Lightweight data collectors for git commits and GitHub pull requests.
+
 Falls back gracefully if PyGithub token not available.
 """
 
@@ -7,12 +7,11 @@ from __future__ import annotations
 
 import datetime as dt
 import os
-from typing import Dict, List
 
 from git import InvalidGitRepositoryError, Repo
 
-CommitsT = List[Dict[str, str]]
-PRsT = List[Dict[str, str]]
+CommitsT = list[dict[str, str]]
+PRsT = list[dict[str, str]]
 
 
 def collect_commits(since_iso: str) -> CommitsT:

@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""
-Typer wrapper for standup CLI to integrate with the main CLI.
-"""
+"""Typer wrapper for standup CLI to integrate with the main CLI."""
 
-import datetime as dt
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -17,13 +13,13 @@ standup_cmd = typer.Typer(context_settings={"help_option_names": ["-h", "--help"
 
 @standup_cmd.callback(invoke_without_command=True)
 def standup(
-    since: Optional[str] = typer.Option(
+    since: str | None = typer.Option(
         None,
         "--since",
         "-s",
         help="ISO datetime or natural language recognised by git (default: yesterday 09:00)",
     ),
-    out: Optional[Path] = typer.Option(None, "--out", "-o", help="Output .md path (default: standup_<date>.md)"),
+    out: Path | None = typer.Option(None, "--out", "-o", help="Output .md path (default: standup_<date>.md)"),
     open: bool = typer.Option(False, "--open", help="Open file afterwards"),
 ):
     """Generate a stand-up report from git commits and GitHub PRs."""

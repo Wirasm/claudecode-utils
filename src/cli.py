@@ -1,5 +1,5 @@
-"""
-Root Typer application that dispatches to vertical slices.
+"""Root Typer application that dispatches to vertical slices.
+
 Includes 'standup' and 'review' commands.
 """
 

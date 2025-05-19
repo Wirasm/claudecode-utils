@@ -1,12 +1,10 @@
-"""
-Prompt builder + Rich helpers.
-"""
+"""Prompt builder + Rich helpers."""
 
 from __future__ import annotations
 
 import datetime as dt
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from rich.console import Console
 from rich.markdown import Markdown
@@ -14,9 +12,9 @@ from rich.markdown import Markdown
 console = Console()
 
 
-def build_prompt(commits: List[Dict[str, str]], prs: List[Dict[str, str]]) -> str:
+def build_prompt(commits: list[dict[str, str]], prs: list[dict[str, str]]) -> str:
     today = dt.date.today().isoformat()
-    payload: Dict[str, Any] = {"commits": commits, "prs": prs}
+    payload: dict[str, Any] = {"commits": commits, "prs": prs}
 
     return f"""You are an scrum standup assistant preparing a stand-up report for **{today}**.
 Your task is to IMMEDIATELY generate a Markdown document with three sections based on the provided JSON data:

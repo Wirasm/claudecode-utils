@@ -35,7 +35,6 @@ import os
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 
 # Constants
 DEFAULT_MAX_ISSUES = 10
@@ -75,8 +74,8 @@ def run_claude_task(prompt, model=DEFAULT_MODEL, verbose=False):
         # Clean up the temporary file
         try:
             os.unlink(prompt_file)
-        except:
-            pass
+        except OSError:
+            pass  # File might not exist or be already deleted
 
 
 def main():
@@ -153,7 +152,7 @@ Please execute this task step by step, showing your work along the way.
 
     # Run the task with Claude Code
     print(f"Starting bug triage for {args.repo}...")
-    result = run_claude_task(prompt, model=args.claude_model, verbose=args.verbose)
+    run_claude_task(prompt, model=args.claude_model, verbose=args.verbose)
 
     # Print completion message
     print(f"Bug triage report has been generated: {args.output}")

@@ -62,7 +62,7 @@ def check_validation_status(validation_file, verbose=False):
         print(f"Error: Validation file not found at {validation_file}")
         return False
 
-    with open(validation_file, "r") as f:
+    with open(validation_file) as f:
         content = f.read()
 
     # Check for validation status
@@ -106,7 +106,7 @@ def run_pr_creation(
 
     # Log if verbose
     if verbose:
-        print(f"Running PR creation for:")
+        print("Running PR creation for:")
         print(f"  Validation file: {validation_file}")
         print(f"  Branch: {branch_name}")
         print(f"  Base branch: {base_branch}")
@@ -135,13 +135,13 @@ Follow these steps:
 3. Generate a PR description with the following sections:
    ## Changes
    [Summary of what was changed and why]
-   
+
    ## Issues Addressed
    [List of specific issues that were fixed]
-   
+
    ## Testing
    [Summary of tests performed]
-   
+
    ## Notes
    [Any other information or future considerations]
 
@@ -177,7 +177,7 @@ Write your PR report in markdown format, and if creating a PR, include the PR UR
             print(f"Validation file exists: {Path(validation_file).exists()}")
 
             try:
-                with open(validation_file, "r") as f:
+                with open(validation_file) as f:
                     validation_preview = f.read(500)
                     print(f"Validation file preview (first 500 chars):\n{validation_preview}...")
             except Exception as e:
@@ -246,7 +246,7 @@ No content was returned from Claude. This could be due to a processing error or 
 
         return pr_created if not dry_run else True
     except subprocess.TimeoutExpired:
-        print(f"Error: Claude PR creation process timed out after 10 minutes")
+        print("Error: Claude PR creation process timed out after 10 minutes")
         return False
     except subprocess.CalledProcessError as e:
         print(f"Error running Claude: {e}")

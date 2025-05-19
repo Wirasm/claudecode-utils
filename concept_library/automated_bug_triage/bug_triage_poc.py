@@ -40,7 +40,6 @@ import subprocess
 import sys
 import tempfile
 from datetime import datetime
-from pathlib import Path
 
 # Import PyGithub with fallback
 try:
@@ -307,8 +306,8 @@ def analyze_issue_with_claude(issue, repo_structure, model=DEFAULT_MODEL, verbos
         # Clean up the temporary file
         try:
             os.unlink(prompt_file)
-        except:
-            pass
+        except OSError:
+            pass  # File might not exist or be already deleted
 
 
 def generate_report(issues, analyses, output_file, verbose=False):
@@ -327,7 +326,7 @@ def generate_report(issues, analyses, output_file, verbose=False):
         bug_type_counts = {}
         component_counts = {}
 
-        for issue_num, analysis in analyses.items():
+        for _issue_num, analysis in analyses.items():
             if analysis:
                 severity = analysis.get("severity", "unknown").lower()
                 bug_type = analysis.get("bug_type", "unknown").lower()
@@ -407,7 +406,7 @@ def generate_report(issues, analyses, output_file, verbose=False):
             # Fix suggestions
             report.append("\n#### Potential Fix Approaches")
             if analysis.get("fix_suggestions"):
-                for i, suggestion in enumerate(analysis["fix_suggestions"], 1):
+                for _i, suggestion in enumerate(analysis["fix_suggestions"], 1):
                     report.append(f"- {suggestion}")
             else:
                 report.append("No fix suggestions available.")

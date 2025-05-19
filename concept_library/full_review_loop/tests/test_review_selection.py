@@ -95,7 +95,6 @@ class TestReviewFileSelection(unittest.TestCase):
         prev_review_file = self.loop.output_dir / "review_iter_1.md"
 
         # Mock path.exists to return different values for different paths
-        original_exists = Path.exists
 
         def mock_exists(path_obj):
             if "rereview_iter_1.md" in str(path_obj):

@@ -57,9 +57,9 @@ def run_review(branch_name, output_file, verbose=False, latest_commit=False):
     # Determine what to review
     if latest_commit:
         review_target = f"the latest commit in branch '{branch_name}'"
-        compare_cmd = f"HEAD~1...HEAD"
+        compare_cmd = "HEAD~1...HEAD"
         if verbose:
-            print(f"Reviewing only the latest commit")
+            print("Reviewing only the latest commit")
     else:
         review_target = f"branch '{branch_name}' compared to main"
         compare_cmd = f"main...{branch_name}"
@@ -161,7 +161,7 @@ Your review will be automatically saved to a file, so focus on creating a detail
 
         return True
     except subprocess.TimeoutExpired:
-        print(f"Error: Claude review process timed out after 20 minutes")
+        print("Error: Claude review process timed out after 20 minutes")
         return False
     except subprocess.CalledProcessError as e:
         print(f"Error running Claude: {e}")
@@ -195,7 +195,7 @@ def main():
         os.makedirs("tmp", exist_ok=True)
 
         if args.latest_commit:
-            output_file = f"tmp/review_latest_commit.md"
+            output_file = "tmp/review_latest_commit.md"
         else:
             output_file = f"tmp/review_{args.branch}.md"
 

@@ -135,7 +135,7 @@ class TestBugTriage(unittest.TestCase):
         mock_process = mock.Mock()
         mock_process.stdout = f"""
         Here's my analysis:
-        
+
         ```json
         {json.dumps(self.sample_analysis)}
         ```
@@ -174,7 +174,7 @@ class TestBugTriage(unittest.TestCase):
         self.assertTrue(os.path.exists(output_file))
 
         # Read the report content
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             content = f.read()
 
         # Verify report content

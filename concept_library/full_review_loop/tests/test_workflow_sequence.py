@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, call, patch
 # Add parent directory to path to import module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from full_review_loop.full_review_loop_safe import AgenticReviewLoop, AgentRole
+from full_review_loop.full_review_loop_safe import AgenticReviewLoop
 
 
 class TestWorkflowSequence(unittest.TestCase):
@@ -75,7 +75,7 @@ class TestWorkflowSequence(unittest.TestCase):
                             break
                     else:
                         self_ref.log(
-                            f"Skipping initial review as we're continuing after a validation failure"
+                            "Skipping initial review as we're continuing after a validation failure"
                         )
                         # When continuing after validation failure, the developer will use the
                         # latest re-review and validation feedback from previous iteration

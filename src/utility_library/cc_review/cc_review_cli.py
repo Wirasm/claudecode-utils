@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
-"""
-CLI interface for the Claude Code review runner using Typer.
-"""
+"""CLI interface for the Claude Code review runner using Typer."""
 
-from typing import List, Optional
 
 import typer
-from rich import print
 
 from .cc_review_runner import generate_review_prompt, run_claude_review
 from .cc_review_utils import pretty_print_json_file
 
 
 def review(
-    branch: Optional[str] = typer.Argument(
+    branch: str | None = typer.Argument(
         None, help="Branch to review (optional, defaults to latest changes)"
     ),
     tools: str = typer.Option(
         "Read,Glob,Grep,LS,Bash,Write", "--tools", help="Comma-separated list of allowed tools"
     ),
     format: str = typer.Option("text", "--format", help="Output format: text, json, stream-json"),
-    pretty_print: Optional[str] = typer.Option(
+    pretty_print: str | None = typer.Option(
         None, "--pretty-print", help="Pretty print a JSON file instead of running a review"
     ),
-    pretty_output: Optional[str] = typer.Option(
+    pretty_output: str | None = typer.Option(
         None,
         "--pretty-output",
         help="Save pretty-printed JSON to this file (use with --pretty-print)",

@@ -44,17 +44,13 @@ Examples:
 """
 
 import argparse
-import json
 import os
 import re
-import shlex
-import shutil
 import subprocess
 import sys
 import tempfile
 import time
 import uuid
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
@@ -279,7 +275,7 @@ You are a senior code reviewer examining the changes in {self.compare_desc}.
 Your task is to provide a thorough, critical review focused on:
 
 1. Code quality and best practices
-2. Architectural consistency 
+2. Architectural consistency
 3. Error handling completeness
 4. Input/output validation
 5. Security issues
@@ -469,7 +465,7 @@ Then thoroughly analyze the current state of the code to determine if ALL issues
         Returns:
             bool: Whether the PR creation was successful
         """
-        self.log(f"Starting PR creation phase...")
+        self.log("Starting PR creation phase...")
 
         # Check that validation file exists
         if not self.validation_file.exists():
@@ -585,7 +581,7 @@ Include the PR URL at the end of your report.
         Returns:
             bool: Whether the workflow completed successfully with validation passing
         """
-        self.log(f"Starting agentic review loop...")
+        self.log("Starting agentic review loop...")
         validation_passed = False
 
         while self.iteration < self.max_iterations:
@@ -634,7 +630,7 @@ Include the PR URL at the end of your report.
                 f"Reached maximum iterations ({self.max_iterations}) without passing validation."
             )
 
-        self.log(f"Agentic review loop completed.")
+        self.log("Agentic review loop completed.")
         self.log(f"Output artifacts are in: {self.output_dir}")
 
         # Summarize artifacts
@@ -656,10 +652,10 @@ def main():
 Examples:
   # Review latest commit
   uv run python scripts/agentic_review_loop.py --latest --verbose
-  
+
   # Review feature branch compared to main
   uv run python scripts/agentic_review_loop.py --branch feature-branch --verbose
-  
+
   # Review with custom settings
   uv run python scripts/agentic_review_loop.py --latest --max-iterations 5 --output-dir my_review --pr-title "Add configuration API"
         """,

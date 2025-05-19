@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-Simple Claude Code review runner.
+"""Simple Claude Code review runner.
+
 Builds on concept_library/full_review_loop concepts but starts minimal.
 
 This module provides the core review functionality. For CLI usage, use cc_review_cli.py
@@ -19,13 +19,12 @@ Python API usage:
 
 import subprocess
 import sys
-from typing import List, Optional
 
 
 def run_claude_review(
     prompt: str,
-    allowed_tools: Optional[List[str]] = None,
-    branch: Optional[str] = None,
+    allowed_tools: list[str] | None = None,
+    branch: str | None = None,
     output_format: str = "text",
 ) -> None:
     """Run Claude code with a review prompt and specified tools.
@@ -60,7 +59,7 @@ def run_claude_review(
         sys.exit(1)
 
 
-def generate_review_prompt(branch: Optional[str] = None, output_format: str = "text") -> str:
+def generate_review_prompt(branch: str | None = None, output_format: str = "text") -> str:
     """Generate a simple review prompt.
 
     Args:

@@ -1,12 +1,11 @@
-"""
-Provider abstraction - only Claude Code is implemented in this POC.
+"""Provider abstraction - only Claude Code is implemented in this POC.
+
 Add a new class + update get_provider() when you want GPT/Gemini/Ollama.
 """
 
 from __future__ import annotations
 
 import os
-import shlex
 import shutil
 import subprocess
 import sys

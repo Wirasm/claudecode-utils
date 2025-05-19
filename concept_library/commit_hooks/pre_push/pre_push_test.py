@@ -8,7 +8,6 @@ Usage:
 
 import subprocess
 import sys
-from pathlib import Path
 
 # Run the hook in test mode
 print("Testing pre-push version bump hook...")

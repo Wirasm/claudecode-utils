@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""
-Utility functions for the cc_review module.
-"""
+"""Utility functions for the cc_review module."""
 
 import json
-from typing import Optional
 
 
-def pretty_print_json_file(file_path: str, output_path: Optional[str] = None) -> None:
+def pretty_print_json_file(file_path: str, output_path: str | None = None) -> None:
     """Pretty print a JSON file, handling common escape issues.
 
     Args:
@@ -15,7 +12,7 @@ def pretty_print_json_file(file_path: str, output_path: Optional[str] = None) ->
         output_path: Optional path to save the pretty-printed JSON
     """
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             content = f.read()
 
         # Fix common escape issues

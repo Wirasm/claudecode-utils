@@ -79,19 +79,17 @@ def run_validation(
 
     # Determine what to validate
     if latest_commit:
-        validation_target = f"the latest commit in branch '{branch_name}'"
-        compare_cmd = f"HEAD~1...HEAD"
+        compare_cmd = "HEAD~1...HEAD"
         if verbose:
-            print(f"Validating only the latest commit")
+            print("Validating only the latest commit")
     else:
-        validation_target = f"branch '{branch_name}' compared to main"
         compare_cmd = f"main...{branch_name}"
         if verbose:
             print(f"Validating all changes between main and {branch_name}")
 
     # Log if verbose
     if verbose:
-        print(f"Running validation for:")
+        print("Running validation for:")
         print(f"  Review file: {review_file}")
         print(f"  Development report: {dev_report_file}")
         print(f"  Branch: {branch_name}")
@@ -161,7 +159,7 @@ Then analyze the current state of the code to determine if ALL issues have been 
             print(f"Review file exists: {review_path.exists()}")
             print(f"Dev report file exists: {dev_report_path.exists()}")
             try:
-                with open(review_file, "r") as f:
+                with open(review_file) as f:
                     review_preview = f.read(500)
                     print(f"Review file preview (first 500 chars):\n{review_preview}...")
             except Exception as e:
@@ -215,7 +213,7 @@ VALIDATION: FAILED
 
         return validation_passed
     except subprocess.TimeoutExpired:
-        print(f"Error: Claude validation process timed out after 15 minutes")
+        print("Error: Claude validation process timed out after 15 minutes")
         return False
     except subprocess.CalledProcessError as e:
         print(f"Error running Claude: {e}")
@@ -256,7 +254,7 @@ def main():
         os.makedirs("tmp", exist_ok=True)
 
         if args.latest_commit:
-            output_file = f"tmp/validation_latest_commit.md"
+            output_file = "tmp/validation_latest_commit.md"
         else:
             output_file = f"tmp/validation_{args.branch}.md"
 

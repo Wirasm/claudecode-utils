@@ -56,10 +56,8 @@ Examples:
 """
 
 import argparse
-import json
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -590,7 +588,7 @@ class AgenticReviewLoop:
                 self.debug(f"Wrote prompt to temporary file: {prompt_file_path}")
 
                 # Read the content back from the file
-                with open(prompt_file_path, "r") as f:
+                with open(prompt_file_path) as f:
                     prompt_content = f.read()
                 self.debug(f"Read {len(prompt_content)} chars from prompt file for -p argument.")
             except Exception:
@@ -612,14 +610,14 @@ class AgenticReviewLoop:
                 if version_check.returncode != 0:
                     raise ValueError(f"Claude command check failed: {version_check.stderr.strip()}")
                 self.debug(f"Claude command is available: {version_check.stdout.strip()}")
-            except FileNotFoundError:
+            except FileNotFoundError as e:
                 raise ValueError(
                     "Error: 'claude' command not found. Please ensure Claude CLI is installed and in your PATH."
-                )
-            except subprocess.TimeoutExpired:
+                ) from e
+            except subprocess.TimeoutExpired as e:
                 raise ValueError(
                     "Error: 'claude --version' command timed out. Check if Claude CLI is functioning properly."
-                )
+                ) from e
 
             # --- Build Claude command using -p with the content string ---
             cmd = [
@@ -714,7 +712,7 @@ class AgenticReviewLoop:
             return {}
 
         try:
-            with open(report_file, "r") as f:
+            with open(report_file) as f:
                 content = f.read()
 
             # Extract issues from the report
@@ -880,7 +878,7 @@ class AgenticReviewLoop:
             )
 
             # Add each issue to the overview table
-            for issue_id, issue_data in sorted_issues:
+            for _issue_id, issue_data in sorted_issues:
                 first_found = min(issue_data["iterations"])
                 last_seen = max(issue_data["iterations"])
                 final_status = issue_data["status"]
@@ -900,7 +898,7 @@ class AgenticReviewLoop:
             timeline_content.append("")
 
             # Add detailed sections for each issue
-            for issue_id, issue_data in sorted_issues:
+            for _issue_id, issue_data in sorted_issues:
                 issue_file = issue_data["file_path"]
                 issue_lines = issue_data["line_nums"]
 
@@ -1114,7 +1112,7 @@ IMPORTANT:
                 f.write(output)
             self.log(f"{phase} report saved to {target_file}")
 
-        except IOError as e:
+        except OSError as e:
             self.log(f"Error writing to {phase.lower()} file {target_file}: {e}")
             return False
 
@@ -1183,7 +1181,7 @@ IMPORTANT: NEVER assume library functionality exists without verifying it. Use W
 
 Format your entire output as a markdown document containing ONLY the development report.
 The report MUST include these sections exactly:
-## Summary 
+## Summary
 [Concise overview of fixes implemented for Iteration {self.iteration}]
 
 ## Issues Addressed
@@ -1214,7 +1212,7 @@ IMPORTANT:
             with open(self.dev_report_file, "w") as f:
                 f.write(output)
             self.log(f"Development report saved to {self.dev_report_file}")
-        except IOError as e:
+        except OSError as e:
             self.log(f"Error writing to development report file {self.dev_report_file}: {e}")
             return False
 
@@ -1315,7 +1313,7 @@ IMPORTANT:
                 f.write(output)
             self.log(f"Validation report saved to {self.validation_file}")
 
-        except IOError as e:
+        except OSError as e:
             self.log(f"Error writing to validation file {self.validation_file}: {e}")
             return False, False
 
@@ -1326,7 +1324,7 @@ IMPORTANT:
 
     def run_pr_manager(self):
         """Run the PR Manager agent."""
-        self.log(f"Starting PR creation phase...")
+        self.log("Starting PR creation phase...")
 
         # Validate the output directory before creating file paths
         if not validate_directory_path(self.output_dir):
@@ -1347,7 +1345,7 @@ IMPORTANT:
                 with open(self.pr_file, "w") as f:
                     f.write("# PR Report\n\nPR creation was skipped via the --no-pr flag.")
                 self.log(f"PR skip note saved to {self.pr_file}")
-            except IOError as e:
+            except OSError as e:
                 self.log(f"Error writing PR skip note to {self.pr_file}: {e}")
             return False  # Indicate PR wasn't created
 
@@ -1452,7 +1450,7 @@ IMPORTANT:
             with open(self.pr_file, "w") as f:
                 f.write(output)
             self.log(f"PR report saved to {self.pr_file}")
-        except IOError as e:
+        except OSError as e:
             self.log(f"Error writing to PR file {self.pr_file}: {e}")
             return False
 
@@ -1492,7 +1490,7 @@ IMPORTANT:
                         break
                 else:
                     self.log(
-                        f"Skipping initial review as we're continuing after a validation failure"
+                        "Skipping initial review as we're continuing after a validation failure"
                     )
                     # When continuing after validation failure, the developer will use the
                     # latest re-review and validation feedback from previous iteration
@@ -1546,7 +1544,7 @@ IMPORTANT:
 
             # --- Step 5: PR Creation (if validation passed) ---
             if final_success:
-                pr_creation_reported = self.run_pr_manager()
+                self.run_pr_manager()
                 # The overall success depends on validation passing, PR is best-effort
             else:
                 self.log("Workflow finished without passing validation.")
@@ -1564,7 +1562,7 @@ IMPORTANT:
             # --- Cleanup ---
             self._cleanup_environment()
 
-        self.log(f"Agentic review loop completed.")
+        self.log("Agentic review loop completed.")
         self.log(f"Final Validation Status: {'PASSED' if final_success else 'FAILED'}")
         self.log(f"Output artifacts are in: {self.output_dir}")
         self.log("Artifacts Summary:")

@@ -6,8 +6,8 @@ Usage:
     python concept_library/commit_hooks/test_hook.py
 """
 import subprocess
-import tempfile
 import sys
+import tempfile
 from pathlib import Path
 
 # Stage a test file change

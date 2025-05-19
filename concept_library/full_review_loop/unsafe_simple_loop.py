@@ -307,7 +307,7 @@ def parse_decision_from_file_content(file_content, file_path_for_log, pass_strin
             return False
 
         # Try to look for variations of pass/fail indicators if exact strings not found
-        if "pass" in file_content.lower() and not "fail" in file_content.lower():
+        if "pass" in file_content.lower() and "fail" not in file_content.lower():
             log(
                 f"WARNING: Exact '{pass_string}' not found in '{file_path_for_log.name}', but 'pass' was detected. Assuming PASS."
             )

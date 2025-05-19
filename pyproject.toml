@@ -49,7 +49,43 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "W",    # pycodestyle warnings
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C90",  # mccabe complexity
+    "N",    # pep8-naming
+    "D",    # pydocstyle
+    "S",    # flake8-bandit
+]
+
+ignore = [
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
+    "D105", # Missing docstring in magic method
+    "E501", # Line too long (we'll handle manually)
+    "S101", # Use of assert (common in tests)
+    "S603", # subprocess without shell=True
+    "S607", # Starting a process with a partial executable path
+    "B008", # Do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "D"]  # Allow assert in tests, no docstrings needed
+"concept_library/**/*.py" = ["D", "E501", "C901", "S108", "B", "UP", "N"]  # POCs can be more relaxed
+"__init__.py" = ["D104"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -5,7 +5,6 @@ Tests for the Claude-driven Automated Bug Triage module.
 These tests verify the core functionality of the Claude-driven bug triage tool.
 """
 
-import os
 import subprocess
 import sys
 import unittest

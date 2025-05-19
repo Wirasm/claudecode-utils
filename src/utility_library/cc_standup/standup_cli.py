@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Command-line interface for stand-up generation.
-"""
+"""Command-line interface for stand-up generation."""
 
 from __future__ import annotations
 

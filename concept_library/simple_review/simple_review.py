@@ -443,7 +443,7 @@ def run_review(
             # Write the actual review content to the file
             with open(unique_output_file, "w") as f:
                 f.write(output)
-        except (IOError, OSError) as e:
+        except OSError as e:
             print(f"Error: Failed to write to file {unique_output_file}: {str(e)}")
             return False
 
