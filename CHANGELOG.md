@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2025-05-19
+
+### Changed
+- Improved report file handling and changelog integration for dylan utility library
+  - Branch-aware report naming with sanitized branch names (replace / with -)
+  - Enhanced changelog support in PR generation
+  - Added PR report extraction capabilities to release process
+  
+### Added
+- Updated CLI and utility documentation with branching strategy details
+  - Comprehensive documentation for `dylan pr` and `dylan release` commands
+  - Documentation for branching strategy support and merge strategies
+  - Enhanced README files across all dylan modules
+
 ## [0.6.0] - 2025-05-19
 
 ### Added
