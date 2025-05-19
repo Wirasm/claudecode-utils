@@ -20,7 +20,10 @@ Python API usage:
 import sys
 from typing import Literal
 
+from rich.console import Console
+
 from ..provider_clis.provider_claude_code import get_provider
+from ..shared.progress import create_dylan_progress, create_task_with_dylan
 
 
 def run_claude_review(
@@ -44,21 +47,30 @@ def run_claude_review(
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/review_report.json" if output_format == "json" else "tmp/review_report.md"
 
-    # Get provider and run the review
-    provider = get_provider()
-    try:
-        result = provider.generate(
-            prompt,
-            output_path=output_file,
-            allowed_tools=allowed_tools,
-            output_format=output_format
-        )
-        print("Claude process completed successfully")
-        if result:
-            print(result)
-    except Exception as e:
-        print(f"Error running Claude: {e}")
-        sys.exit(1)
+    console = Console()
+
+    # Create progress bar
+    with create_dylan_progress(console) as progress:
+        task = create_task_with_dylan(progress, "Running code review...")
+
+        # Get provider and run the review
+        provider = get_provider()
+        try:
+            result = provider.generate(
+                prompt,
+                output_path=output_file,
+                allowed_tools=allowed_tools,
+                output_format=output_format
+            )
+            progress.update(task, completed=True)
+            console.print("\n✅ Review completed successfully")
+            console.print(f"📝 Report saved to: {output_file}")
+            if result:
+                console.print(result)
+        except Exception as e:
+            progress.update(task, completed=True)
+            console.print(f"\n❌ Error running review: {e}")
+            sys.exit(1)
 
 
 def generate_review_prompt(branch: str | None = None, output_format: str = "text") -> str:
