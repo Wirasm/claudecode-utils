@@ -64,6 +64,7 @@ def generate_release_prompt(
     create_tag: bool = False,
     dry_run: bool = False,
     no_git: bool = False,
+    merge_strategy: str = "direct",
     output_format: str = "text"
 ) -> str:
     """Generate a release prompt.
@@ -73,6 +74,7 @@ def generate_release_prompt(
         create_tag: Whether to create a git tag
         dry_run: Preview changes without applying
         no_git: Skip git operations
+        merge_strategy: Merge strategy for releases (direct, pr)
         output_format: Output format (text, json, stream-json)
 
     Returns:
@@ -83,7 +85,23 @@ def generate_release_prompt(
     git_instructions = "" if no_git else f"""
 5. GIT OPERATIONS:
    - Create commit: "release: version X.Y.Z"
-   - {'Create git tag: v{new_version}' if create_tag else 'Skip tag creation'}
+   {'- Create git tag: v{new_version}' if create_tag else '- Skip tag creation'}
+6. MERGE STRATEGY ({merge_strategy}):
+   {"- If on release branch (e.g., develop):" + '\n' +
+    "  * Commit changes on release branch" + '\n' +
+    "  * Push release branch" + '\n' +
+    "  * Merge release branch to production branch (main)" + '\n' +
+    "  * Tag on production branch if requested" + '\n' +
+    "  * Push production branch and tags" + '\n' +
+    "- If already on production branch (main):" + '\n' +
+    "  * Create tag if requested" + '\n' +
+    "  * Push branch and tags"
+    if merge_strategy == "direct" else
+    "- If on release branch (e.g., develop):" + '\n' +
+    "  * Commit changes on release branch" + '\n' +
+    "  * Push release branch" + '\n' +
+    "  * Create a pull request from release branch to production branch" + '\n' +
+    "  * Report PR URL"}
    - Report git status after operations
 """
 
@@ -93,10 +111,11 @@ def generate_release_prompt(
 You are a release manager with COMPLETE AUTONOMY to create project releases.
 
 {dry_run_note}YOUR MISSION:
-1. Detect project version configuration
-2. Apply {bump_type} version bump
+1. Detect current branch and branching strategy
+2. Apply {bump_type} version bump on the appropriate release branch
 3. Update changelog appropriately
 4. Create release commit and optionally tag
+5. Handle merging based on merge strategy: {merge_strategy}
 
 IMPORTANT FILE HANDLING INSTRUCTIONS:
 - Save your report to the tmp/ directory
@@ -107,7 +126,18 @@ IMPORTANT FILE HANDLING INSTRUCTIONS:
 
 CRITICAL STEPS - Use Bash and other tools to:
 
-1. VERSION DETECTION:
+1. BRANCH DETECTION AND STRATEGY:
+   - Detect current branch: git symbolic-ref --short HEAD
+   - Check for .branchingstrategy file and parse it if exists
+   - If on 'main' and .branchingstrategy exists:
+     * Read release_branch from .branchingstrategy file
+     * Switch to the release branch (e.g., develop)
+   - If no .branchingstrategy file, check for common release branches:
+     * develop, development, staging, release
+     * If found, use the first matching branch as release branch
+   - If no strategy found, proceed on current branch
+
+2. VERSION DETECTION:
    - Look for version in this order:
      a. pyproject.toml (version = "X.Y.Z")
      b. package.json ("version": "X.Y.Z")
@@ -116,7 +146,7 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Extract current version using appropriate method
    - Report which file contains the version
 
-2. VERSION CALCULATION:
+3. VERSION CALCULATION:
    - Current version: X.Y.Z
    - {bump_type.capitalize()} bump: {
         'increment Z' if bump_type == 'patch' else
@@ -145,7 +175,7 @@ CRITICAL STEPS - Use Bash and other tools to:
 
 {git_instructions if not no_git else ''}
 
-6. REPORT GENERATION:
+7. REPORT GENERATION:
    - Document all actions taken
    - Show before/after versions
    - List files modified

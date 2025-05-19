@@ -46,10 +46,7 @@ def run_claude_pr(
     provider = get_provider()
     try:
         result = provider.generate(
-            prompt,
-            output_path=output_file,
-            allowed_tools=allowed_tools,
-            output_format=output_format
+            prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
         )
         print("Claude process completed successfully")
         if result:
@@ -61,14 +58,16 @@ def run_claude_pr(
 
 def generate_pr_prompt(
     branch: str | None = None,
-    target_branch: str = "main",
-    output_format: str = "text"
+    target_branch: str = "develop",
+    update_changelog: bool = False,
+    output_format: str = "text",
 ) -> str:
     """Generate a PR creation prompt.
 
     Args:
         branch: Branch to create PR from (None = current branch)
-        target_branch: Target branch for PR (default: main)
+        target_branch: Target branch for PR (default: develop)
+        update_changelog: Whether to update changelog (default: False)
         output_format: Output format (text, json, stream-json)
 
     Returns:
@@ -83,7 +82,8 @@ You are a PR creator with COMPLETE AUTONOMY to analyze commits and create pull r
 YOUR MISSION:
 1. Determine the branch to create PR from ({branch_instruction})
 2. Analyze all commits in this branch vs {target_branch}
-3. Create a high-quality pull request
+3. {"Update changelog if requested" if update_changelog else "Skip changelog update"}
+4. Create a high-quality pull request
 
 IMPORTANT FILE HANDLING INSTRUCTIONS:
 - Save your report to the tmp/ directory
@@ -101,18 +101,46 @@ CRITICAL STEPS - Use Bash and other tools to:
 
 2. GIT CONTEXT DISCOVERY:
    - Current branch: git symbolic-ref --short HEAD
-   - Verify branch exists: git rev-parse --verify {branch or 'HEAD'}
-   - Check if pushed: git ls-remote --heads origin {branch or '$(git symbolic-ref --short HEAD)'}
+   - Verify branch exists: git rev-parse --verify {branch or "HEAD"}
+   - Check if pushed: git ls-remote --heads origin {branch or "$(git symbolic-ref --short HEAD)"}
    - Get default branch: git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
-   - List existing PRs: gh pr list --head {branch or '$(git symbolic-ref --short HEAD)'}
+   - List existing PRs: gh pr list --head {branch or "$(git symbolic-ref --short HEAD)"}
 
 3. COMMIT ANALYSIS:
-   - Get all commits: git log {target_branch}..{branch or 'HEAD'} --pretty=format:'%h %s'
-   - Analyze changes: git diff {target_branch}...{branch or 'HEAD'} --stat
-   - Detailed diff: git diff {target_branch}...{branch or 'HEAD'}
-   - Changed files: git diff {target_branch}...{branch or 'HEAD'} --name-only
+   - Get all commits: git log {target_branch}..{branch or "HEAD"} --pretty=format:'%h %s'
+   - Analyze changes: git diff {target_branch}...{branch or "HEAD"} --stat
+   - Detailed diff: git diff {target_branch}...{branch or "HEAD"}
+   - Changed files: git diff {target_branch}...{branch or "HEAD"} --name-only
 
-4. PR CREATION LOGIC:
+{
+        "4. CHANGELOG UPDATE (if --changelog flag):"
+        + "\n"
+        + "   - Find CHANGELOG.md (or HISTORY.md, NEWS.md)"
+        + "\n"
+        + "   - Locate [Unreleased] section"
+        + "\n"
+        + "   - Analyze commits and group by type:"
+        + "\n"
+        + "     * Added: new features (feat:)"
+        + "\n"
+        + "     * Changed: updates to existing features"
+        + "\n"
+        + "     * Fixed: bug fixes (fix:)"
+        + "\n"
+        + "     * Removed: removed features"
+        + "\n"
+        + "   - Add commit entries to appropriate sections"
+        + "\n"
+        + '   - Format: "- Description of change (`commit_hash`)"'
+        + "\n"
+        + "   - Use Edit tool to update changelog"
+        + "\n"
+        + '   - Stage and commit: git add CHANGELOG.md && git commit -m "docs: update unreleased section"'
+        + "\n"
+        if update_changelog
+        else ""
+    }
+{"5. PR CREATION LOGIC:" if update_changelog else "4. PR CREATION LOGIC:"}
    - Skip if PR already exists
    - Extract meaningful title from branch name or commits
    - Generate comprehensive description:
@@ -121,9 +149,11 @@ CRITICAL STEPS - Use Bash and other tools to:
      * Files changed
      * Testing notes
      * Breaking changes (if any)
-   - Create PR: gh pr create --base {target_branch} --head {branch or '$(git symbolic-ref --short HEAD)'} --title "..." --body "..."
+   - Create PR: gh pr create --base {target_branch} --head {
+        branch or "$(git symbolic-ref --short HEAD)"
+    } --title "..." --body "..."
 
-5. REPORT GENERATION:
+{"6. REPORT GENERATION:" if update_changelog else "5. REPORT GENERATION:"}
    - Document PR URL if created
    - Summarize what was done
    - Note any issues encountered

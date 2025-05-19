@@ -72,15 +72,26 @@ def generate_review_prompt(branch: str | None = None, output_format: str = "text
         The review prompt string
     """
     if branch:
-        base_prompt = f"Review the changes in branch '{branch}' compared to main."
+        base_prompt = f"Review the changes in branch '{branch}' compared to develop (or main if develop doesn't exist)."
     else:
-        base_prompt = "Review the latest changes in this repository."
+        base_prompt = "Review the latest changes in this repository compared to develop (or main if develop doesn't exist)."
 
     # Determine file extension based on format
     extension = ".json" if output_format == "json" else ".md"
 
+    branching_instructions = """
+BRANCH STRATEGY DETECTION:
+1. Check for .branchingstrategy file in repository root
+2. If found, parse release_branch (typically: develop) and use as base for comparison
+3. If not found, check for common development branches (develop, development, dev)
+4. If none found, fall back to main/master
+5. Report which base branch was selected
+"""
+
     return f"""
 {base_prompt}
+
+{branching_instructions}
 
 IMPORTANT FILE HANDLING INSTRUCTIONS:
 - Save your report to the tmp/ directory
@@ -92,16 +103,18 @@ IMPORTANT FILE HANDLING INSTRUCTIONS:
 Please:
 1. Check if tmp/review_report{extension} exists using Bash
 2. If it exists, create a new filename with date/timestamp
-3. Use git diff to see the changes
-4. Identify any issues, bugs, or improvements
-5. Provide specific feedback with file and line references
-6. Suggest concrete fixes where applicable
+3. Detect the correct base branch following the BRANCH STRATEGY DETECTION steps
+4. Use git diff to see the changes from the detected base branch
+5. Identify any issues, bugs, or improvements
+6. Provide specific feedback with file and line references
+7. Suggest concrete fixes where applicable
 
 Provide your review with the following metadata:
 - Report metadata:
     - Report file name
     - Report relative path
     - Branch name
+    - Base branch used for comparison
     - List of changed files
     - Date range
     - Number of commits
