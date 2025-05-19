@@ -10,39 +10,30 @@ SPINNER = "◍"
 
 # Dylan's thinking spinner frames - ASCII art faces looking around
 DYLAN_SPINNER = {
-    "interval": 150,
+    "interval": 400,  # Slower animation for better readability
     "frames": [
-        "( o.o) ✧",
-        "( o.-)  ✧",
-        "( -.o)   ✧",
-        "( -.-) ⋄   ✧",
-        "(o.-')  •  ✧",
-        "(o.o )   •  ✧",
-        "('-.o)    • ✧",
-        "(-.-)     ⋄ ✧",
-        "( o.o)     • ✧",
-        "( o.-)    • ✧",
-        "( -.o)   • ✧",
-        "( -.-)  ⋄ ✧",
-        "(o.-') • ✧",
-        "(o.o ) • ✧",
-        "('-.o) • ✧",
-        "( -.-) ✧",
-        "( o.o) ✧",
-        "( >.o) ✧",
-        "( o.<) ✧",
-        "( ^.^) ✧",
-        "( o.~) ✧",
-        "( ~.o) ✧",
-        "( 0.0) ✧",
-        "( o.O) ✧",
-        "( O.o) ✧",
-        "( @.@) ✧",
-        "( *.o) ✧",
-        "( o.*) ✧",
-        "( ^_^) ✧",
-        "( -_-) ✧",
-        "( o_o) ✧",
+        "( o.o) ✧",      # Looking forward
+        "( o.o) ✧",      # Stay a bit
+        "( o.-) ✧",      # Look right
+        "( o.-) ✧",      # Stay right
+        "( -.o) ✧",      # Look left
+        "( -.o) ✧",      # Stay left
+        "( o.o) ✧",      # Back to center
+        "( ^.^) ✧",      # Happy/thinking
+        "( ^.^) ✧",      # Stay happy
+        "( o.o) ✧",      # Back to normal
+        "( -.-) ✧",      # Eyes closed/thinking
+        "( -.-) ✧",      # Keep thinking
+        "( o.o) ✧",      # Open eyes
+        "( o.O) ✧",      # Surprised/curious
+        "( O.o) ✧",      # Other eye big
+        "( o.o) ✧",      # Back to normal
+        "( >.o) ✧",      # Squint right
+        "( o.<) ✧",      # Squint left
+        "( o.o) ✧",      # Normal
+        "( @.@) ✧",      # Dizzy/processing
+        "( @.@) ✧",      # Still processing
+        "( o.o) ✧",      # Recovered
     ]
 }
 
