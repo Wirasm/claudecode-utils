@@ -104,44 +104,6 @@ wheels = [
 ]
 
 [[package]]
-name = "claudecode-utility-library"
-version = "0.6.1"
-source = { editable = "." }
-dependencies = [
-    { name = "filelock" },
-    { name = "gitpython" },
-    { name = "pygithub" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "ruff" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "black" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "black", marker = "extra == 'dev'", specifier = ">=25.1.0" },
-    { name = "filelock", specifier = ">=3.12.2" },
-    { name = "gitpython", specifier = ">=3.1.44" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15.0" },
-    { name = "pygithub", specifier = ">=2.6.1" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
-    { name = "requests", specifier = ">=2.32.3" },
-    { name = "rich", specifier = ">=14.0.0" },
-    { name = "ruff", specifier = ">=0.11.10" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.9" },
-    { name = "typer", specifier = ">=0.15.3" },
-]
-provides-extras = ["dev"]
-
-[[package]]
 name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
@@ -208,6 +170,44 @@ sdist = { url = "https://files.pythonhosted.org/packages/98/97/06afe62762c9a8a86
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6e/c6/ac0b6c1e2d138f1002bcf799d330bd6d85084fece321e662a14223794041/Deprecated-1.2.18-py2.py3-none-any.whl", hash = "sha256:bd5011788200372a32418f888e326a09ff80d0214bd961147cfed01b5c018eec", size = 9998 },
 ]
+
+[[package]]
+name = "dylan"
+version = "0.6.1"
+source = { editable = "." }
+dependencies = [
+    { name = "filelock" },
+    { name = "gitpython" },
+    { name = "pygithub" },
+    { name = "requests" },
+    { name = "rich" },
+    { name = "ruff" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "black" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "black", marker = "extra == 'dev'", specifier = ">=25.1.0" },
+    { name = "filelock", specifier = ">=3.12.2" },
+    { name = "gitpython", specifier = ">=3.1.44" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15.0" },
+    { name = "pygithub", specifier = ">=2.6.1" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
+    { name = "requests", specifier = ">=2.32.3" },
+    { name = "rich", specifier = ">=14.0.0" },
+    { name = "ruff", specifier = ">=0.11.10" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.9" },
+    { name = "typer", specifier = ">=0.15.3" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "filelock"
