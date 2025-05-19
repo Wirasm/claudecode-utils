@@ -4,13 +4,12 @@ A simple utility that runs code reviews using Claude Code on git branches and co
 
 ## Overview
 
-The cc_review tool helps developers get AI-powered code reviews by:
+The dylan_review tool helps developers get AI-powered code reviews by:
 
 1. Analyzing git diffs between branches or commits
 2. Identifying issues, bugs, and potential improvements
 3. Providing specific feedback with file and line references
 4. Generating structured review reports in markdown or JSON format
-5. Supporting pretty-printing for JSON outputs
 
 **Required Claude Code Tools**: Read, Glob, Grep, LS, Bash, Write (configurable via --allowed-tools)
 
@@ -70,16 +69,12 @@ dylan review feature-branch
 
 # With options
 dylan review feature-branch --format json --tools Read,Bash,Grep
-
-# Pretty print JSON output
-dylan review --pretty-print review_report.json
 ```
 
 ### From Python code
 
 ```python
 from dylan.utility_library.dylan_review import run_claude_review, generate_review_prompt
-from dylan.utility_library.dylan_review.dylan_review_utils import pretty_print_json_file
 
 # Generate and run a review
 prompt = generate_review_prompt(branch="feature-branch")
@@ -88,9 +83,6 @@ run_claude_review(prompt)
 # Use JSON output format
 prompt = generate_review_prompt(branch="feature-branch", output_format="json")
 run_claude_review(prompt, output_format="json")
-
-# Pretty print a JSON report
-pretty_print_json_file("review_report.json", output_path="review_pretty.json")
 ```
 
 ## Options
@@ -98,8 +90,6 @@ pretty_print_json_file("review_report.json", output_path="review_pretty.json")
 - `branch`: Optional branch name to review (defaults to latest changes)
 - `--tools`: Comma-separated list of tools (default: Read,Glob,Grep,LS,Bash,Write)
 - `--format`: Output format - text, json, or stream-json (default: text)
-- `--pretty-print`: Pretty print a JSON file instead of running a review
-- `--pretty-output`: Save pretty-printed JSON to a file
 
 ## Output Formats
 

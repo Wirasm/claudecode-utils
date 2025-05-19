@@ -21,7 +21,6 @@ Run AI-powered code reviews on git branches and commits.
 ```bash
 dylan review feature-branch
 dylan review main --format json
-dylan review --pretty-print review_report.json
 ```
 
 See [dylan_review README](utility_library/dylan_review/README.md) for detailed options.

@@ -5,7 +5,6 @@
 import typer
 
 from .dylan_review_runner import generate_review_prompt, run_claude_review
-from .dylan_review_utils import pretty_print_json_file
 
 
 def review(
@@ -16,22 +15,8 @@ def review(
         "Read,Glob,Grep,LS,Bash,Write", "--tools", help="Comma-separated list of allowed tools"
     ),
     format: str = typer.Option("text", "--format", help="Output format: text, json, stream-json"),
-    pretty_print: str | None = typer.Option(
-        None, "--pretty-print", help="Pretty print a JSON file instead of running a review"
-    ),
-    pretty_output: str | None = typer.Option(
-        None,
-        "--pretty-output",
-        help="Save pretty-printed JSON to this file (use with --pretty-print)",
-    ),
 ):
     """Run a code review using Claude Code."""
-    # Handle pretty-print mode
-    if pretty_print:
-        pretty_print_json_file(pretty_print, pretty_output)
-        return
-
-    # Normal review mode
     # Parse tools
     allowed_tools = [tool.strip() for tool in tools.split(",")]
 
