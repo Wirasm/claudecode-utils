@@ -41,8 +41,8 @@ def run_claude_review(
     if allowed_tools is None:
         allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write"]
 
-    # Determine output file based on format
-    output_file = "review_report.json" if output_format == "json" else "review_report.md"
+    # Determine output file based on format - always in tmp directory
+    output_file = "tmp/review_report.json" if output_format == "json" else "tmp/review_report.md"
 
     # Get provider and run the review
     provider = get_provider()
@@ -76,15 +76,26 @@ def generate_review_prompt(branch: str | None = None, output_format: str = "text
     else:
         base_prompt = "Review the latest changes in this repository."
 
-    # No need to include file saving instructions here since provider handles it
+    # Determine file extension based on format
+    extension = ".json" if output_format == "json" else ".md"
+
     return f"""
 {base_prompt}
 
+IMPORTANT FILE HANDLING INSTRUCTIONS:
+- Save your report to the tmp/ directory
+- If tmp/review_report{extension} already exists, create a new file with timestamp
+- Format: tmp/review_report_YYYYMMDD_HHMMSS{extension}
+- Use the Bash tool to check if the file exists first
+- DO NOT modify or append to existing files
+
 Please:
-1. Use git diff to see the changes
-2. Identify any issues, bugs, or improvements
-3. Provide specific feedback with file and line references
-4. Suggest concrete fixes where applicable
+1. Check if tmp/review_report{extension} exists using Bash
+2. If it exists, create a new filename with date/timestamp
+3. Use git diff to see the changes
+4. Identify any issues, bugs, or improvements
+5. Provide specific feedback with file and line references
+6. Suggest concrete fixes where applicable
 
 Provide your review with the following metadata:
 - Report metadata:

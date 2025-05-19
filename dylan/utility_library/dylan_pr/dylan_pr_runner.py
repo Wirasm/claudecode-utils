@@ -39,8 +39,8 @@ def run_claude_pr(
     if allowed_tools is None:
         allowed_tools = ["Read", "Bash", "Write", "Glob", "Grep"]
 
-    # Determine output file based on format
-    output_file = "pr_report.json" if output_format == "json" else "pr_report.md"
+    # Determine output file based on format - always in tmp directory
+    output_file = "tmp/pr_report.json" if output_format == "json" else "tmp/pr_report.md"
 
     # Get provider and run the PR creation
     provider = get_provider()
@@ -75,6 +75,7 @@ def generate_pr_prompt(
         The PR creation prompt string
     """
     branch_instruction = f"'{branch}'" if branch else "the current branch"
+    extension = ".json" if output_format == "json" else ".md"
 
     return f"""
 You are a PR creator with COMPLETE AUTONOMY to analyze commits and create pull requests.
@@ -84,22 +85,34 @@ YOUR MISSION:
 2. Analyze all commits in this branch vs {target_branch}
 3. Create a high-quality pull request
 
+IMPORTANT FILE HANDLING INSTRUCTIONS:
+- Save your report to the tmp/ directory
+- If tmp/pr_report{extension} already exists, create a new file with timestamp
+- Format: tmp/pr_report_YYYYMMDD_HHMMSS{extension}
+- Use the Bash tool to check if the file exists first
+- DO NOT modify or append to existing files
+
 CRITICAL STEPS - Use Bash and other tools to:
 
-1. GIT CONTEXT DISCOVERY:
+1. FILE HANDLING:
+   - Check if tmp/pr_report{extension} exists
+   - If it exists, create new filename with timestamp
+   - Ensure tmp/ directory exists: mkdir -p tmp
+
+2. GIT CONTEXT DISCOVERY:
    - Current branch: git symbolic-ref --short HEAD
    - Verify branch exists: git rev-parse --verify {branch or 'HEAD'}
    - Check if pushed: git ls-remote --heads origin {branch or '$(git symbolic-ref --short HEAD)'}
    - Get default branch: git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
    - List existing PRs: gh pr list --head {branch or '$(git symbolic-ref --short HEAD)'}
 
-2. COMMIT ANALYSIS:
+3. COMMIT ANALYSIS:
    - Get all commits: git log {target_branch}..{branch or 'HEAD'} --pretty=format:'%h %s'
    - Analyze changes: git diff {target_branch}...{branch or 'HEAD'} --stat
    - Detailed diff: git diff {target_branch}...{branch or 'HEAD'}
    - Changed files: git diff {target_branch}...{branch or 'HEAD'} --name-only
 
-3. PR CREATION LOGIC:
+4. PR CREATION LOGIC:
    - Skip if PR already exists
    - Extract meaningful title from branch name or commits
    - Generate comprehensive description:
@@ -110,18 +123,20 @@ CRITICAL STEPS - Use Bash and other tools to:
      * Breaking changes (if any)
    - Create PR: gh pr create --base {target_branch} --head {branch or '$(git symbolic-ref --short HEAD)'} --title "..." --body "..."
 
-4. REPORT GENERATION:
+5. REPORT GENERATION:
    - Document PR URL if created
    - Summarize what was done
    - Note any issues encountered
+   - Save to appropriate filename in tmp/
 
 REMEMBER:
 - Be autonomous - make all decisions yourself
 - Create rich, helpful PR descriptions
 - Use proper markdown formatting
 - Report results clearly
+- Save report with proper filename handling
 
-Execute the complete PR creation workflow now and save your report.
+Execute the complete PR creation workflow now and save your report to the appropriate file.
 """
 
 
