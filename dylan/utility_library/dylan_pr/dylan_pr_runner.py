@@ -94,7 +94,7 @@ def run_claude_pr(
             console.print()
             console.print(create_status(f"Unexpected error: {e}", "error"))
             console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
-            console.print(f"[{COLORS['primary']}]https://github.com/Wirasm/claudecode-utils/issues[/]")
+            console.print(f"[{COLORS['primary']}]https://github.com/Wirasm/claudecode-utility/issues[/]")
             sys.exit(1)
 
 
