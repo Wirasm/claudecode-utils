@@ -12,7 +12,7 @@ def create_dylan_progress(console=None):
 
     # SpinnerColumn will use the custom frames directly
     return Progress(
-        SpinnerColumn(spinner_name="dylan", spinner_style=COLORS['primary']),
+        SpinnerColumn(spinner_name="dylan", style=COLORS['primary']),
         TextColumn("[progress.description]{task.description}"),
         TimeElapsedColumn(),
         console=console,
