@@ -23,6 +23,7 @@ from typing import Literal
 from rich.console import Console
 
 from ..provider_clis.provider_claude_code import get_provider
+from ..shared.config import CLAUDE_CODE_NPM_PACKAGE, CLAUDE_CODE_REPO_URL, GITHUB_ISSUES_URL
 from ..shared.progress import create_dylan_progress, create_task_with_dylan
 from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
 
@@ -91,15 +92,15 @@ def run_claude_review(
             console.print()
             console.print(create_status("Claude Code not found!", "error"))
             console.print(f"\n[{COLORS['warning']}]Please install Claude Code:[/]")
-            console.print(f"[{COLORS['muted']}]  npm install -g @anthropic-ai/claude-code[/]")
-            console.print(f"\n[{COLORS['muted']}]For more info: https://github.com/anthropics/claude-code[/]")
+            console.print(f"[{COLORS['muted']}]  npm install -g {CLAUDE_CODE_NPM_PACKAGE}[/]")
+            console.print(f"\n[{COLORS['muted']}]For more info: {CLAUDE_CODE_REPO_URL}[/]")
             sys.exit(1)
         except Exception as e:
             progress.update(task, completed=True)
             console.print()
             console.print(create_status(f"Unexpected error: {e}", "error"))
             console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
-            console.print(f"[{COLORS['primary']}]https://github.com/Wirasm/dylan/issues[/]")
+            console.print(f"[{COLORS['primary']}]{GITHUB_ISSUES_URL}[/]")
             sys.exit(1)
 
 

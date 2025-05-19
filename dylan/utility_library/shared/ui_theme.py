@@ -1,5 +1,6 @@
 """Shared UI theme and styling for Dylan CLI."""
 
+from typing import Any
 
 # Colors and symbols
 ARROW = "❯"
@@ -8,9 +9,12 @@ CHECK = "✓"
 CROSS = "✗"
 SPINNER = "◍"
 
+# Animation timing
+SPINNER_INTERVAL_MS = 400  # Milliseconds between spinner frames
+
 # Dylan's thinking spinner frames - ASCII art faces looking around
 DYLAN_SPINNER = {
-    "interval": 400,  # Slower animation for better readability
+    "interval": SPINNER_INTERVAL_MS,
     "frames": [
         "( o.o) ✧",      # Looking forward
         "( o.o) ✧",      # Stay a bit
@@ -50,28 +54,28 @@ COLORS = {
 
 def create_header(title: str, subtitle: str = "") -> str:
     """Create a stylized header with arrow and spark."""
-    header = f"[{COLORS['primary']}]{ARROW}[/] [bold]{title}[/bold] [{COLORS['accent']}]{SPARK}[/]"
+    header: str = f"[{COLORS['primary']}]{ARROW}[/] [bold]{title}[/bold] [{COLORS['accent']}]{SPARK}[/]"
     if subtitle:
         header += f"\n[dim]{subtitle}[/dim]"
     return header
 
 def create_status(message: str, status: str = "info") -> str:
     """Create a status message with appropriate icon and color."""
-    icons = {
+    icons: dict[str, str] = {
         "success": f"[{COLORS['success']}]{CHECK}[/]",
         "error": f"[{COLORS['error']}]{CROSS}[/]",
         "working": f"[{COLORS['primary']}]{SPINNER}[/]",
         "info": f"[{COLORS['muted']}]•[/]",
     }
 
-    icon = icons.get(status, icons["info"])
-    color = COLORS.get(status, COLORS["primary"])
+    icon: str = icons.get(status, icons["info"])
+    color: str = COLORS.get(status, COLORS["primary"])
 
     return f"{icon} [{color}]{message}[/]"
 
-def create_box_header(title: str, items: dict) -> str:
+def create_box_header(title: str, items: dict[str, Any]) -> str:
     """Create a box header with key-value pairs."""
-    lines = [f"[{COLORS['primary']}]╭─[/] [bold]{title}[/bold]"]
+    lines: list[str] = [f"[{COLORS['primary']}]╭─[/] [bold]{title}[/bold]"]
 
     for key, value in items.items():
         lines.append(f"[{COLORS['primary']}]│[/] [dim]{key}:[/dim] [{COLORS['accent']}]{value}[/]")
