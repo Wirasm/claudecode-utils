@@ -4,7 +4,8 @@
       "Bash(mkdir:*)",
       "Bash(grep:*)",
       "Bash(mv:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

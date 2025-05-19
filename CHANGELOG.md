@@ -1,9 +1,3 @@
-## [0.3.2] - 2025-05-19
-- Removed unused pretty-print functionality from dylan_review module
-
-## [0.3.1] - 2025-05-18
-- refactor(commit_hooks): reorganize prepare_commit_msg hook into subdirectory for better structure\n- chore: remove unused workflows and commit hook infrastructure\n- chore: remove experimental commit hooks and temporary artifacts\n- chore: bump dependencies and update versions
-
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -14,16 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Added commit hooks concept library with Claude Code integration
-  - prepare-commit-msg hook for automatic conventional commit messages
-  - pre-push hook for semantic version bumping and changelog updates
-- Added automated bug triage concept
-- Added full review loop orchestration
-- Added PRP (Product Requirement Prompt) flow
+- New minimal autonomous pre-push hook implementation that trusts Claude completely
+  - Gives Claude complete control over versioning decisions
+  - Trusts Claude to format changelog entries appropriately
+  - Allows Claude to run optional checks based on changes
+  - Zero validation approach with graceful error handling
+- Updated commit hooks documentation to reflect new philosophy
 
 ### Changed
+- Replaced complex pre-push hook with minimal Claude-driven implementation
+  - Reduced from 160+ lines to ~120 lines of code
+  - Removed hardcoded version bump rules
+  - Eliminated complex authentication fallbacks
+  - Simplified to trust Claude's analysis completely
+
+## [0.3.2] - 2025-05-19
+
+### Changed
+- Converted standup command to Typer sub-app architecture
+- Simplified standup command structure for better integration
+- Removed unused pretty-print functionality from dylan_review module
+
+### Updated
+- Documentation to reflect simplified CLI entry points
+
+## [0.3.1] - 2025-05-18
+
+### Changed
+- Renamed CLI from claudecode to dylan
+- Renamed package directory from src to dylan
+- Consolidated provider modules into shared provider_clis package
+- Enhanced codebase linting with comprehensive ruff configuration
 - Reorganized prepare_commit_msg hook into subdirectory structure
-- Updated project to use 0.x.x versioning during development phase
+
+### Removed
+- Unused workflows and commit hook infrastructure
+- Experimental commit hooks and temporary artifacts
+
+### Updated
+- Documentation with tool requirements and commit hook guidance
 
 ## [0.3.0] - 2025-05-18
 

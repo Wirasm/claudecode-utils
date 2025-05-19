@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 """
-prepare-commit-msg — AI Conventional Commit writer (Max-plan-aware)
-
-This hook generates conventional commit messages using Claude Code by analyzing
-staged changes. Works with both Max OAuth and API key authentication.
+Minimal prepare-commit-msg hook using Claude Code - maximum trust approach.
+Follows concept library philosophy: let Claude handle everything with minimal wrapper.
 """
-import os
+
 import subprocess
 import sys
-import textwrap
 from pathlib import Path
 
-# Git provides these arguments to the hook
+# Git provides these arguments
 MSG_FILE = sys.argv[1]
 COMMIT_SOURCE = sys.argv[2] if len(sys.argv) > 2 else ""
 
@@ -19,51 +16,74 @@ COMMIT_SOURCE = sys.argv[2] if len(sys.argv) > 2 else ""
 if COMMIT_SOURCE in {"merge", "squash"}:
     sys.exit(0)
 
-# 1️⃣ Get staged diff
-diff = subprocess.run(
-    ["git", "diff", "--cached", "--unified=0"],
-    text=True, capture_output=True, check=True
-).stdout
 
-if not diff.strip():
+def call_claude(prompt: str) -> tuple[int, str]:
+    """Call Claude Code with minimal wrapper - trust it completely."""
+    cmd = ["claude", "-p", prompt, "--allowedTools", "Bash", "Read"]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return 0, result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        return e.returncode, (e.output or e.stderr or "").strip()
+
+
+def generate_commit_prompt() -> str:
+    """Generate prompt that gives Claude full control over commit message generation."""
+    return """
+You are a commit message generator with COMPLETE AUTONOMY.
+
+YOUR MISSION:
+1. Analyze the staged changes using git diff --cached
+2. Generate a perfect conventional commit message
+3. Return ONLY the commit message - no explanations
+
+CRITICAL: Use Bash to get the full staged diff and do a quick analysis to get an understanding of changes.
+
+COMMIT MESSAGE REQUIREMENTS:
+- Format: type(scope?): description
+- Type must be one of: feat, fix, docs, style, refactor, test, chore, build, ci, perf
+- Description: imperative mood, lowercase, no period, ≤72 chars
+- Include body if needed (what + why)
+- Add "BREAKING CHANGE:" footer if applicable
+
+STEPS:
+1. Use: git diff --cached --unified=3
+2. Analyze the changes thoroughly
+3. Determine the primary type of change
+4. Identify the scope if clear
+5. Write a concise, meaningful description
+6. Add body if changes are complex
+7. Check for breaking changes
+
+RETURN: Only the formatted commit message, nothing else.
+"""
+
+
+def main():
+    """Execute the prepare-commit-msg hook with minimal intervention."""
+    # Generate prompt
+    prompt = generate_commit_prompt()
+
+    # Call Claude
+    exit_code, message = call_claude(prompt)
+
+    if exit_code != 0 or not message:
+        # Don't block commits on errors
+        print("⚠️ Claude couldn't generate commit message - proceeding without")
+        sys.exit(0)
+
+    # Write the message
+    Path(MSG_FILE).write_text(message + "\n")
+
+    # Print the message to terminal for user visibility
+    print("✅ Claude generated commit message:")
+    print("─" * 50)
+    print(message)
+    print("─" * 50)
+
     sys.exit(0)
 
-# 2️⃣ Build prompt
-prompt = textwrap.dedent(f"""
-    You are an expert release engineer. From the staged diff below,
-    output *only* a Conventional Commit message:
-      type(scope?): description  ← ≤72 chars, imperative
-      blank line
-      wrapped body (what + why)
-      optional "BREAKING CHANGE:" footer
-    Allowed types: feat, fix, docs, style, refactor, test, chore.
-    Diff:
-    ```diff
-    {diff}
-    ```
-""").strip()
 
-def call_claude():
-    return subprocess.run(
-        ["claude", "-p", "--max-turns", "3", prompt],
-        text=True, capture_output=True
-    )
-
-# 3️⃣ First try (cached Max token or last-used auth)
-result = call_claude()
-
-# 4️⃣ On auth failure, retry if an API key is available
-if result.returncode != 0 and os.getenv("ANTHROPIC_API_KEY"):
-    env = os.environ.copy()
-    env["CLAUDE_AUTH"] = "api-key"  # force API path
-    result = subprocess.run(
-        ["claude", "-p", "--max-turns", "3", prompt],
-        text=True, capture_output=True, env=env
-    )
-
-# 5️⃣ If still failing, bail but don't block commit
-if result.returncode != 0 or not result.stdout.strip():
-    sys.exit(0)
-
-Path(MSG_FILE).write_text(result.stdout.strip() + "\n")
-print("✔ Claude Code wrote commit message")
+if __name__ == "__main__":
+    main()
