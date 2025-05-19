@@ -99,7 +99,7 @@ def run_claude_review(
             console.print()
             console.print(create_status(f"Unexpected error: {e}", "error"))
             console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
-            console.print(f"[{COLORS['primary']}]https://github.com/Wirasm/claudecode-utility/issues[/]")
+            console.print(f"[{COLORS['primary']}]https://github.com/Wirasm/dylan/issues[/]")
             sys.exit(1)
 
 
