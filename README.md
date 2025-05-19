@@ -4,17 +4,17 @@ A collection of CLI utilities and experimental concepts for enhancing developmen
 
 ## Core Application
 
-The main CLI (`claudecode`) provides integrated access to production-ready utilities:
+The main CLI (`dylan`) provides integrated access to production-ready utilities:
 
 ```bash
 # Main CLI with sub-commands
-claudecode review feature-branch    # Run AI code reviews
-claudecode standup                 # Generate standup reports
+dylan review feature-branch    # Run AI code reviews
+dylan standup                 # Generate standup reports
 ```
 
 ### Available Commands
 
-#### `claudecode review` - AI Code Review
+#### `dylan review` - AI Code Review
 Analyzes git diffs and provides comprehensive code reviews with:
 - Issue identification by severity (critical, high, medium, low)
 - File and line-specific feedback
@@ -22,17 +22,17 @@ Analyzes git diffs and provides comprehensive code reviews with:
 - JSON output support for automation
 
 ```bash
-claudecode review feature-branch --format json
+dylan review feature-branch --format json
 ```
 
-#### `claudecode standup` - Daily Standup Reports
+#### `dylan standup` - Daily Standup Reports
 Generates formatted standup reports from:
 - Recent git commits
 - GitHub PRs (if configured)
 - Customizable time ranges
 
 ```bash
-claudecode standup --since yesterday --open
+dylan standup --since yesterday --open
 ```
 
 ## Installation
@@ -42,8 +42,8 @@ claudecode standup --since yesterday --open
 uv tool install -e /path/to/claudecode-utility
 
 # Use anywhere
-claudecode --help
-cc-review --help
+dylan --help
+dylan-review --help
 standup --help
 ```
 

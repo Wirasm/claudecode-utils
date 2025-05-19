@@ -35,10 +35,10 @@ packages = ["src"]
 package-dir = {"" = "."}
 
 [project.scripts]   
-claudecode = "src.cli:app"
+dylan = "src.cli:app"
 # Standalone entry points (optional - can be removed if not needed)
-cc-review = "src.utility_library.cc_review.cc_review_cli:main"
-standup = "src.utility_library.cc_standup.standup_cli:main"
+dylan-review = "src.utility_library.dylan_review.dylan_review_cli:main"
+standup = "src.utility_library.dylan_standup.standup_cli:main"
 
 [tool.black]
 line-length = 100

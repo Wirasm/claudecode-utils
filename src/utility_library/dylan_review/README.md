@@ -72,42 +72,42 @@ The review tool can be run in several ways:
 
 ```bash
 # Review latest changes on current branch
-cc-review
+dylan-review
 
 # Review specific branch against main
-cc-review feature-branch
+dylan-review feature-branch
 
 # Get JSON output for automation
-cc-review feature-branch --format json
+dylan-review feature-branch --format json
 
 # Review with specific tools only
-cc-review develop --tools Read,Bash
+dylan-review develop --tools Read,Bash
 
 # Pretty print an existing JSON report
-cc-review --pretty-print review_report.json
+dylan-review --pretty-print review_report.json
 
 # Pretty print and save to new file
-cc-review --pretty-print review_report.json --pretty-output report_pretty.json
+dylan-review --pretty-print review_report.json --pretty-output report_pretty.json
 ```
 
 ### Using the integrated CLI
 
 ```bash
 # Using the main CLI
-claudecode review feature-branch
+dylan review feature-branch
 
 # With options
-claudecode review feature-branch --format json --tools Read,Bash,Grep
+dylan review feature-branch --format json --tools Read,Bash,Grep
 
 # Pretty print JSON output
-claudecode review --pretty-print review_report.json
+dylan review --pretty-print review_report.json
 ```
 
 ### From Python code
 
 ```python
-from src.utility_library.cc_review import run_claude_review, generate_review_prompt
-from src.utility_library.cc_review.cc_review_utils import pretty_print_json_file
+from src.utility_library.dylan_review import run_claude_review, generate_review_prompt
+from src.utility_library.dylan_review.dylan_review_utils import pretty_print_json_file
 
 # Generate and run a review
 prompt = generate_review_prompt(branch="feature-branch")
@@ -151,7 +151,7 @@ Creates a `review_report.json` file with structured data:
 
 ## Customization
 
-The review prompts can be customized by modifying the `generate_review_prompt()` function in `cc_review_runner.py`.
+The review prompts can be customized by modifying the `generate_review_prompt()` function in `dylan_review_runner.py`.
 
 Available severity levels:
 

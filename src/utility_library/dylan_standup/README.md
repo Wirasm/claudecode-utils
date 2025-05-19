@@ -4,7 +4,7 @@ A simple utility that generates stand-up reports using Claude Code, git commits,
 
 ## Overview
 
-The cc_standup tool helps developers generate daily stand-up reports by:
+The dylan_standup tool helps developers generate daily stand-up reports by:
 
 1. Collecting your recent git commits (since yesterday by default)
 2. Gathering your GitHub pull requests (if configured)
@@ -45,7 +45,7 @@ uv tool install -e /path/to/repo/root
 standup
 
 # Run with the main CLI
-claudecode standup
+dylan standup
 
 # Reinstall as a global tool if any updates are made
 uv tool install -e . --force
@@ -99,19 +99,19 @@ standup --out custom_report.md
 
 ```bash
 # Using the main CLI
-claudecode standup
+dylan standup
 
 # With options
-claudecode standup --since 2025-05-10T00:00:00 --open
+dylan standup --since 2025-05-10T00:00:00 --open
 
 # Specify output path
-claudecode standup --out custom_report.md
+dylan standup --out custom_report.md
 ```
 
 ### From Python code
 
 ```python
-from src.utility_library.cc_standup import activity, report
+from src.utility_library.dylan_standup import activity, report
 from src.utility_library.provider_clis.provider_claude_code import get_provider
 
 # Collect activities
@@ -143,7 +143,7 @@ The report format can be customized by editing the prompt template in `report.py
 
 ## Architecture
 
-The cc_standup tool is split into modular components:
+The dylan_standup tool is split into modular components:
 
 - `standup_cli.py`: Main CLI logic using argparse
 - `standup_typer.py`: Typer wrapper for integration with main CLI

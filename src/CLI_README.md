@@ -1,6 +1,6 @@
-# Claude Code CLI
+# Dylan CLI
 
-The main command-line interface for Claude Code utilities.
+The main command-line interface for Dylan utilities.
 
 ## Installation
 
@@ -9,44 +9,44 @@ The main command-line interface for Claude Code utilities.
 uv tool install -e /path/to/claudecode-utility
 
 # Verify installation
-claudecode --help
+dylan --help
 ```
 
 ## Commands
 
-### `claudecode review`
+### `dylan review`
 
 Run AI-powered code reviews on git branches and commits.
 
 ```bash
-claudecode review feature-branch
-claudecode review main --format json
-claudecode review --pretty-print review_report.json
+dylan review feature-branch
+dylan review main --format json
+dylan review --pretty-print review_report.json
 ```
 
-See [cc_review README](utility_library/cc_review/README.md) for detailed options.
+See [dylan_review README](utility_library/dylan_review/README.md) for detailed options.
 
-### `claudecode standup`
+### `dylan standup`
 
 Generate daily standup reports from git commits and GitHub PRs.
 
 ```bash
-claudecode standup
-claudecode standup --since yesterday --open
-claudecode standup --out report.md
+dylan standup
+dylan standup --since yesterday --open
+dylan standup --out report.md
 ```
 
-See [cc_standup README](utility_library/cc_standup/README.md) for detailed options.
+See [dylan_standup README](utility_library/dylan_standup/README.md) for detailed options.
 
 ## Usage
 
 ```bash
 # Show all available commands
-claudecode --help
+dylan --help
 
 # Get help for a specific command
-claudecode review --help
-claudecode standup --help
+dylan review --help
+dylan standup --help
 ```
 
 ## Development

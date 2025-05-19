@@ -3,10 +3,10 @@
 
 Builds on concept_library/full_review_loop concepts but starts minimal.
 
-This module provides the core review functionality. For CLI usage, use cc_review_cli.py
+This module provides the core review functionality. For CLI usage, use dylan_review_cli.py
 
 Python API usage:
-    from src.utility_library.cc_review.cc_review_runner import run_claude_review, generate_review_prompt
+    from src.utility_library.dylan_review.dylan_review_runner import run_claude_review, generate_review_prompt
 
     # Review latest changes
     prompt = generate_review_prompt()

@@ -4,8 +4,8 @@
 
 import typer
 
-from .cc_review_runner import generate_review_prompt, run_claude_review
-from .cc_review_utils import pretty_print_json_file
+from .dylan_review_runner import generate_review_prompt, run_claude_review
+from .dylan_review_utils import pretty_print_json_file
 
 
 def review(
