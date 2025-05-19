@@ -17,44 +17,46 @@ Python API usage:
     run_claude_review(prompt, allowed_tools=["Bash", "Read", "LS"], output_format="json")
 """
 
-import subprocess
 import sys
+from typing import Literal
+
+from ..provider_clis.provider_claude_code import get_provider
 
 
 def run_claude_review(
     prompt: str,
     allowed_tools: list[str] | None = None,
     branch: str | None = None,
-    output_format: str = "text",
+    output_format: Literal["text", "json", "stream-json"] = "text",
 ) -> None:
     """Run Claude code with a review prompt and specified tools.
 
     Args:
         prompt: The review prompt to send to Claude
         allowed_tools: List of allowed tools (defaults to Read, Glob, Grep, LS, Bash, Write)
-        branch: Optional branch to review (defaults to current branch)
+        branch: Optional branch to review (not used in this implementation)
         output_format: Output format (text, json, stream-json)
     """
     # Default safe tools for review
     if allowed_tools is None:
         allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write"]
 
-    # Build the command
-    command = ["claude", "-p", prompt]
+    # Determine output file based on format
+    output_file = "review_report.json" if output_format == "json" else "review_report.md"
 
-    # Add output format
-    if output_format != "text":
-        command.extend(["--output-format", output_format])
-
-    # Add allowed tools
-    if allowed_tools:
-        command.extend(["--allowedTools"] + allowed_tools)
-
-    # Run the command
+    # Get provider and run the review
+    provider = get_provider()
     try:
-        subprocess.run(command, check=True)
+        result = provider.generate(
+            prompt,
+            output_path=output_file,
+            allowed_tools=allowed_tools,
+            output_format=output_format
+        )
         print("Claude process completed successfully")
-    except subprocess.CalledProcessError as e:
+        if result:
+            print(result)
+    except Exception as e:
         print(f"Error running Claude: {e}")
         sys.exit(1)
 
@@ -74,19 +76,7 @@ def generate_review_prompt(branch: str | None = None, output_format: str = "text
     else:
         base_prompt = "Review the latest changes in this repository."
 
-    # Determine file format and name based on output format
-    if output_format == "json":
-        file_instruction = """Save your report as a JSON file named 'review_report.json' in the root of the
-        repository with the structured data format described above.
-
-IMPORTANT: When generating JSON output valid JSON, ensure proper escaping:
-- Escape all backslashes (\\) as double backslashes (\\\\)
-- Use proper JSON escaping for special characters
-- Be careful with strings containing Unix paths or regex patterns
-- Test that the output is valid JSON before saving"""
-    else:
-        file_instruction = "Save your report as a markdown file named 'review_report.md' in the root of the repository."
-
+    # No need to include file saving instructions here since provider handles it
     return f"""
 {base_prompt}
 
@@ -124,6 +114,5 @@ For each issue, provide:
 - A list of affected lines
 - A list of suggested fixes
 
-{file_instruction}
 **ENSURE YOU ALWAYS RETURN THE FILE NAME AND RELATIVE PATH AS PART OF THE REPORT METADATA**
 """

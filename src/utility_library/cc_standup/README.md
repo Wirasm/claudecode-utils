@@ -109,7 +109,8 @@ claudecode standup --out custom_report.md
 ### From Python code
 
 ```python
-from src.utility_library.cc_standup import activity, report, provider
+from src.utility_library.cc_standup import activity, report
+from src.utility_library.provider_clis.provider_claude_code import get_provider
 
 # Collect activities
 since_dt = datetime.datetime.now() - datetime.timedelta(days=1)
@@ -119,7 +120,7 @@ prs = activity.collect_prs(since_dt)
 
 # Generate report
 prompt = report.build_prompt(commits, prs)
-claude = provider.get_provider()
+claude = get_provider()
 markdown = claude.generate(prompt)
 
 # Save report
@@ -145,8 +146,8 @@ The cc_standup tool is split into modular components:
 - `standup_cli.py`: Main CLI logic using argparse
 - `standup_typer.py`: Typer wrapper for integration with main CLI
 - `activity.py`: Git commit and GitHub PR collection
-- `provider.py`: Claude Code provider interface
 - `report.py`: Report generation and formatting
+- `../provider_clis/provider_claude_code.py`: Claude Code provider interface (shared across utilities)
 
 ## License
 

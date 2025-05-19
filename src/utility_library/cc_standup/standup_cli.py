@@ -11,8 +11,8 @@ import webbrowser
 
 from rich.console import Console
 
+from ..provider_clis.provider_claude_code import get_provider
 from .activity import collect_commits, collect_prs
-from .provider import get_provider
 from .report import build_prompt, preview
 
 console = Console()
@@ -21,9 +21,7 @@ console = Console()
 def main():
     """Main entry point for the standup command."""
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Generate a stand-up report from git commits and GitHub PRs."
-    )
+    parser = argparse.ArgumentParser(description="Generate a stand-up report from git commits and GitHub PRs.")
     parser.add_argument(
         "--since",
         "-s",
@@ -76,17 +74,19 @@ def main():
     # Let the user know we're generating the report
     console.print("[yellow]Generating stand-up report...[/yellow]")
 
-    # Prompt Claude
+    # Prompt Claude to generate and save the file
     provider = get_provider()  # only Claude for now
     prompt = build_prompt(commits, prs)
-    markdown = provider.generate(prompt)
+    result = provider.generate(prompt, output_path=str(outfile))
 
-    # Save the file directly
-    outfile.write_text(markdown, encoding="utf-8")
-
-    # Show preview and confirmation
-    preview(markdown)
-    console.print(f"[green]Report saved to {outfile}[/green]")
+    # Read the saved file and show preview
+    if outfile.exists():
+        markdown = outfile.read_text(encoding="utf-8")
+        preview(markdown)
+        console.print(f"[green]Report saved to {outfile}[/green]")
+    else:
+        console.print(f"[yellow]Warning: Report file not found at {outfile}[/yellow]")
+        console.print(f"[yellow]Claude response: {result}[/yellow]")
 
     if args.open:
         webbrowser.open(outfile.resolve().as_uri())
