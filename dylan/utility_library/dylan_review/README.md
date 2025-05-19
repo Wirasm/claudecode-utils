@@ -42,14 +42,8 @@ uv pip install -e ".[dev]"
 # Install as a UV tool to use on any directory
 uv tool install -e /path/to/repo/root
 
-# Run in any git repository standalone
-cc-review
-
 # Run with the main CLI
-claudecode review
-
-# Reinstall as a global tool if any updates are made
-uv tool install -e . --force
+dylan review
 ```
 
 ### Using pip
@@ -67,28 +61,6 @@ pip install -e .
 ## Usage
 
 The review tool can be run in several ways:
-
-### From the command line
-
-```bash
-# Review latest changes on current branch
-dylan-review
-
-# Review specific branch against main
-dylan-review feature-branch
-
-# Get JSON output for automation
-dylan-review feature-branch --format json
-
-# Review with specific tools only
-dylan-review develop --tools Read,Bash
-
-# Pretty print an existing JSON report
-dylan-review --pretty-print review_report.json
-
-# Pretty print and save to new file
-dylan-review --pretty-print review_report.json --pretty-output report_pretty.json
-```
 
 ### Using the integrated CLI
 

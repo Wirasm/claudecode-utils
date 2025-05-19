@@ -159,18 +159,18 @@ uv run python concept_library/cc_PRP_flow/scripts/cc_runner_simple.py --prp-path
 
 ```bash
 # Generate a standup report for today
-uv run python -m utility_library.cc_standup
+standup
 
 # Generate for a specific date
-uv run python -m utility_library.cc_standup --since "2023-05-01T09:00:00"
+standup --since "2023-05-01T09:00:00"
 
 # Open the report after generation
-uv run python -m utility_library.cc_standup --open
+standup --open
 ```
 
 ## Code Architecture
 
-The claudecode-utility is a modular library for code review and development using Claude. The project explores three core concepts:
+The dylan is a modular library for code review and development using Claude. The project explores three core concepts:
 
 ### 1. Automated Review Flow
 
@@ -246,7 +246,8 @@ A tool for generating daily standup reports from git activity:
   - `simple_validator/`: Validator agent that checks if fixes are correct
   - `simple_pr/`: PR creation tool
   - `cc_PRP_flow/`: Product Requirement Prompt workflow
-- `src/utility_library/`: Contains the utility implementations
-  - `cc_standup/`: Standup report generator
+- `dylan/utility_library/`: Contains the utility implementations
+  - `dylan_standup/`: Standup report generator
+  - `dylan_review/`: Code review tool
 - `PRPs/`: Contains Product Requirement Prompt templates
 - `ai_docs/`: Documentation for AI tools and best practices

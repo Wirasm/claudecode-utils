@@ -43,8 +43,6 @@ uv tool install -e /path/to/claudecode-utility
 
 # Use anywhere
 dylan --help
-dylan-review --help
-standup --help
 ```
 
 ## Concept Library

@@ -41,14 +41,8 @@ uv pip install -e ".[dev]"
 # Install as a UV tool to use on any directory
 uv tool install -e /path/to/repo/root
 
-# Run in any git repository as standalone
-standup
-
 # Run with the main CLI
 dylan standup
-
-# Reinstall as a global tool if any updates are made
-uv tool install -e . --force
 ```
 
 ### Using pip
@@ -78,22 +72,6 @@ export GITHUB_TOKEN=your_github_token
 ## Usage
 
 The standup tool can be run in several ways:
-
-### From the command line
-
-```bash
-# Use the installed entry point
-standup
-
-# Include PRs since yesterday and open report after generation
-standup --open
-
-# Specify a custom date range (ISO format)
-standup --since 2025-05-10T00:00:00
-
-# Specify a custom output path
-standup --out custom_report.md
-```
 
 ### Using the integrated CLI
 
