@@ -1,160 +1,119 @@
 #!/usr/bin/env python3
 """
-pre-push hook - bumps semver & updates CHANGELOG using Claude Code
-Never bumps major version during development phase
-Works with Max-plan OAuth or ANTHROPIC_API_KEY fallback
+Standalone pre-push hook using Claude Code - minimal wrapper, maximum trust.
+This follows the concept library philosophy: minimal validation, let Claude handle everything.
 """
 
-import os
-import re
 import subprocess
 import sys
-import textwrap
-from datetime import date
-from pathlib import Path
-
-# Get project root
-ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-VERSION_FILE = ROOT / "pyproject.toml"
-CHANGELOG = ROOT / "CHANGELOG.md"
 
 
-def run(cmd: list[str]) -> str:
-    """Run command and return output"""
-    return subprocess.check_output(cmd, text=True).strip()
+def call_claude(prompt: str, allowed_tools: list[str] | None = None) -> tuple[int, str]:
+    """Call Claude Code with minimal wrapper - trust it to do everything."""
+    # Default tools if none specified
+    if allowed_tools is None:
+        allowed_tools = ["Bash", "Read", "Write", "Edit", "LS", "Glob"]
 
+    # Build command
+    cmd = ["claude", "-p", prompt]
 
-def call_claude(prompt: str, api_fallback: bool = False) -> tuple[int, str]:
-    """Call Claude Code with prompt, optionally forcing API key auth"""
-    env = os.environ.copy()
-    if api_fallback:
-        env["CLAUDE_AUTH"] = "api-key"
+    # Add allowed tools
+    if allowed_tools:
+        cmd.extend(["--allowedTools"] + allowed_tools)
 
     try:
-        out = subprocess.check_output(["claude", "-p", "--max-turns", "2", prompt], text=True, env=env)
-        return 0, out.strip()
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return 0, result.stdout
     except subprocess.CalledProcessError as e:
-        return e.returncode, (e.output or "").strip()
+        return e.returncode, (e.output or e.stderr or "").strip()
 
 
-def extract_version() -> str:
-    """Extract current version from pyproject.toml"""
-    content = VERSION_FILE.read_text()
-    m = re.search(r'version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"', content)
-    if m:
-        return m.group(1)
-    print("❌ Could not find version in pyproject.toml")
-    sys.exit(1)
+def generate_pre_push_prompt() -> str:
+    """Generate prompt that gives Claude complete control over the pre-push process."""
+    return """
+You are a pre-push hook with COMPLETE AUTONOMY to analyze commits and update project files.
+
+YOUR MISSION:
+1. Discover what commits are being pushed
+2. Analyze their impact
+3. Update necessary files (version, changelog, etc.)
+4. Ensure the project is ready for push
+
+CRITICAL: You MUST complete these tasks WITHOUT asking for confirmation. Use all available tools to:
+
+1. GIT ANALYSIS - Use Bash to:
+   - Find the latest tag: git describe --tags --abbrev=0 (might fail if no tags)
+   - Get current branch: git symbolic-ref --short HEAD
+   - Find remote tracking branch: git rev-parse --abbrev-ref --symbolic-full-name @{u}
+   - Get commits being pushed: git log origin/main..HEAD --pretty=format:"%h %s %b" (adjust for actual remote)
+   - If no remote, get all commits: git log --pretty=format:"%h %s %b"
+   - Check for uncommitted changes: git status --porcelain
+
+2. VERSION MANAGEMENT:
+   - Read pyproject.toml to find current version
+   - Analyze commit messages for semantic versioning hints:
+     - feat: → minor bump
+     - fix:, docs:, chore: → patch bump
+     - BREAKING CHANGE → major bump (We are still in development phase, so avoid major bumps unless speficied by the user)
+   - Update version in pyproject.toml if needed
+
+3. CHANGELOG UPDATES:
+   - Read CHANGELOG.md
+   - Create new section with today's date
+   - Group changes by type (Added, Changed, Fixed, etc.)
+   - Include commit hashes and messages
+   - Format properly in Markdown
+
+4. OPTIONAL CHECKS (if you detect they're needed):
+   - Run tests if test files were modified
+   - Update documentation if API changes detected
+   - Check for TODOs or FIXMEs in changed files
+
+REMEMBER:
+- Work autonomously - make all decisions yourself
+- Use proper git commands to get FULL context
+- Update files directly with Write/Edit tools
+- Report what you've done at the end
+
+Go ahead and complete the entire pre-push workflow now.
+"""
 
 
-def latest_tag() -> str | None:
-    """Get the latest version tag"""
-    tags = run(["git", "tag", "--list", "v[0-9]*", "--sort=-v:refname"])
-    return tags.splitlines()[0] if tags else None
+def run_pre_push_hook():
+    """Execute the pre-push hook with minimal intervention."""
+    print("🚀 Running pre-push hook with Claude Code...")
 
+    # Generate the prompt
+    prompt = generate_pre_push_prompt()
 
-# Get current version and commits since last tag
-current_ver = extract_version()
-tag = latest_tag() or ""
-log_range = f"{tag}..HEAD" if tag else "HEAD"
-commits = run(["git", "log", "--pretty=format:%s%n%b%n---", log_range])
+    # Call Claude and let it handle everything
+    exit_code, output = call_claude(prompt)
 
-if not commits.strip():
-    sys.exit(0)  # nothing new → allow push
+    if exit_code != 0:
+        print("⚠️ Claude Code encountered an issue:")
+        print(output)
+        # Don't block push on Claude errors
+        sys.exit(0)
 
-# Get git diff to analyze file changes
-diff_files = run(["git", "diff", "--name-only", f"{tag}..HEAD" if tag else "HEAD"])
+    # Show Claude's output
+    print(output)
 
-# Build prompt for Claude
-PROMPT = textwrap.dedent(f"""
-You are a semantic versioning bot for a development project. Follow these rules EXACTLY:
+    # Check if any files were modified
+    try:
+        diff_result = subprocess.run(["git", "diff", "--quiet"], capture_output=True)
+        if diff_result.returncode != 0:
+            print("\n⚠️ Files were modified during pre-push hook.")
+            print("Please review changes and commit before pushing:")
+            print("  git add -A")
+            print("  git commit -m 'chore: pre-push updates'")
+            print("  git push")
+            sys.exit(1)  # Block the push
+    except Exception as e:
+        print(f"Error checking git status: {e}")
 
-Input:
-- current_version = {current_ver}
-- commit_messages = <<<EOF
-{commits}
-EOF
-- changed_files = <<<EOF
-{diff_files}
-EOF
-
-Rules:
-- We are in development (0.x.x versioning)
-- NEVER bump to 1.0.0 or higher
-
-Minor bump (0.x.0 -> 0.x+1.0) when:
-- feat: commit type
-- New root-level folder added in concept_library/ (but NOT subfolders)
-- New feature added to src/ directory (main CLI)
-
-Patch bump (0.x.y -> 0.x.y+1) for:
-- fix:, chore:, docs:, refactor:, test: commit types
-- All other changes
-
-Analysis steps:
-1. Check if any changed files indicate a new root folder in concept_library/ (e.g., concept_library/new_concept/*)
-2. Check if any changed files are new features in src/ (new commands, new utilities)
-3. Look at commit types
-4. Use the highest bump type if multiple criteria match
-
-Output EXACTLY THREE lines:
-bump:<minor|patch>
-new_version:<calculated version>
-changelog:<markdown bullet list of changes>
-""").strip()
-
-# Try Claude with cached credentials first
-code, reply = call_claude(PROMPT)
-
-# Fallback to API key if needed
-if code != 0 and os.getenv("ANTHROPIC_API_KEY"):
-    print("↻ Retrying with API key...")
-    code, reply = call_claude(PROMPT, api_fallback=True)
-
-if code != 0:
-    print("⚠️ Claude unavailable – skipping version bump")
-    sys.exit(0)  # don't block push
-
-# Parse Claude's response
-bump_type = ""
-new_ver = ""
-change_md = ""
-
-for line in reply.splitlines():
-    if line.startswith("bump:"):
-        bump_type = line.split(":", 1)[1].strip()
-    elif line.startswith("new_version:"):
-        new_ver = line.split(":", 1)[1].strip()
-    elif line.startswith("changelog:"):
-        change_md = line.split(":", 1)[1].strip()
-
-if not new_ver:
-    print("⚠️ Invalid response from Claude")
+    print("✅ Pre-push checks complete. Proceeding with push...")
     sys.exit(0)
 
-print(f"► Bumping {current_ver} → {new_ver} ({bump_type})")
 
-# Update version in pyproject.toml
-VERSION_FILE.write_text(
-    re.sub(r'version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"', f'version = "{new_ver}"', VERSION_FILE.read_text(), count=1)
-)
-
-# Update CHANGELOG.md
-today = date.today().isoformat()
-# Replace \n in change_md with actual newlines
-formatted_changes = change_md.replace("\\n", "\n")
-header = f"## [{new_ver}] - {today}\n{formatted_changes}\n\n"
-changelog_content = CHANGELOG.read_text()
-CHANGELOG.write_text(header + changelog_content)
-
-# Check if files were modified
-diff_exit = subprocess.call(["git", "diff", "--quiet"])
-if diff_exit != 0:
-    print("✗ Version bump & changelog updated.")
-    print("  Please commit these changes and push again:")
-    print("  git add pyproject.toml CHANGELOG.md")
-    print(f'  git commit -m "chore(release): v{new_ver}"')
-    sys.exit(1)  # stop push
-
-print("✓ No version changes needed – push continues.")
-sys.exit(0)
+if __name__ == "__main__":
+    run_pre_push_hook()
