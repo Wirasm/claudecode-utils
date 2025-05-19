@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Updated README files for dylan pr and review commands (`05c9716`)
+
 ### Changed
 - Refactored pre-push hook to add branch-specific versioning rules (`5ee18c5`)
   - Apply different versioning rules based on target branch
