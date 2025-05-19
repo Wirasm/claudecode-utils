@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- New `dylan release` command for automated project releases (`10bed2a`)
+  - Introduces autonomous release management functionality
+  - Detects project configuration and manages version bumps
+  - Updates changelogs and optionally creates git commits/tags
+  - Follows dylan philosophy of minimal wrappers and maximum Claude autonomy
+  - Supports project-agnostic operations with configurable version bump types
+  - Includes dry-run mode for safe operation previews
+
 ### Fixed
 - Updated README files for dylan pr and review commands (`05c9716`)
 
