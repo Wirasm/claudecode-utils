@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-05-19
+
+### Changed
+- Remove temporary workflow report files (`4ac095e`)
+  - Clean up pr_report.md and review_report.md files from repository
+  - Keep repository tidy by removing temporary files generated during workflows
+
 ## [0.5.0] - 2025-05-19
 
 ### Added
