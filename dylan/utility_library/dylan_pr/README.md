@@ -6,19 +6,22 @@ A minimal Claude Code utility for autonomous pull request creation.
 
 The `dylan pr` command gives Claude Code complete autonomy to analyze commits and create pull requests. It follows the same minimal philosophy as other dylan utilities.
 
-The command saves its report to the `tmp/` directory to avoid cluttering the project root.
+The command saves its report to the `tmp/` directory with branch-aware naming for better tracking across multiple PRs.
 
 ## Usage
 
 ```bash
-# Create PR from current branch to main
+# Create PR from current branch to develop (default)
 dylan pr
 
-# Create PR from specific branch to main
+# Create PR from specific branch to develop
 dylan pr feature-branch
 
 # Create PR with custom target branch
-dylan pr feature-branch --target develop
+dylan pr feature-branch --target main
+
+# Create PR with changelog section
+dylan pr --changelog
 
 # Use JSON output format
 dylan pr --format json
@@ -31,6 +34,9 @@ dylan pr --tools "Bash,Read,Write"
 
 - **Automatic branch detection**: Uses current branch if none specified
 - **Rich PR descriptions**: Claude generates comprehensive PR content
+- **Changelog support**: Add formatted changelog section to PR description with `--changelog`
+- **Branch-aware reports**: Reports include branch name for better organization
+- **Incremental updates**: Appends to existing PR reports for the same branch
 - **GitHub CLI integration**: Uses `gh` command for PR creation
 - **Minimal validation**: Trusts Claude to handle edge cases
 - **Multiple output formats**: Supports text and JSON output
@@ -44,10 +50,13 @@ dylan pr --tools "Bash,Read,Write"
    - Summary of changes
    - List of commits
    - Files modified
+   - Changelog section (if `--changelog` flag is used)
    - Testing notes
 5. Uses GitHub CLI to create the PR
 6. Reports results with PR URL
-7. Saves report to `tmp/pr_report.md` (or `tmp/pr_report_[timestamp].md` if file exists)
+7. Saves report to `tmp/pr_report_<branch>_<timestamp>.md`
+   - Branch name is sanitized (slashes replaced with dashes)
+   - Appends to existing report if one exists for the branch
 
 ## Requirements
 
