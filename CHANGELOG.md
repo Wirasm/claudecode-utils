@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Updated README files for dylan pr and review commands (`05c9716`)
+
+### Changed
+- Refactored pre-push hook to add branch-specific versioning rules (`5ee18c5`)
+  - Apply different versioning rules based on target branch
+  - Main branch: Bump version and create new changelog section  
+  - Feature branches: Append to [Unreleased] section without version bump
+  - Add clearer branch detection and file management instructions
+- Refactored dylan to improve pr and review file handling with tmp directory (`5ee18c5`)
+  - Move report outputs to tmp/ directory to avoid clutter
+  - Add timestamp-based filename generation for existing files
+  - Enhance file handling instructions in prompts
+  - Ensure proper directory creation before writing reports
+
+### Breaking Changes
+- Report files are now saved to tmp/ directory by default (`5ee18c5`)
+
+## [0.4.0] - 2025-05-19
+
 ### Added
+- New `dylan pr` command for autonomous pull request creation (`90233e4`)
+  - Integrates with the main dylan CLI as a new subcommand
+  - Complete PR creation module with CLI and runner components
+  - Comprehensive prompt generation for autonomous PR workflow
+  - Support for automatic branch detection and PR analysis
+  - Follows dylan philosophy of minimal wrappers with complete Claude autonomy
 - New minimal autonomous pre-push hook implementation that trusts Claude completely
   - Gives Claude complete control over versioning decisions
   - Trusts Claude to format changelog entries appropriately

@@ -34,42 +34,58 @@ def generate_pre_push_prompt() -> str:
 You are a pre-push hook with COMPLETE AUTONOMY to analyze commits and update project files.
 
 YOUR MISSION:
-1. Discover what commits are being pushed
+1. Discover what commits are being pushed and to which branch
 2. Analyze their impact
-3. Update necessary files (version, changelog, etc.)
+3. Update necessary files based on target branch rules
 4. Ensure the project is ready for push
 
 CRITICAL: You MUST complete these tasks WITHOUT asking for confirmation. Use all available tools to:
 
 1. GIT ANALYSIS - Use Bash to:
-   - Find the latest tag: git describe --tags --abbrev=0 (might fail if no tags)
    - Get current branch: git symbolic-ref --short HEAD
-   - Find remote tracking branch: git rev-parse --abbrev-ref --symbolic-full-name @{u}
+   - Find the target remote branch: git rev-parse --abbrev-ref --symbolic-full-name @{u}
+   - Find the latest tag: git describe --tags --abbrev=0 (might fail if no tags)
    - Get commits being pushed: git log origin/main..HEAD --pretty=format:"%h %s %b" (adjust for actual remote)
    - If no remote, get all commits: git log --pretty=format:"%h %s %b"
    - Check for uncommitted changes: git status --porcelain
 
-2. VERSION MANAGEMENT:
-   - Read pyproject.toml to find current version
-   - Analyze commit messages for semantic versioning hints:
-     - feat: → minor bump
-     - fix:, docs:, chore: → patch bump
-     - BREAKING CHANGE → major bump (We are still in development phase, so avoid major bumps unless speficied by the user)
-   - Update version in pyproject.toml if needed
+2. BRANCH-SPECIFIC RULES:
 
-3. CHANGELOG UPDATES:
+   IF PUSHING TO MAIN:
+   - ALWAYS bump version (patch or minor based on commits)
+   - Update CHANGELOG.md with new version section
+   - Analyze commit messages:
+     - feat: → minor bump
+     - fix:, docs:, chore:, refactor: → patch bump
+     - BREAKING CHANGE → major bump (avoid in 0.x development)
+   - Create new version section in changelog with date
+
+   IF PUSHING TO FEATURE BRANCH:
+   - DO NOT bump version
+   - Append changes to [Unreleased] section in CHANGELOG.md
+   - Group by commit type but don't create new version section
+   - Keep commits organized for future version bump
+
+3. VERSION MANAGEMENT (MAIN BRANCH ONLY):
+   - Read pyproject.toml to find current version
+   - Apply appropriate version bump
+   - Update version in pyproject.toml
+   - Commit the version change
+
+4. CHANGELOG UPDATES:
    - Read CHANGELOG.md
-   - Create new section with today's date
-   - Group changes by type (Added, Changed, Fixed, etc.)
-   - Include commit hashes and messages
+   - For main: Create new version section with today's date
+   - For feature branches: Append to [Unreleased] section
+   - Include commit references and descriptions
    - Format properly in Markdown
 
-4. OPTIONAL CHECKS (if you detect they're needed):
+5. OPTIONAL CHECKS:
    - Run tests if test files were modified
    - Update documentation if API changes detected
    - Check for TODOs or FIXMEs in changed files
 
 REMEMBER:
+- Check target branch first to apply correct rules
 - Work autonomously - make all decisions yourself
 - Use proper git commands to get FULL context
 - Update files directly with Write/Edit tools
