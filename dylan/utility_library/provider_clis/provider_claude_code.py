@@ -196,10 +196,10 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
                 bufsize=1,  # Line buffered
             ) as proc:
                 output_lines = []
-                # Set up exit command listener independently of streaming
-                # This way the exit command works even without streaming enabled
+                # Set up exit command listener but only in streaming mode
+                # In non-streaming mode, users should use Ctrl+C to interrupt
                 from ..shared.exit_command import setup_exit_command_handler
-                exit_triggered = setup_exit_command_handler(proc, exit_command)
+                exit_triggered = setup_exit_command_handler(proc, exit_command if stream else None)
 
                 try:
                     # Stream output if requested, otherwise collect all lines

@@ -89,7 +89,7 @@ def pr(
         "Changelog": format_boolean_option(changelog),
         "Tools": format_tool_count(allowed_tools),
         "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
-        "Exit": "/exit (type to quit at any time)"
+        "Exit": format_boolean_option(stream, "/exit (type to quit at any time)", "Ctrl+C to interrupt")
     }))
     console.print()
 
