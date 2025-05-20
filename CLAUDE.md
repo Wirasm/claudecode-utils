@@ -112,21 +112,8 @@ uv run mypy .
 
 ### Running Core Components
 
-#### Full Review Loop
-
-```bash
-# Review latest commit
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --latest --verbose
-
-# Review a specific branch against main
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --verbose
-
-# Use a git worktree for isolation
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --worktree
-
-# Specify base branch and keep temporary branch after run
-uv run python concept_library/full_review_loop/full_review_loop_safe.py --branch feature-branch --base-branch develop --keep-branch
-```
+check
+dylan/
 
 #### Individual Components
 
@@ -288,3 +275,8 @@ A tool for generating daily standup reports from git activity:
   - `dylan_release/`: Release management and changelog generation
 - `PRPs/`: Contains Product Requirement Prompt templates
 - `ai_docs/`: Documentation for AI tools and best practices
+
+## BRANCHING STRATEGY
+
+The branching strategy is defined in the .branchingstrategy file.
+more details in BRANCHING_STRATEGY.md

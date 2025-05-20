@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import os
 import shutil
+import signal
 import subprocess
 import sys
+import time
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import Final
 
 from ..shared.config import (
@@ -48,6 +51,88 @@ class Provider(ABC):
 class ClaudeProvider(Provider):
     _BIN: Final[str] = shutil.which("claude") or "claude"
 
+    def stream_output(  # noqa: C901
+        self,
+        proc: subprocess.Popen,
+        timeout: int | None = None,
+        exit_command: str | None = None,
+    ) -> Iterator[str]:
+        """Stream output from a subprocess line by line with optional timeout.
+
+        Args:
+            proc: The subprocess.Popen process object
+            timeout: Optional timeout in seconds for the entire process
+            exit_command: Custom command to listen for to exit gracefully
+
+        Yields:
+            Lines of output from the process
+
+        Raises:
+            TimeoutError: If the process exceeds the timeout
+            subprocess.CalledProcessError: If the process exits with a non-zero code
+            KeyboardInterrupt: If the process is interrupted by user
+        """
+        start_time = time.time()
+
+        try:
+            # Check for user input if exit_command is specified and in stream mode
+            if exit_command:
+                import sys
+                import threading
+
+                exit_triggered = threading.Event()
+
+                def input_listener():
+                    """Listen for user input in a separate thread."""
+                    while not exit_triggered.is_set():
+                        try:
+                            user_input = input()
+                            if user_input.strip() == exit_command:
+                                print(f"\nExit command '{exit_command}' detected. Shutting down...", file=sys.stderr)
+                                exit_triggered.set()
+                                # Send SIGINT to Claude process
+                                proc.send_signal(signal.SIGINT)
+                        except (EOFError, KeyboardInterrupt):
+                            break
+                        except Exception:  # noqa: S110
+                            # Ignore other errors in the input thread - don't crash the daemon thread
+                            # This is intentionally suppressed as the input thread is non-critical
+                            pass
+
+                # Start input listener thread if exit_command is specified
+                input_thread = threading.Thread(target=input_listener, daemon=True)
+                input_thread.start()
+
+            # Main output streaming loop
+            for line in proc.stdout:
+                if timeout and (time.time() - start_time > timeout):
+                    raise TimeoutError("Process exceeded timeout")
+
+                # Check if exit was triggered in the input thread
+                if exit_command and exit_triggered.is_set():
+                    break
+
+                yield line.strip()
+
+        except (KeyboardInterrupt, SystemExit) as e:
+            print("\nProcess interrupted by user. Attempting graceful shutdown...", file=sys.stderr)
+            # First try SIGINT (like Ctrl+C) which Claude Code CLI handles specially
+            proc.send_signal(signal.SIGINT)
+
+            # Give it a few seconds to clean up
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                print("Graceful shutdown timed out, terminating process...", file=sys.stderr)
+                proc.terminate()  # SIGTERM
+                try:
+                    proc.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    print("Termination timed out, killing process...", file=sys.stderr)
+                    proc.kill()  # SIGKILL
+
+            raise KeyboardInterrupt() from e
+
     def generate(  # noqa: C901
         self,
         prompt: str,
@@ -55,8 +140,28 @@ class ClaudeProvider(Provider):
         output_path: str | None = None,
         allowed_tools: list[str] | None = None,
         output_format: str = "text",
+        timeout: int | None = None,
+        stream: bool = False,
+        exit_command: str | None = None,
     ) -> str:
-        """Generate content using Claude Code."""
+        """Generate content using Claude Code with proper interrupt handling.
+
+        Args:
+            prompt: The prompt to send to the provider
+            output_path: Optional path to save output to (will be added to prompt)
+            allowed_tools: Optional list of allowed tools
+            output_format: Output format (text, json, stream-json)
+            timeout: Optional timeout in seconds
+            stream: Whether to stream output (for interactive use)
+            exit_command: Custom command to gracefully exit (e.g., "/exit" or "/quit")
+
+        Returns:
+            The generated content or confirmation message
+
+        Raises:
+            RuntimeError: If Claude Code CLI is not found or returns an error
+            KeyboardInterrupt: If the process is interrupted
+        """
         # Check if Claude is available
         if not self._BIN or self._BIN == "claude":
             claude_path = shutil.which("claude")
@@ -94,8 +199,55 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
             print("      For Claude Code Max users this should work automatically.", file=sys.stderr)
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return result.stdout
+            # Use Popen instead of run for better control over the process
+            with subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,  # Line buffered
+            ) as proc:
+                output_lines = []
+                try:
+                    # Stream output if requested, otherwise collect all lines
+                    if stream:
+                        for line in self.stream_output(proc, timeout, exit_command):
+                            print(line)
+                            output_lines.append(line)
+                    else:
+                        for line in self.stream_output(proc, timeout, exit_command if stream else None):
+                            output_lines.append(line)
+
+                except TimeoutError as e:
+                    proc.send_signal(signal.SIGINT)
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=2)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                    raise RuntimeError(f"Claude Code process timed out after {timeout} seconds") from e
+
+                # Wait for the process to complete and check return code
+                return_code = proc.wait()
+
+                # Process stderr
+                stderr = proc.stderr.read()
+
+                # Handle return codes
+                if return_code == 0:
+                    return "\n".join(output_lines)
+                elif return_code == 130:  # SIGINT (Ctrl+C)
+                    print("Process was interrupted by user", file=sys.stderr)
+                    raise KeyboardInterrupt()
+                else:
+                    error_msg = stderr or f"Process exited with code {return_code}"
+                    if "CLAUDE_API_KEY" not in os.environ:
+                        return self._handle_auth_error(error_msg)
+                    raise RuntimeError(f"Claude Code returned non-zero exit:\n{error_msg}")
+
         except FileNotFoundError as exc:
             raise RuntimeError(
                 f"Claude Code CLI not found. Install with:\n  {CLAUDE_CODE_INSTALL_CMD}"
@@ -146,6 +298,6 @@ Your stand-up report would typically appear here after authentication.
 
 def get_provider(name: str | None = None) -> Provider:
     """Factory - returns a Provider instance. Only 'claude' for now."""
-    if name and name.lower() not in {"claude", "anthropic"}:
+    if name and name.lower() != "claude":
         raise ValueError(f"Unknown provider '{name}'. Only 'claude' supported in POC.")
     return ClaudeProvider()
