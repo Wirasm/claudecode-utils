@@ -46,7 +46,7 @@ def run_claude_review(
     """
     # Default safe tools for review
     if allowed_tools is None:
-        allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write"]
+        allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write", "MultiEdit", "TodoRead", "TodoWrite"]
 
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/review_report.json" if output_format == "json" else "tmp/review_report.md"
@@ -59,10 +59,7 @@ def run_claude_review(
         provider = get_provider()
         try:
             result = provider.generate(
-                prompt,
-                output_path=output_file,
-                allowed_tools=allowed_tools,
-                output_format=output_format
+                prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
             )
             # Update task to complete
             progress.update(task, completed=True)
@@ -115,7 +112,9 @@ def generate_review_prompt(branch: str | None = None, output_format: str = "text
     if branch:
         base_prompt = f"Review the changes in branch '{branch}' compared to develop (or main if develop doesn't exist)."
     else:
-        base_prompt = "Review the latest changes in this repository compared to develop (or main if develop doesn't exist)."
+        base_prompt = (
+            "Review the latest changes in this repository compared to develop (or main if develop doesn't exist)."
+        )
 
     # Determine file extension based on format
     extension = ".json" if output_format == "json" else ".md"
