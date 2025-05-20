@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2025-05-20
+
+### Changed
+- Project renamed to "dylan" throughout the codebase
+- Updated branching strategy documentation
+- Improved documentation and README files
+
+### Added
+- Added PRP-001 for prompt consistency
+- Updated CLI README and component READMEs
+
+### Updated
+- Updated Ruff dependency from 0.11.9 to 0.11.10
+
 ## [0.6.3] - 2025-05-20
 
 ### Added
