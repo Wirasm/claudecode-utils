@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2025-05-20
+
+### Added
+- Enhanced CLI interfaces with improved UI components
+  - Added welcome message and command table to main CLI
+  - Improved help text and visual elements across all CLIs
+  - Added progress bars and rich console output to all runners
+- New shared UI components in utility_library/shared
+  - Added UI theme configuration
+  - Added progress bar utilities
+  - Added error handling improvements
+
 ## [0.6.2] - 2025-05-19
 
 ### Changed
