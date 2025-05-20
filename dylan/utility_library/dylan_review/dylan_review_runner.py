@@ -51,7 +51,7 @@ def run_claude_review(
     """
     # Default safe tools for review
     if allowed_tools is None:
-        allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write", "MultiEdit", "TodoRead", "TodoWrite"]
+        allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write", "Edit", "MultiEdit", "TodoRead", "TodoWrite"]
 
     # Print prompt for debugging
     if debug:
@@ -70,11 +70,7 @@ def run_claude_review(
     # Always show exit command message, but let the handler thread show its own prompt
     if stream:
         # For streaming mode, still show the prominent message
-        show_exit_command_message(
-            console,
-            DEFAULT_EXIT_COMMAND,
-            style="prominent"
-        )
+        show_exit_command_message(console, DEFAULT_EXIT_COMMAND, style="prominent")
 
     with create_dylan_progress(console=console) as progress:
         # Start the review task
@@ -87,7 +83,7 @@ def run_claude_review(
                 allowed_tools=allowed_tools,
                 output_format=output_format,
                 stream=stream,
-                exit_command=DEFAULT_EXIT_COMMAND if stream else None
+                exit_command=DEFAULT_EXIT_COMMAND if stream else None,
             )
 
             # Update task to complete
@@ -141,7 +137,7 @@ def generate_review_prompt(branch: str | None = None, output_format: str = "text
     """
     # Determine file extension based on format
     extension = ".json" if output_format == "json" else ".md"
-    
+
     branching_instructions = """
 BRANCH STRATEGY DETECTION:
 1. First, determine the current branch using: git symbolic-ref --short HEAD
@@ -159,9 +155,12 @@ FILE HANDLING INSTRUCTIONS:
 3. Determine the target branch from the BRANCH STRATEGY DETECTION steps
 4. Create a filename in this format: tmp/dylan-review-compare-[current-branch]-to-[target]{extension}
    - Replace any slashes in branch names with hyphens (e.g., feature/foo becomes feature-foo)
-5. If the file already exists, APPEND your new review to the file with a clear separator
+   - DO NOT add timestamps to the filename itself
+5. If the file already exists:
+   - Read the existing file to understand previous reviews
+   - APPEND to the existing file with a clear separator
    - Add a timestamp header: ## Review [DATE] [TIME]
-   - This allows tracking multiple reviews over time in the same file
+   - This allows tracking multiple reviews over time
 """
 
     review_steps = """
@@ -217,5 +216,9 @@ For each issue, provide:
 - A list of affected lines
 - A list of suggested fixes
 
-**IMPORTANT: Append your review to the file if it already exists, with a timestamp header separating reviews**
+**IMPORTANT INSTRUCTIONS:**
+- Always append your review to the file if it already exists, with a timestamp header separating reviews
+- DO NOT add timestamps to the filename itself
+- Always include a "Steps Executed" section listing all commands and decisions you made
+- Use the exact filename format: tmp/dylan-review-compare-[current-branch]-to-[target]{extension}
 """

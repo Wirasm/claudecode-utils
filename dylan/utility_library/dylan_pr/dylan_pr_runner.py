@@ -164,9 +164,12 @@ FILE HANDLING INSTRUCTIONS:
 3. Determine the target branch from the BRANCH STRATEGY DETECTION steps
 4. Create a filename in this format: tmp/dylan-pr-[current-branch]-to-[target]{extension}
    - Replace any slashes in branch names with hyphens (e.g., feature/foo becomes feature-foo)
-5. If the file already exists, APPEND your new PR report to the file with a clear separator
-   - Add a timestamp header: ## PR Created [DATE] [TIME]
-   - This allows tracking multiple PR attempts over time in the same file
+   - DO NOT add timestamps to the filename itself
+5. If the file already exists:
+   - Read the existing file to understand previous PR attempts
+   - APPEND to the existing file with a clear separator 
+   - Add a timestamp header: ## PR Created/Updated [DATE] [TIME]
+   - This allows tracking multiple PR attempts and updates over time
 """
 
     return f"""
@@ -194,11 +197,16 @@ CRITICAL STEPS - Use Bash and other tools to:
 
 2. PR PREPARATION:
    - Check for existing PRs: gh pr list --head $(git symbolic-ref --short HEAD)
-   - Skip creation if PR already exists
    - Get all commits: git log [target]..HEAD --pretty=format:'%h %s'
    - Analyze changes: git diff [target]...HEAD --stat
    - Detailed diff: git diff [target]...HEAD
    - Changed files: git diff [target]...HEAD --name-only
+   
+   If an existing PR is found:
+   - Get the PR number and URL: gh pr view --json number,url
+   - Check if there are new commits since PR creation
+   - If there are new commits, plan to update PR with new information
+   - If there are no new commits, document that the PR is up to date
 
 {
         "3. CHANGELOG UPDATE (default unless --no-changelog flag):"
@@ -232,32 +240,46 @@ CRITICAL STEPS - Use Bash and other tools to:
         if update_changelog
         else "3. CHANGELOG UPDATE:\n   - Skip changelog updates (--no-changelog flag specified)\n   - Proceed directly to PR creation without modifying CHANGELOG.md\n"
     }
-4. PR CREATION:
-   - Extract meaningful title from branch name or commits
-   - Generate comprehensive description:
-     * Summary of changes
-     * List of commits
-     * Files changed
-     * Testing notes
-     * Breaking changes (if any)
-   - Create PR: gh pr create --base [target] --head [current] --title "..." --body "..."
+4. PR CREATION/UPDATES:
+   - When NO existing PR:
+     * Extract meaningful title from branch name or commits
+     * Generate comprehensive description:
+       + Summary of changes
+       + List of commits
+       + Files changed
+       + Testing notes
+       + Breaking changes (if any)
+     * Create PR: gh pr create --base [target] --head [current] --title "..." --body "..."
+   
+   - When existing PR found WITH new commits:
+     * Generate updated description with new commits included
+     * Update PR: gh pr edit [PR_NUMBER] --body "..."
+     * Add comment to PR about updates if significant changes
+   
+   - When existing PR found WITHOUT new commits:
+     * Skip PR updates
+     * Document that PR is already up to date
 
 5. REPORT GENERATION:
-   - Document PR URL if created
-   - Summarize what was done
-   - Include in report:
-     * PR URL
-     * Current branch name
-     * Target branch
+   - Document what actions were taken:
+     * PR created, PR updated, or no changes needed
+     * Include PR URL
+     * Current branch name and target branch
      {"* Changelog section content" if update_changelog else ""}
-     * Timestamp
-   - Save report to: tmp/dylan-pr-[current-branch]-to-[target].md
+   - REQUIRED: Add a "Steps Executed" section that lists all steps you performed:
+     * Include bash commands used 
+     * Note key decisions made
+     * Document any errors or issues encountered
+   - Ensure report sections are clearly separated and formatted
+   - Save report to: tmp/dylan-pr-[current-branch]-to-[target].md with timestamp header
 
 REMEMBER:
 - Be completely autonomous in your decisions
 - Create rich, helpful PR descriptions with proper markdown formatting
-- Skip PR creation if one already exists for this branch
-- Report results clearly and save to the properly named file
+- For existing PRs, UPDATE with new commits instead of skipping
+- Always APPEND to existing reports with clear timestamps, DO NOT create new files
+- Always include a "Steps Executed" section in your report
+- Save reports with the exact filename format, NO timestamps in filenames
 - Use develop as target branch when no explicit target is provided
 
 Execute the complete PR creation workflow now and save your report to the appropriate file.

@@ -155,7 +155,10 @@ FILE HANDLING INSTRUCTIONS:
 4. Create a filename in this format: tmp/dylan-release-vX.Y.Z-from-[branch]{extension}
    - Replace any slashes in branch names with hyphens
    - Include the new version number in the filename
-5. If the file already exists, APPEND your new release report with a clear separator
+   - DO NOT add timestamps to the filename itself
+5. If the file already exists:
+   - Read the existing file to understand previous release attempts
+   - APPEND to the existing file with a clear separator
    - Add a timestamp header: ## Release [DATE] [TIME]
    - This allows tracking multiple release attempts over time
 """
@@ -252,13 +255,21 @@ REPORT GENERATION:
 2. Show before/after versions
 3. List all files modified
 4. Include any error messages or warnings
-5. Save report to: tmp/dylan-release-vX.Y.Z-from-[branch]{extension}
+5. REQUIRED: Add a "Steps Executed" section that lists all steps you performed:
+   - Include bash commands used
+   - Note key decisions made
+   - Document any errors or issues encountered
+6. Ensure report sections are clearly separated and formatted
+7. Save report to: tmp/dylan-release-vX.Y.Z-from-[branch]{extension} with timestamp header
 
 REMEMBER:
 - Releases must always start from develop branch
 - Follow semantic versioning strictly
 - Follow Keep a Changelog format
 - Provide clear error messages if prerequisites aren't met
+- Always APPEND to existing reports with clear timestamps, DO NOT create new files
+- Always include a "Steps Executed" section in your report
+- Save reports with the exact filename format, NO timestamps in filenames
 {"- This is a DRY RUN - show changes but do not apply them" if dry_run else ""}
 
 Execute the complete release workflow now and save your report.
