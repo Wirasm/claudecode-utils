@@ -120,12 +120,19 @@ def setup_exit_command_handler(process, exit_command: str = DEFAULT_EXIT_COMMAND
     
     def input_listener():
         """Listen for user input in a separate thread."""
+        # Start with a visible prompt for the exit command
+        print(f"Type {exit_command} and press Enter to exit at any time", file=sys.stderr)
+        
         while not exit_triggered.is_set():
             try:
                 user_input = input()
                 if user_input.strip() == exit_command:
                     on_exit_command()
                     break
+                elif user_input.strip():
+                    # Make the command visible again after any non-empty input
+                    # that isn't the exit command
+                    print(f"Type {exit_command} and press Enter to exit at any time", file=sys.stderr)
             except (EOFError, KeyboardInterrupt):
                 break
             except Exception:

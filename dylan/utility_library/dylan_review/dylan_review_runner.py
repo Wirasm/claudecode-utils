@@ -57,12 +57,14 @@ def run_claude_review(
     # Get provider and run the review
     provider = get_provider()
 
-    # Always show exit command message, prominent if streaming is enabled
-    show_exit_command_message(
-        console,
-        DEFAULT_EXIT_COMMAND,
-        style="prominent" if stream else "standard"
-    )
+    # Always show exit command message, but let the handler thread show its own prompt
+    if stream:
+        # For streaming mode, still show the prominent message
+        show_exit_command_message(
+            console,
+            DEFAULT_EXIT_COMMAND,
+            style="prominent"
+        )
 
     with create_dylan_progress(console=console) as progress:
         # Start the review task
