@@ -22,10 +22,14 @@ from typing import Literal
 
 from rich.console import Console
 
-from ..provider_clis.provider_claude_code import get_provider
-from ..shared.config import CLAUDE_CODE_NPM_PACKAGE, CLAUDE_CODE_REPO_URL, GITHUB_ISSUES_URL
-from ..shared.progress import create_dylan_progress, create_task_with_dylan
-from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
+from dylan.utility_library.provider_clis.provider_claude_code import get_provider
+from dylan.utility_library.shared.config import (
+    CLAUDE_CODE_NPM_PACKAGE,
+    CLAUDE_CODE_REPO_URL,
+    GITHUB_ISSUES_URL,
+)
+from dylan.utility_library.shared.progress import create_dylan_progress, create_task_with_dylan
+from dylan.utility_library.shared.ui_theme import ARROW, COLORS, SPARK, create_status
 
 console = Console()
 
