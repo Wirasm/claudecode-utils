@@ -71,6 +71,6 @@ def _main(ctx: typer.Context) -> None:
         )
 
         console.print(table)
-        help_msg = f"\n[{COLORS['muted']}]Use[/] [{COLORS['primary']}]dylan <command> --help[/]"
-        console.print(f"{help_msg} [{COLORS['muted']}]for detailed options[/]")
+        help_text = f"\n[{COLORS['muted']}]Use[/] [{COLORS['primary']}]dylan <command> --help[/]"
+        console.print(f"{help_text} [{COLORS['muted']}]for detailed options[/]")
         console.print("[dim]Example: dylan review --help[/dim]\n")

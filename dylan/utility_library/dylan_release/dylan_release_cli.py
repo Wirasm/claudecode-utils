@@ -20,17 +20,17 @@ release_app = typer.Typer()
 
 @release_app.callback(invoke_without_command=True)
 def release(
-    major: bool = typer.Option(False, "--major", help="Bump major version (X.0.0)"),
-    minor: bool = typer.Option(False, "--minor", help="Bump minor version (0.X.0)"),
-    patch: bool = typer.Option(False, "--patch", help="Bump patch version (0.0.X)"),
-    tag: bool = typer.Option(False, "--tag", help="Create git tag for the release"),
-    merge_strategy: str = typer.Option(
-        "direct", "--merge-strategy", help="Merge strategy: direct, pr, or none"
-    ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Don't make actual changes"),
+    patch: bool = typer.Option(False, "--patch", help="Patch version bump (0.0.X)"),
+    minor: bool = typer.Option(False, "--minor", help="Minor version bump (0.X.0)"),
+    major: bool = typer.Option(False, "--major", help="Major version bump (X.0.0)"),
+    tag: bool = typer.Option(False, "--tag", help="Create git tag after release"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without applying"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip git operations"),
+    merge_strategy: str = typer.Option(
+        "direct", "--merge-strategy", help="Merge strategy: 'direct' or 'pr' (default: direct)"
+    ),
     tools: str = typer.Option(
-        "Read,Bash,Write,Glob,Grep", "--tools", help="Comma-separated list of allowed tools"
+        "Read,Write,Edit,Bash,LS,Glob", "--tools", help="Comma-separated list of allowed tools"
     ),
     format: str = typer.Option("text", "--format", help="Output format: text, json, stream-json"),
 ):
