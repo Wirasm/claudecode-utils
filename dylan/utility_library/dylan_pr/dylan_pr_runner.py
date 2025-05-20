@@ -192,6 +192,10 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Current branch: git symbolic-ref --short HEAD
    - Verify branch exists: git rev-parse --verify HEAD
    - Check if pushed: git ls-remote --heads origin $(git symbolic-ref --short HEAD)
+   - If NOT pushed or some commits are not pushed:
+     * CRITICAL: Display warning to push all commits first
+     * Run: git push origin $(git symbolic-ref --short HEAD)
+     * Ensure all commits are pushed before proceeding
    - Apply BRANCH STRATEGY DETECTION to determine target branch
    - Override with "{target_branch}" if explicitly specified
 
@@ -209,17 +213,15 @@ CRITICAL STEPS - Use Bash and other tools to:
    - If there are no new commits, document that the PR is up to date
 
 {
-        "3. CHANGELOG UPDATE (default unless --no-changelog flag):"
+        "3. SUGGESTED CHANGELOG PREPARATION (default unless --no-changelog flag):"
         + "\n"
-        + "   - Find CHANGELOG.md file in repository root"
-        + "\n"
-        + "   - Find [Unreleased] section in the file"
+        + "   - Find CHANGELOG.md file in repository root (just to understand format)"
         + "\n"
         + "   - Analyze all commits since target branch: git log [target]..HEAD --pretty=format:'%h %s'"
         + "\n"
         + "   - Parse commit messages and group by conventional types"
         + "\n"
-        + "   - Add entries to [Unreleased] section with following structure:"
+        + "   - Create a 'Suggested Changelog Updates' section with this structure:"
         + "\n"
         + "     * ### Added - new features (commits starting with feat:)"
         + "\n"
@@ -231,14 +233,14 @@ CRITICAL STEPS - Use Bash and other tools to:
         + "\n"
         + "   - Format each entry: '- <description>'"
         + "\n"
-        + "   - Use Edit or MultiEdit tool to update CHANGELOG.md"
+        + "   - Include this section in both:"
+        + "\n" 
+        + "     * The PR description (in a collapsible section titled 'Suggested Changelog Updates')"
         + "\n"
-        + "   - Commit your changes to CHANGELOG.md before creating PR"
-        + "\n"
-        + "   - Also add the changelog section to the PR description"
+        + "     * The report file as documented changes"
         + "\n"
         if update_changelog
-        else "3. CHANGELOG UPDATE:\n   - Skip changelog updates (--no-changelog flag specified)\n   - Proceed directly to PR creation without modifying CHANGELOG.md\n"
+        else "3. CHANGELOG UPDATE:\n   - Skip changelog generation (--no-changelog flag specified)\n   - Proceed directly to PR creation without suggested changelog updates\n"
     }
 4. PR CREATION/UPDATES:
    - When NO existing PR:
@@ -249,12 +251,14 @@ CRITICAL STEPS - Use Bash and other tools to:
        + Files changed
        + Testing notes
        + Breaking changes (if any)
+       + Suggested Changelog Updates section (if enabled)
      * Create PR: gh pr create --base [target] --head [current] --title "..." --body "..."
    
    - When existing PR found WITH new commits:
-     * Generate updated description with new commits included
-     * Update PR: gh pr edit [PR_NUMBER] --body "..."
-     * Add comment to PR about updates if significant changes
+     * Let GitHub automatically update the PR with new commits
+     * Only update the PR description if significant changes are needed:
+       + gh pr edit [PR_NUMBER] --body "..." (only if needed)
+     * Add PR comment about major updates if applicable
    
    - When existing PR found WITHOUT new commits:
      * Skip PR updates
@@ -265,11 +269,16 @@ CRITICAL STEPS - Use Bash and other tools to:
      * PR created, PR updated, or no changes needed
      * Include PR URL
      * Current branch name and target branch
-     {"* Changelog section content" if update_changelog else ""}
+     {"* Include 'Suggested Changelog Updates' section" if update_changelog else ""}
    - REQUIRED: Add a "Steps Executed" section that lists all steps you performed:
      * Include bash commands used 
      * Note key decisions made
      * Document any errors or issues encountered
+     * Mention if branch needed to be pushed
+   - REQUIRED: Include "PR Status" section with clear summary of:
+     * Whether PR was created, updated, or unchanged
+     * Any changelog suggestions made
+     * Any issues encountered
    - Ensure report sections are clearly separated and formatted
    - Save report to: tmp/dylan-pr-[current-branch]-to-[target].md with timestamp header
 
