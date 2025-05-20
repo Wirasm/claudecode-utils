@@ -32,7 +32,7 @@ def pr(
         False,
         "--no-changelog",
         "-n",
-        help="Skip updating the [Unreleased] section in CHANGELOG.md",
+        help="Skip generating suggested changelog updates in the PR and report",
         show_default=True,
     ),
     tools: str = typer.Option(
@@ -75,8 +75,8 @@ def pr(
         # Create PR from feature branch to develop
         dylan pr feature/my-feature --target develop
 
-        # Update changelog while creating PR
-        dylan pr --changelog
+        # Skip changelog suggestions in PR
+        dylan pr --no-changelog
 
         # Create PR with custom target and tools
         dylan pr --target develop --tools "Read,Bash"

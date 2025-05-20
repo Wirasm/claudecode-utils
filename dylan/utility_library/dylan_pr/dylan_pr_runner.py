@@ -145,7 +145,7 @@ def generate_pr_prompt(
         The PR creation prompt string
     """
     extension = ".json" if output_format == "json" else ".md"
-    
+
     branching_instructions = """
 BRANCH STRATEGY DETECTION:
 1. First, determine the current branch using: git symbolic-ref --short HEAD
@@ -167,7 +167,7 @@ FILE HANDLING INSTRUCTIONS:
    - DO NOT add timestamps to the filename itself
 5. If the file already exists:
    - Read the existing file to understand previous PR attempts
-   - APPEND to the existing file with a clear separator 
+   - APPEND to the existing file with a clear separator
    - Add a timestamp header: ## PR Created/Updated [DATE] [TIME]
    - This allows tracking multiple PR attempts and updates over time
 """
@@ -205,7 +205,7 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Analyze changes: git diff [target]...HEAD --stat
    - Detailed diff: git diff [target]...HEAD
    - Changed files: git diff [target]...HEAD --name-only
-   
+
    If an existing PR is found:
    - Get the PR number and URL: gh pr view --json number,url
    - Check if there are new commits since PR creation
@@ -215,7 +215,9 @@ CRITICAL STEPS - Use Bash and other tools to:
 {
         "3. SUGGESTED CHANGELOG PREPARATION (default unless --no-changelog flag):"
         + "\n"
-        + "   - Find CHANGELOG.md file in repository root (just to understand format)"
+        + "   - Find CHANGELOG.md file in repository root (ONLY to understand format)"
+        + "\n"
+        + "   - IMPORTANT: DO NOT EDIT the CHANGELOG.md file directly"
         + "\n"
         + "   - Analyze all commits since target branch: git log [target]..HEAD --pretty=format:'%h %s'"
         + "\n"
@@ -233,11 +235,13 @@ CRITICAL STEPS - Use Bash and other tools to:
         + "\n"
         + "   - Format each entry: '- <description>'"
         + "\n"
-        + "   - Include this section in both:"
-        + "\n" 
+        + "   - ONLY include this section in both:"
+        + "\n"
         + "     * The PR description (in a collapsible section titled 'Suggested Changelog Updates')"
         + "\n"
-        + "     * The report file as documented changes"
+        + "     * The report file under a heading 'Suggested Changelog Updates'"
+        + "\n"
+        + "   - DO NOT modify CHANGELOG.md - just generate suggestions in the report and PR"
         + "\n"
         if update_changelog
         else "3. CHANGELOG UPDATE:\n   - Skip changelog generation (--no-changelog flag specified)\n   - Proceed directly to PR creation without suggested changelog updates\n"
@@ -253,13 +257,13 @@ CRITICAL STEPS - Use Bash and other tools to:
        + Breaking changes (if any)
        + Suggested Changelog Updates section (if enabled)
      * Create PR: gh pr create --base [target] --head [current] --title "..." --body "..."
-   
+
    - When existing PR found WITH new commits:
      * Let GitHub automatically update the PR with new commits
      * Only update the PR description if significant changes are needed:
        + gh pr edit [PR_NUMBER] --body "..." (only if needed)
      * Add PR comment about major updates if applicable
-   
+
    - When existing PR found WITHOUT new commits:
      * Skip PR updates
      * Document that PR is already up to date
@@ -269,9 +273,9 @@ CRITICAL STEPS - Use Bash and other tools to:
      * PR created, PR updated, or no changes needed
      * Include PR URL
      * Current branch name and target branch
-     {"* Include 'Suggested Changelog Updates' section" if update_changelog else ""}
+     {"* Include 'Suggested Changelog Updates' section (DO NOT modify CHANGELOG.md)" if update_changelog else ""}
    - REQUIRED: Add a "Steps Executed" section that lists all steps you performed:
-     * Include bash commands used 
+     * Include bash commands used
      * Note key decisions made
      * Document any errors or issues encountered
      * Mention if branch needed to be pushed
@@ -290,6 +294,7 @@ REMEMBER:
 - Always include a "Steps Executed" section in your report
 - Save reports with the exact filename format, NO timestamps in filenames
 - Use develop as target branch when no explicit target is provided
+- IMPORTANT: DO NOT modify CHANGELOG.md directly - only create changelog suggestions in the PR and report
 
 Execute the complete PR creation workflow now and save your report to the appropriate file.
 """
