@@ -40,6 +40,13 @@ def release(
         help="Stream output in real-time (enables exit command)",
         show_default=True,
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Print debug information (including the full prompt)",
+        show_default=True,
+    ),
 ):
     """Create a new release with version bump and changelog update."""
     # Parse tools first
@@ -82,7 +89,7 @@ def release(
     )
 
     # Run release
-    run_claude_release(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream)
+    run_claude_release(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream, debug=debug)
 
 
 # For backwards compatibility and standalone usage

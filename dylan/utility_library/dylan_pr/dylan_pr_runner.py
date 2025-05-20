@@ -36,6 +36,7 @@ def run_claude_pr(
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
     stream: bool = False,
+    debug: bool = False,
 ) -> None:
     """Run Claude code with a PR creation prompt and specified tools.
 
@@ -44,17 +45,26 @@ def run_claude_pr(
         allowed_tools: List of allowed tools (defaults to Read, Bash, Write)
         output_format: Output format (text, json, stream-json)
         stream: Whether to stream output (default False)
+        debug: Whether to print debug information (default False)
     """
     # Default safe tools for PR creation
     if allowed_tools is None:
         allowed_tools = ["Read", "Bash", "Write", "Glob", "Grep", "TodoRead", "TodoWrite"]
 
-    # Determine output file based on format - always in tmp directory
-    output_file = "tmp/pr_report.json" if output_format == "json" else "tmp/pr_report.md"
+    # Print prompt for debugging
+    if debug:
+        print("\n===== DEBUG: PROMPT =====\n")
+        print(prompt)
+        print("\n========================\n")
+
+    # We no longer provide a fixed output file - Claude will determine the correct filename
+    # based on the current branch and target branch using the format:
+    # tmp/dylan-pr-[current-branch]-to-[target].<extension>
+    output_file = None
 
     # Get provider and run the PR creation
     provider = get_provider()
-    
+
     # Always show exit command message, but let the handler thread show its own prompt
     if stream:
         # For streaming mode, still show the prominent message
@@ -75,7 +85,7 @@ def run_claude_pr(
                 allowed_tools=allowed_tools,
                 output_format=output_format,
                 stream=stream,
-                exit_command=DEFAULT_EXIT_COMMAND
+                exit_command=DEFAULT_EXIT_COMMAND if stream else None
             )
 
             # Update task to complete
@@ -84,7 +94,8 @@ def run_claude_pr(
             # Success message with flair
             console.print()
             console.print(create_status("Pull request created successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to:[/] [{COLORS['accent']}]{output_file}[/]")
+            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
+            console.print(f"[{COLORS['muted']}]Format: dylan-pr-<branch>-to-<target>.md[/]")
             console.print()
 
             # Show a nice completion message
@@ -133,106 +144,251 @@ def generate_pr_prompt(
     Returns:
         The PR creation prompt string
     """
-    branch_instruction = f"'{branch}'" if branch else "the current branch"
     extension = ".json" if output_format == "json" else ".md"
+
+    branching_instructions = """
+BRANCH STRATEGY DETECTION:
+1. First, determine the current branch using: git symbolic-ref --short HEAD
+2. Check for .branchingstrategy file in repository root
+3. If found, parse release_branch (typically: develop) and use as target for PR
+4. If not found, check for common development branches (develop, development, dev)
+5. If none found, fall back to main/master as the target branch
+6. IMPORTANT: Use the specified target branch if one was explicitly provided
+7. Report both the current branch and target branch in the metadata
+"""
+
+    file_handling_instructions = f"""
+FILE HANDLING INSTRUCTIONS:
+1. Create the tmp/ directory if it doesn't exist: mkdir -p tmp
+2. Determine the current branch: git symbolic-ref --short HEAD
+3. Determine the target branch from the BRANCH STRATEGY DETECTION steps
+4. Create a filename in this format: tmp/dylan-pr-[current-branch]-to-[target]{extension}
+   - Replace any slashes in branch names with hyphens (e.g., feature/foo becomes feature-foo)
+   - DO NOT add timestamps to the filename itself
+5. If the file already exists:
+   - Read the existing file to understand previous PR attempts
+   - APPEND to the existing file with a clear separator
+   - Add a timestamp header: ## PR Created/Updated [DATE] [TIME]
+   - This allows tracking multiple PR attempts and updates over time
+"""
 
     return f"""
 You are a PR creator with COMPLETE AUTONOMY to analyze commits and create pull requests.
 
 YOUR MISSION:
-1. Determine the branch to create PR from ({branch_instruction})
-2. Analyze all commits in this branch vs {target_branch}
-3. {"Update changelog if requested" if update_changelog else "Skip changelog update"}
-4. Create a high-quality pull request
+1. Determine the branch to create PR from (current working branch)
+2. Determine the target branch (default: develop or from branching strategy)
+3. Analyze all commits in this branch vs target branch
+4. {"Generate changelog suggestions for PR description and report (DO NOT modify CHANGELOG.md directly)" if update_changelog else "Skip changelog suggestion generation"}
+5. Create a high-quality pull request
 
-IMPORTANT FILE HANDLING INSTRUCTIONS:
-- Save your report to the tmp/ directory
-- If tmp/pr_report{extension} already exists, create a new file with timestamp
-- Format: tmp/pr_report_YYYYMMDD_HHMMSS{extension}
-- Use the Bash tool to check if the file exists first
-- DO NOT modify or append to existing files
+{branching_instructions}
+
+{file_handling_instructions}
 
 CRITICAL STEPS - Use Bash and other tools to:
 
-1. FILE HANDLING:
-   - Check if tmp/pr_report{extension} exists
-   - If it exists, create new filename with timestamp
-   - Ensure tmp/ directory exists: mkdir -p tmp
+1. BRANCH DETERMINATION:
+   - Set CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+   - Verify branch exists: git rev-parse --verify HEAD
+   - Check if pushed: git ls-remote --heads origin $CURRENT_BRANCH
+   - If NOT pushed or some commits are not pushed:
+     * CRITICAL: Display warning to push all commits first
+     * Run: git push origin $CURRENT_BRANCH
+     * Ensure all commits are pushed before proceeding
+   - Apply BRANCH STRATEGY DETECTION to determine TARGET_BRANCH
+   - Override with "{target_branch}" if explicitly specified
+   - Create sanitized versions:
+     * CURRENT_BRANCH_SANITIZED=$(echo $CURRENT_BRANCH | sed 's/\\//-/g')
+     * TARGET_BRANCH_SANITIZED=$(echo $TARGET_BRANCH | sed 's/\\//-/g')
 
-2. GIT CONTEXT DISCOVERY:
-   - Current branch: git symbolic-ref --short HEAD
-   - Verify branch exists: git rev-parse --verify {branch or "HEAD"}
-   - Check if pushed: git ls-remote --heads origin {branch or "$(git symbolic-ref --short HEAD)"}
-   - Get default branch: git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
-   - List existing PRs: gh pr list --head {branch or "$(git symbolic-ref --short HEAD)"}
+2. PR PREPARATION:
+   - Check for existing PRs: gh pr list --head $CURRENT_BRANCH
+   - Get all commits: git log $TARGET_BRANCH..HEAD --pretty=format:'%h %s'
+   - Analyze changes: git diff $TARGET_BRANCH...HEAD --stat
+   - Detailed diff: git diff $TARGET_BRANCH...HEAD
+   - Changed files: git diff $TARGET_BRANCH...HEAD --name-only
 
-3. COMMIT ANALYSIS:
-   - Get all commits: git log {target_branch}..{branch or "HEAD"} --pretty=format:'%h %s'
-   - Analyze changes: git diff {target_branch}...{branch or "HEAD"} --stat
-   - Detailed diff: git diff {target_branch}...{branch or "HEAD"}
-   - Changed files: git diff {target_branch}...{branch or "HEAD"} --name-only
+   If an existing PR is found:
+   - Get the PR number and URL: gh pr view --json number,url
+   - Check if there are new commits since PR creation
+   - If there are new commits, plan to update PR with new information
+   - If there are no new commits, document that the PR is up to date
 
 {
-        "4. CHANGELOG SECTION FOR PR DESCRIPTION (if --changelog flag):"
+        "3. SUGGESTED CHANGELOG PREPARATION (default unless --no-changelog flag):"
         + "\n"
-        + "   - Analyze all commits since target branch: git log " + target_branch + "..HEAD --pretty=format:'%h %s'"
+        + "   - Find CHANGELOG.md file in repository root (ONLY to understand format)"
         + "\n"
-        + "   - Parse commit messages and group by conventional types"
+        + "   - IMPORTANT: DO NOT EDIT the CHANGELOG.md file directly"
         + "\n"
-        + "   - Create a dedicated 'Changelog' section with subsections:"
+        + "   - Analyze all commits since target branch: git log $TARGET_BRANCH..HEAD --pretty=format:'%h %s'"
         + "\n"
-        + "     * ### Added - new features (commits starting with feat:)"
+        + "   - Parse commit messages and group by conventional types using this mapping:"
         + "\n"
-        + "     * ### Changed - updates (commits: refactor:, style:, perf:, chore:)"
+        + "     * feat: → Added (new features)"
         + "\n"
-        + "     * ### Fixed - bug fixes (commits starting with fix:)"
+        + "     * fix: → Fixed (bug fixes)"
         + "\n"
-        + "     * ### Removed - removed features"
+        + "     * docs: → Documentation (documentation only changes)"
         + "\n"
-        + "   - Format each entry: '- <description> (`<commit_hash>`)'"
+        + "     * style: → Changed (code style, formatting)"
         + "\n"
-        + "   - IMPORTANT: Add this as a separate '## Changelog' section in PR body"
+        + "     * refactor: → Changed (code refactoring, no functional change)"
         + "\n"
-        + "   - DO NOT modify actual CHANGELOG.md file"
+        + "     * perf: → Changed (performance improvements)"
         + "\n"
-        + "   - Include changelog content in report for future reference"
+        + "     * test: → Changed (adding or refactoring tests)"
+        + "\n"
+        + "     * build: → Changed (build system, dependencies)"
+        + "\n"
+        + "     * ci: → Changed (CI configuration)"
+        + "\n"
+        + "     * chore: → Changed (maintenance tasks)"
+        + "\n"
+        + "   - For commits without conventional prefixes, analyze commit message content to categorize appropriately"
+        + "\n"
+        + "   - Create a 'Suggested Changelog Updates' section with this structure:"
+        + "\n"
+        + "     * ### Added - new features (feat:)"
+        + "\n"
+        + "     * ### Changed - code changes (refactor:, style:, perf:, chore:, build:, ci:)"
+        + "\n"
+        + "     * ### Fixed - bug fixes (fix:)"
+        + "\n"
+        + "     * ### Documentation - documentation changes (docs:)"
+        + "\n"
+        + "     * ### Removed - removed features or deprecated code"
+        + "\n"
+        + "   - Format each entry: '- <description>'"
+        + "\n"
+        + "   - ONLY include this section in both:"
+        + "\n"
+        + "     * The PR description (in a collapsible section titled 'Suggested Changelog Updates')"
+        + "\n"
+        + "       Format the collapsible section using GitHub markdown:"
+        + "\n"
+        + "       ```"
+        + "\n"
+        + "       <details>"
+        + "\n"
+        + "       <summary>Suggested Changelog Updates</summary>"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Added"
+        + "\n"
+        + "       - Item 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Changed"
+        + "\n"
+        + "       - Item 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Fixed"
+        + "\n"
+        + "       - Bug fix 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Documentation"
+        + "\n"
+        + "       - Doc update 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       </details>"
+        + "\n"
+        + "       ```"
+        + "\n"
+        + "     * The report file under a heading 'Suggested Changelog Updates'"
+        + "\n"
+        + "   - DO NOT modify CHANGELOG.md - just generate suggestions in the report and PR"
         + "\n"
         if update_changelog
-        else ""
+        else "3. CHANGELOG UPDATE:\n   - Skip changelog generation (--no-changelog flag specified)\n   - Proceed directly to PR creation without suggested changelog updates\n"
     }
-{"5. PR CREATION LOGIC:" if update_changelog else "4. PR CREATION LOGIC:"}
-   - Skip if PR already exists
-   - Extract meaningful title from branch name or commits
-   - Generate comprehensive description:
-     * Summary of changes
-     * List of commits
-     * Files changed
-     * Testing notes
-     * Breaking changes (if any)
-   - Create PR: gh pr create --base {target_branch} --head {
-        branch or "$(git symbolic-ref --short HEAD)"
-    } --title "..." --body "..."
+4. PR CREATION/UPDATES:
+   - When NO existing PR:
+     * Extract meaningful title using these rules in priority order:
+       1. If branch name follows conventional format (feature/xxx, fix/xxx, etc.), convert to title case:
+          - feature/add-dark-mode → "Add Dark Mode"
+          - fix/login-redirect → "Fix Login Redirect"
+       2. If not conventional, look for the most recent feat: or fix: commit and use its description
+       3. If no conventional commits found, use a descriptive title based on the most significant change
+     * Generate comprehensive description using this markdown structure:
+       ```
+       ## Summary
+       Brief description of what this PR accomplishes and why.
 
-{"6. REPORT GENERATION:" if update_changelog else "5. REPORT GENERATION:"}
-   - Document PR URL if created
-   - Summarize what was done
-   - Note any issues encountered
-   - Include branch info in filename: tmp/pr_report_<safe_branch_name>_YYYYMMDD_HHMMSS{extension}
-   - If file already exists for this branch, append new section with separator
-   - Include in report:
-     * PR URL
-     * Branch name (feature branch)
-     * Target branch
-     {"* Changelog section content" if update_changelog else ""}
-     * Timestamp
-   - IMPORTANT: Save using the branch-specific naming pattern
+       ## Changes
+       - Major change 1
+       - Major change 2
+       - Other important modifications
+
+       ## Commits
+       [LIST_OF_COMMITS_WITH_LINKS]
+
+       ## Files Changed
+       [LIST_OF_FILES_CATEGORIZED_BY_TYPE]
+
+       ## Testing Notes
+       Steps to verify the changes work as expected.
+
+       ## Breaking Changes
+       [BREAKING_CHANGES_IF_ANY_OR_NONE]
+
+       <details>
+       <summary>Suggested Changelog Updates</summary>
+       [CHANGELOG_CONTENT_IF_ENABLED]
+       </details>
+       ```
+     * Create PR: gh pr create --base $TARGET_BRANCH --head $CURRENT_BRANCH --title "..." --body "..."
+
+   - When existing PR found WITH new commits:
+     * Let GitHub automatically update the PR with new commits
+     * Only update the PR description if significant changes are needed:
+       + gh pr edit [PR_NUMBER] --body "..." (only if needed)
+     * Add PR comment about major updates if any of these conditions apply:
+       + New feature added (feat: commits) that weren't in the original PR
+       + Breaking changes introduced that weren't mentioned before
+       + Significant architecture changes
+       + New dependencies added
+
+   - When existing PR found WITHOUT new commits:
+     * Skip PR updates
+     * Document that PR is already up to date
+
+5. REPORT GENERATION:
+   - Document what actions were taken:
+     * PR created, PR updated, or no changes needed
+     * Include PR URL
+     * Current branch name and target branch
+     {"* Include 'Suggested Changelog Updates' section (DO NOT modify CHANGELOG.md)" if update_changelog else ""}
+   - REQUIRED: Add a "Steps Executed" section that lists all steps you performed:
+     * Include bash commands used
+     * Note key decisions made
+     * Document any errors or issues encountered
+     * Mention if branch needed to be pushed
+   - REQUIRED: Include "PR Status" section with clear summary of:
+     * Whether PR was created, updated, or unchanged
+     * Any changelog suggestions made
+     * Any issues encountered
+   - Ensure report sections are clearly separated and formatted
+   - Save report to: tmp/dylan-pr-$CURRENT_BRANCH_SANITIZED-to-$TARGET_BRANCH_SANITIZED.md with timestamp header
 
 REMEMBER:
-- Be autonomous - make all decisions yourself
-- Create rich, helpful PR descriptions
-- Use proper markdown formatting
-- Report results clearly
-- Save report with proper filename handling
+- Be completely autonomous in your decisions
+- Create rich, helpful PR descriptions with proper markdown formatting
+- For existing PRs, UPDATE with new commits instead of skipping
+- Always APPEND to existing reports with clear timestamps, DO NOT create new files
+- Always include a "Steps Executed" section in your report
+- Save reports with the exact filename format, NO timestamps in filenames
+- Use develop as target branch when no explicit target is provided
+- IMPORTANT: DO NOT modify CHANGELOG.md directly - only create changelog suggestions in the PR and report
 
 Execute the complete PR creation workflow now and save your report to the appropriate file.
 """

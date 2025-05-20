@@ -22,17 +22,17 @@ def pr(
         metavar="BRANCH",
     ),
     target: str = typer.Option(
-        "main",
+        "develop",
         "--target",
         "-t",
-        help="Target branch for PR (develop/main)",
+        help="Target branch for PR (defaults to develop, falls back to main if develop doesn't exist)",
         show_default=True,
     ),
-    changelog: bool = typer.Option(
+    no_changelog: bool = typer.Option(
         False,
-        "--changelog",
-        "-c",
-        help="Update [Unreleased] section in CHANGELOG.md",
+        "--no-changelog",
+        "-n",
+        help="Skip generating suggested changelog updates in the PR and report",
         show_default=True,
     ),
     tools: str = typer.Option(
@@ -55,6 +55,13 @@ def pr(
         help="Stream output in real-time (enables exit command)",
         show_default=True,
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Print debug information (including the full prompt)",
+        show_default=True,
+    ),
 ):
     """Create pull requests with AI-generated descriptions.
 
@@ -68,8 +75,8 @@ def pr(
         # Create PR from feature branch to develop
         dylan pr feature/my-feature --target develop
 
-        # Update changelog while creating PR
-        dylan pr --changelog
+        # Skip changelog suggestions in PR
+        dylan pr --no-changelog
 
         # Create PR with custom target and tools
         dylan pr --target develop --tools "Read,Bash"
@@ -86,23 +93,23 @@ def pr(
     console.print(create_box_header("PR Configuration", {
         "Source": branch or "current branch",
         "Target": target,
-        "Changelog": format_boolean_option(changelog),
+        "Changelog": format_boolean_option(not no_changelog, "✓ Enabled (default)", "✗ Disabled"),
         "Tools": format_tool_count(allowed_tools),
         "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
         "Exit": format_boolean_option(stream, "/exit (type to quit at any time)", "Ctrl+C to interrupt")
     }))
     console.print()
 
-    # Generate prompt
+    # Generate prompt - changelog is now enabled by default unless --no-changelog is specified
     prompt = generate_pr_prompt(
         branch=branch,
         target_branch=target,
-        update_changelog=changelog,
+        update_changelog=not no_changelog,
         output_format=format
     )
 
     # Run PR creation
-    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream)
+    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream, debug=debug)
 
 
 # For backwards compatibility and standalone usage
