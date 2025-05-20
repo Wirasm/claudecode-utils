@@ -8,7 +8,6 @@ from ..shared.ui_theme import (
     create_box_header,
     create_header,
     format_boolean_option,
-    format_tool_count,
 )
 from .dylan_review_runner import generate_review_prompt, run_claude_review
 
@@ -20,27 +19,6 @@ def review(
         default=None,
         help="Branch to review (defaults to latest changes against base branch)",
         metavar="BRANCH",
-    ),
-    tools: str = typer.Option(
-        "Read,Glob,Grep,LS,Bash,Write",
-        "--tools",
-        "-t",
-        help="Comma-separated list of allowed tools for Claude",
-        show_default=True,
-    ),
-    format: str = typer.Option(
-        "text",
-        "--format",
-        "-f",
-        help="Output format: text (markdown), json, or stream-json",
-        show_default=True,
-    ),
-    stream: bool = typer.Option(
-        False,
-        "--stream",
-        "-s",
-        help="Stream output in real-time (enables exit command)",
-        show_default=True,
     ),
     debug: bool = typer.Option(
         False,
@@ -62,14 +40,12 @@ def review(
         # Review specific feature branch
         dylan review feature/my-feature
 
-        # Generate JSON output for automation
-        dylan review --format json
-
-        # Limit tools for security
-        dylan review --tools "Read,LS"
+        # Show debug information including the prompt
+        dylan review --debug
     """
-    # Parse tools first
-    allowed_tools = [tool.strip() for tool in tools.split(",")]
+    # Default values
+    allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write"]
+    output_format = "text"
 
     # Show header with flair
     console.print()
@@ -79,22 +55,19 @@ def review(
     # Show review configuration
     console.print(create_box_header("Review Configuration", {
         "Branch": branch or "latest changes",
-        "Format": format,
-        "Tools": format_tool_count(allowed_tools),
-        "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
-        "Exit": format_boolean_option(stream, "/exit (type to quit at any time)", "Ctrl+C to interrupt")
+        "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
+        "Exit": "Ctrl+C to interrupt"
     }))
     console.print()
 
     # Generate prompt
-    prompt = generate_review_prompt(branch=branch, output_format=format)
+    prompt = generate_review_prompt(branch=branch, output_format=output_format)
 
     # Run review
     run_claude_review(
         prompt,
         allowed_tools=allowed_tools,
-        output_format=format,
-        stream=stream,
+        output_format=output_format,
         debug=debug
     )
 

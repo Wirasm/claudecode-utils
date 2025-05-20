@@ -8,7 +8,6 @@ from ..shared.ui_theme import (
     create_box_header,
     create_header,
     format_boolean_option,
-    format_tool_count,
 )
 from .dylan_release_runner import generate_release_prompt, run_claude_release
 
@@ -20,25 +19,23 @@ release_app = typer.Typer()
 
 @release_app.callback(invoke_without_command=True)
 def release(
-    patch: bool = typer.Option(False, "--patch", help="Patch version bump (0.0.X)"),
-    minor: bool = typer.Option(False, "--minor", help="Minor version bump (0.X.0)"),
-    major: bool = typer.Option(False, "--major", help="Major version bump (X.0.0)"),
+    bump_type: str = typer.Option(
+        "patch",
+        "--bump",
+        "-b",
+        help="Version bump type: 'patch' (0.0.X), 'minor' (0.X.0), or 'major' (X.0.0)",
+        show_default=True,
+    ),
     tag: bool = typer.Option(False, "--tag", help="Create git tag after release"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without applying"),
-    no_git: bool = typer.Option(False, "--no-git", help="Skip git operations"),
+    mode: str = typer.Option(
+        "live",
+        "--mode",
+        "-m",
+        help="Mode: 'live' (create release), 'dry-run' (preview only), or 'no-git' (skip git operations)",
+        show_default=True,
+    ),
     merge_strategy: str = typer.Option(
         "direct", "--merge-strategy", help="Merge strategy: 'direct' or 'pr' (default: direct)"
-    ),
-    tools: str = typer.Option(
-        "Read,Write,Edit,Bash,LS,Glob", "--tools", help="Comma-separated list of allowed tools"
-    ),
-    format: str = typer.Option("text", "--format", help="Output format: text, json, stream-json"),
-    stream: bool = typer.Option(
-        False,
-        "--stream",
-        "-s",
-        help="Stream output in real-time (enables exit command)",
-        show_default=True,
     ),
     debug: bool = typer.Option(
         False,
@@ -49,16 +46,18 @@ def release(
     ),
 ):
     """Create a new release with version bump and changelog update."""
-    # Parse tools first
-    allowed_tools = [tool.strip() for tool in tools.split(",")]
+    # Default values
+    allowed_tools = ["Read", "Write", "Edit", "Bash", "LS", "Glob", "MultiEdit", "TodoRead", "TodoWrite"]
+    output_format = "text"
 
-    # Determine bump type
-    if major:
-        bump_type = "major"
-    elif minor:
-        bump_type = "minor"
-    else:
-        bump_type = "patch"  # Default
+    # Validate bump_type
+    if bump_type not in ["patch", "minor", "major"]:
+        console.print(f"Invalid bump type: {bump_type}. Using 'patch' instead.", style="warning")
+        bump_type = "patch"
+
+    # Parse mode
+    dry_run = mode == "dry-run"
+    no_git = mode == "no-git"
 
     # Show header with flair
     console.print()
@@ -70,11 +69,9 @@ def release(
         "Version Bump": bump_type.capitalize(),
         "Tag": format_boolean_option(tag, "✓ Create tag", "✗ No tag"),
         "Strategy": merge_strategy,
-        "Mode": "🔍 Dry run" if dry_run else "🚀 Live run",
-        "Git Operations": format_boolean_option(not no_git, "✓ Enabled", "✗ Disabled"),
-        "Tools": format_tool_count(allowed_tools),
-        "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
-        "Exit": format_boolean_option(stream, "/exit (type to quit at any time)", "Ctrl+C to interrupt")
+        "Mode": "🔍 Dry run" if dry_run else "🚀 No git" if no_git else "🚀 Live run",
+        "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
+        "Exit": "Ctrl+C to interrupt"
     }))
     console.print()
 
@@ -85,11 +82,11 @@ def release(
         dry_run=dry_run,
         no_git=no_git,
         merge_strategy=merge_strategy,
-        output_format=format
+        output_format=output_format
     )
 
     # Run release
-    run_claude_release(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream, debug=debug)
+    run_claude_release(prompt, allowed_tools=allowed_tools, output_format=output_format, debug=debug)
 
 
 # For backwards compatibility and standalone usage

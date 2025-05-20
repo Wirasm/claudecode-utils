@@ -24,7 +24,6 @@ from rich.console import Console
 
 from ..provider_clis.provider_claude_code import get_provider
 from ..shared.config import CLAUDE_CODE_NPM_PACKAGE, CLAUDE_CODE_REPO_URL, GITHUB_ISSUES_URL
-from ..shared.exit_command import DEFAULT_EXIT_COMMAND, show_exit_command_message
 from ..shared.progress import create_dylan_progress, create_task_with_dylan
 from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
 
@@ -35,7 +34,6 @@ def run_claude_pr(
     prompt: str,
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
-    stream: bool = False,
     debug: bool = False,
 ) -> None:
     """Run Claude code with a PR creation prompt and specified tools.
@@ -44,7 +42,6 @@ def run_claude_pr(
         prompt: The PR creation prompt to send to Claude
         allowed_tools: List of allowed tools (defaults to Read, Bash, Write)
         output_format: Output format (text, json, stream-json)
-        stream: Whether to stream output (default False)
         debug: Whether to print debug information (default False)
     """
     # Default safe tools for PR creation
@@ -65,15 +62,6 @@ def run_claude_pr(
     # Get provider and run the PR creation
     provider = get_provider()
 
-    # Always show exit command message, but let the handler thread show its own prompt
-    if stream:
-        # For streaming mode, still show the prominent message
-        show_exit_command_message(
-            console,
-            DEFAULT_EXIT_COMMAND,
-            style="prominent"
-        )
-
     with create_dylan_progress(console=console) as progress:
         # Start the PR task
         task = create_task_with_dylan(progress, "Dylan is creating your pull request...")
@@ -83,9 +71,7 @@ def run_claude_pr(
                 prompt,
                 output_path=output_file,
                 allowed_tools=allowed_tools,
-                output_format=output_format,
-                stream=stream,
-                exit_command=DEFAULT_EXIT_COMMAND if stream else None
+                output_format=output_format
             )
 
             # Update task to complete
@@ -131,6 +117,7 @@ def generate_pr_prompt(
     branch: str | None = None,
     target_branch: str = "develop",
     update_changelog: bool = False,
+    dry_run: bool = False,
     output_format: str = "text",
 ) -> str:
     """Generate a PR creation prompt.
@@ -139,6 +126,7 @@ def generate_pr_prompt(
         branch: Branch to create PR from (None = current branch)
         target_branch: Target branch for PR (default: develop)
         update_changelog: Whether to update changelog (default: False)
+        dry_run: Whether to preview changes without creating a PR (default: False)
         output_format: Output format (text, json, stream-json)
 
     Returns:
@@ -175,12 +163,12 @@ FILE HANDLING INSTRUCTIONS:
     return f"""
 You are a PR creator with COMPLETE AUTONOMY to analyze commits and create pull requests.
 
-YOUR MISSION:
+{"**DRY RUN MODE: Analyze changes and generate PR report WITHOUT creating an actual PR**\n\n" if dry_run else ""}YOUR MISSION:
 1. Determine the branch to create PR from (current working branch)
 2. Determine the target branch (default: develop or from branching strategy)
 3. Analyze all commits in this branch vs target branch
 4. {"Generate changelog suggestions for PR description and report (DO NOT modify CHANGELOG.md directly)" if update_changelog else "Skip changelog suggestion generation"}
-5. Create a high-quality pull request
+5. {"Generate a report of what the PR would look like (but don't create it)" if dry_run else "Create a high-quality pull request"}
 
 {branching_instructions}
 
@@ -311,7 +299,7 @@ CRITICAL STEPS - Use Bash and other tools to:
         if update_changelog
         else "3. CHANGELOG UPDATE:\n   - Skip changelog generation (--no-changelog flag specified)\n   - Proceed directly to PR creation without suggested changelog updates\n"
     }
-4. PR CREATION/UPDATES:
+4. PR {"PREPARATION" if dry_run else "CREATION/UPDATES"}:
    - When NO existing PR:
      * Extract meaningful title using these rules in priority order:
        1. If branch name follows conventional format (feature/xxx, fix/xxx, etc.), convert to title case:
@@ -346,12 +334,12 @@ CRITICAL STEPS - Use Bash and other tools to:
        [CHANGELOG_CONTENT_IF_ENABLED]
        </details>
        ```
-     * Create PR: gh pr create --base $TARGET_BRANCH --head $CURRENT_BRANCH --title "..." --body "..."
+     * {"PREVIEW ONLY: Show the PR command that would be run" if dry_run else "Create PR: gh pr create --base $TARGET_BRANCH --head $CURRENT_BRANCH --title \"...\" --body \"...\""}
 
    - When existing PR found WITH new commits:
-     * Let GitHub automatically update the PR with new commits
-     * Only update the PR description if significant changes are needed:
-       + gh pr edit [PR_NUMBER] --body "..." (only if needed)
+     * {"PREVIEW ONLY: Describe how the PR would be updated" if dry_run else "Let GitHub automatically update the PR with new commits"}
+     * {"PREVIEW ONLY: Show the PR edit command that would be run" if dry_run else "Only update the PR description if significant changes are needed:"}
+       + {"Example: gh pr edit [PR_NUMBER] --body \"...\"" if dry_run else "gh pr edit [PR_NUMBER] --body \"...\" (only if needed)"}
      * Add PR comment about major updates if any of these conditions apply:
        + New feature added (feat: commits) that weren't in the original PR
        + Breaking changes introduced that weren't mentioned before

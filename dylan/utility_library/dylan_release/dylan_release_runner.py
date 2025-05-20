@@ -23,7 +23,6 @@ from typing import Literal
 from rich.console import Console
 
 from ..provider_clis.provider_claude_code import get_provider
-from ..shared.exit_command import DEFAULT_EXIT_COMMAND, show_exit_command_message
 from ..shared.progress import create_dylan_progress, create_task_with_dylan
 from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
 
@@ -34,7 +33,6 @@ def run_claude_release(
     prompt: str,
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
-    stream: bool = False,
     debug: bool = False,
 ) -> None:
     """Run Claude code with a release prompt and specified tools.
@@ -43,7 +41,6 @@ def run_claude_release(
         prompt: The release prompt to send to Claude
         allowed_tools: List of allowed tools (defaults to Read, Write, Edit, Bash, LS, Glob)
         output_format: Output format (text, json, stream-json)
-        stream: Whether to stream output (default False)
         debug: Whether to print debug information (default False)
     """
     # Default safe tools for release
@@ -64,15 +61,6 @@ def run_claude_release(
     # Get provider and run the release
     provider = get_provider()
 
-    # Always show exit command message, but let the handler thread show its own prompt
-    if stream:
-        # For streaming mode, still show the prominent message
-        show_exit_command_message(
-            console,
-            DEFAULT_EXIT_COMMAND,
-            style="prominent"
-        )
-
     with create_dylan_progress(console=console) as progress:
         # Start the release task
         task = create_task_with_dylan(progress, "Dylan is creating your release...")
@@ -82,9 +70,7 @@ def run_claude_release(
                 prompt,
                 output_path=output_file,
                 allowed_tools=allowed_tools,
-                output_format=output_format,
-                stream=stream,
-                exit_command=DEFAULT_EXIT_COMMAND if stream else None
+                output_format=output_format
             )
             # Update task to complete
             progress.update(task, completed=True)
