@@ -87,11 +87,11 @@ def format_provider_options(options: dict) -> dict:
     """
     # Clone the options
     updated_options = options.copy()
-    
+
     # Always add exit command if not already present
     if 'exit_command' not in updated_options:
         updated_options['exit_command'] = DEFAULT_EXIT_COMMAND
-    
+
     return updated_options
 
 
@@ -106,7 +106,7 @@ def setup_exit_command_handler(process, exit_command: str = DEFAULT_EXIT_COMMAND
         threading.Event that will be set when the exit command is detected
     """
     exit_triggered = threading.Event()
-    
+
     def on_exit_command():
         """Triggered when exit command is entered."""
         exit_triggered.set()
@@ -117,13 +117,13 @@ def setup_exit_command_handler(process, exit_command: str = DEFAULT_EXIT_COMMAND
         except Exception:
             # Process might already be gone, ignore errors
             pass
-    
+
     def input_listener():
         """Listen for user input in a separate thread."""
         if exit_command:
             # Start with a visible prompt for the exit command
             print(f"[Streaming mode enabled] Type {exit_command} and press Enter to exit at any time", file=sys.stderr)
-            
+
             while not exit_triggered.is_set():
                 try:
                     user_input = input()
@@ -139,9 +139,9 @@ def setup_exit_command_handler(process, exit_command: str = DEFAULT_EXIT_COMMAND
                 except Exception:
                     # Ignore other errors in the input thread - don't crash the daemon thread
                     pass
-    
+
     # Start input listener thread
     input_thread = threading.Thread(target=input_listener, daemon=True)
     input_thread.start()
-    
+
     return exit_triggered

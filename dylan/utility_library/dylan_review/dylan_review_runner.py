@@ -37,6 +37,7 @@ def run_claude_review(
     branch: str | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
     stream: bool = False,
+    debug: bool = False,
 ) -> None:
     """Run Claude code with a review prompt and specified tools.
 
@@ -46,10 +47,17 @@ def run_claude_review(
         branch: Optional branch to review (not used in this implementation)
         output_format: Output format (text, json, stream-json)
         stream: Whether to stream output (default False)
+        debug: Whether to print debug information (default False)
     """
     # Default safe tools for review
     if allowed_tools is None:
         allowed_tools = ["Read", "Glob", "Grep", "LS", "Bash", "Write", "MultiEdit", "TodoRead", "TodoWrite"]
+
+    # Print prompt for debugging
+    if debug:
+        print("\n===== DEBUG: PROMPT =====\n")
+        print(prompt)
+        print("\n========================\n")
 
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/review_report.json" if output_format == "json" else "tmp/review_report.md"

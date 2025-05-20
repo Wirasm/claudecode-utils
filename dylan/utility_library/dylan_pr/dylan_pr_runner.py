@@ -36,6 +36,7 @@ def run_claude_pr(
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
     stream: bool = False,
+    debug: bool = False,
 ) -> None:
     """Run Claude code with a PR creation prompt and specified tools.
 
@@ -44,17 +45,24 @@ def run_claude_pr(
         allowed_tools: List of allowed tools (defaults to Read, Bash, Write)
         output_format: Output format (text, json, stream-json)
         stream: Whether to stream output (default False)
+        debug: Whether to print debug information (default False)
     """
     # Default safe tools for PR creation
     if allowed_tools is None:
         allowed_tools = ["Read", "Bash", "Write", "Glob", "Grep", "TodoRead", "TodoWrite"]
+
+    # Print prompt for debugging
+    if debug:
+        print("\n===== DEBUG: PROMPT =====\n")
+        print(prompt)
+        print("\n========================\n")
 
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/pr_report.json" if output_format == "json" else "tmp/pr_report.md"
 
     # Get provider and run the PR creation
     provider = get_provider()
-    
+
     # Always show exit command message, but let the handler thread show its own prompt
     if stream:
         # For streaming mode, still show the prominent message

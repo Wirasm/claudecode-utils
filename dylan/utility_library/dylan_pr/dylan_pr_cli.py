@@ -55,6 +55,13 @@ def pr(
         help="Stream output in real-time (enables exit command)",
         show_default=True,
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Print debug information (including the full prompt)",
+        show_default=True,
+    ),
 ):
     """Create pull requests with AI-generated descriptions.
 
@@ -102,7 +109,7 @@ def pr(
     )
 
     # Run PR creation
-    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream)
+    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream, debug=debug)
 
 
 # For backwards compatibility and standalone usage

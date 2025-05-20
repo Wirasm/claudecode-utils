@@ -42,6 +42,13 @@ def review(
         help="Stream output in real-time (enables exit command)",
         show_default=True,
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Print debug information (including the full prompt)",
+        show_default=True,
+    ),
 ):
     """Run AI-powered code review using Claude Code.
 
@@ -87,7 +94,8 @@ def review(
         prompt,
         allowed_tools=allowed_tools,
         output_format=format,
-        stream=stream
+        stream=stream,
+        debug=debug
     )
 
 

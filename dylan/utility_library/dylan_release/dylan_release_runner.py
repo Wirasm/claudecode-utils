@@ -35,6 +35,7 @@ def run_claude_release(
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
     stream: bool = False,
+    debug: bool = False,
 ) -> None:
     """Run Claude code with a release prompt and specified tools.
 
@@ -43,17 +44,24 @@ def run_claude_release(
         allowed_tools: List of allowed tools (defaults to Read, Write, Edit, Bash, LS, Glob)
         output_format: Output format (text, json, stream-json)
         stream: Whether to stream output (default False)
+        debug: Whether to print debug information (default False)
     """
     # Default safe tools for release
     if allowed_tools is None:
         allowed_tools = ["Read", "Write", "Edit", "Bash", "LS", "Glob", "MultiEdit", "TodoRead", "TodoWrite"]
+
+    # Print prompt for debugging
+    if debug:
+        print("\n===== DEBUG: PROMPT =====\n")
+        print(prompt)
+        print("\n========================\n")
 
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/release_report.json" if output_format == "json" else "tmp/release_report.md"
 
     # Get provider and run the release
     provider = get_provider()
-    
+
     # Always show exit command message, but let the handler thread show its own prompt
     if stream:
         # For streaming mode, still show the prominent message
