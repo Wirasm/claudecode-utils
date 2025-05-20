@@ -44,7 +44,7 @@ def run_claude_pr(
     """
     # Default safe tools for PR creation
     if allowed_tools is None:
-        allowed_tools = ["Read", "Bash", "Write", "Glob", "Grep"]
+        allowed_tools = ["Read", "Bash", "Write", "Glob", "Grep", "TodoRead", "TodoWrite"]
 
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/pr_report.json" if output_format == "json" else "tmp/pr_report.md"
@@ -161,7 +161,9 @@ CRITICAL STEPS - Use Bash and other tools to:
 {
         "4. CHANGELOG SECTION FOR PR DESCRIPTION (if --changelog flag):"
         + "\n"
-        + "   - Analyze all commits since target branch: git log " + target_branch + "..HEAD --pretty=format:'%h %s'"
+        + "   - Analyze all commits since target branch: git log "
+        + target_branch
+        + "..HEAD --pretty=format:'%h %s'"
         + "\n"
         + "   - Parse commit messages and group by conventional types"
         + "\n"
