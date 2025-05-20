@@ -16,6 +16,10 @@ from ..shared.config import (
     CLAUDE_CODE_INSTALL_CMD,
     CLAUDE_CODE_NOT_FOUND_MSG,
 )
+from .shared.subprocess_utils import (
+    stream_process_output,
+    terminate_process,
+)
 
 
 class Provider(ABC):
@@ -48,35 +52,46 @@ class Provider(ABC):
 class ClaudeProvider(Provider):
     _BIN: Final[str] = shutil.which("claude") or "claude"
 
-    def generate(  # noqa: C901
-        self,
-        prompt: str,
-        *,
-        output_path: str | None = None,
-        allowed_tools: list[str] | None = None,
-        output_format: str = "text",
-    ) -> str:
-        """Generate content using Claude Code."""
-        # Check if Claude is available
-        if not self._BIN or self._BIN == "claude":
-            claude_path = shutil.which("claude")
-            if not claude_path:
-                raise RuntimeError(CLAUDE_CODE_NOT_FOUND_MSG)
+    def _prepare_prompt(self, prompt: str, output_path: str | None = None) -> str:
+        """Prepare prompt with output path directive if needed.
 
-        # Modify prompt if output path is specified
-        if output_path:
-            file_extension = os.path.splitext(output_path)[1].lower()
-            if file_extension == ".json":
-                file_directive = f"""
+        Args:
+            prompt: The prompt to send to the provider
+            output_path: Optional path to save output to
+
+        Returns:
+            The prepared prompt
+        """
+        if not output_path:
+            return prompt
+
+        file_extension = os.path.splitext(output_path)[1].lower()
+        if file_extension == ".json":
+            file_directive = f"""
 
 IMPORTANT: Generate the full report and save it directly to the file {output_path} using the Write tool WITHOUT asking for confirmation. Do not wait for user input before generating and saving the report. Ensure the output is valid JSON with proper escaping. Once you've saved the file, please confirm it was saved successfully."""
-            else:
-                file_directive = f"""
+        else:
+            file_directive = f"""
 
 IMPORTANT: Generate the full report and save it directly to the file {output_path} using the Write tool WITHOUT asking for confirmation. Do not wait for user input before generating and saving the report. Once you've saved the file, please confirm it was saved successfully."""
-            prompt = prompt + file_directive
+        return prompt + file_directive
 
-        # Build command
+    def _build_command(
+        self,
+        prompt: str,
+        output_format: str = "text",
+        allowed_tools: list[str] | None = None,
+    ) -> list[str]:
+        """Build the command to run Claude Code CLI.
+
+        Args:
+            prompt: The prompt to send to the provider
+            output_format: Output format (text, json, stream-json)
+            allowed_tools: Optional list of allowed tools
+
+        Returns:
+            Command as list of strings
+        """
         cmd = [self._BIN, "-p", prompt]
 
         # Add output format if not text
@@ -87,6 +102,78 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
         if allowed_tools:
             cmd.extend(["--allowedTools"] + allowed_tools)
 
+        return cmd
+
+    def _handle_process_result(
+        self,
+        return_code: int,
+        output_lines: list[str],
+        stderr: str,
+    ) -> str:
+        """Handle the result of the Claude Code process.
+
+        Args:
+            return_code: The process return code
+            output_lines: The collected output lines
+            stderr: The standard error output
+
+        Returns:
+            The final output or error message
+
+        Raises:
+            KeyboardInterrupt: If the process was interrupted
+            RuntimeError: If the process encountered an error
+        """
+        if return_code == 0:
+            return "\n".join(output_lines)
+        elif return_code == 130:  # SIGINT (Ctrl+C)
+            print("Process was interrupted by user", file=sys.stderr)
+            raise KeyboardInterrupt()
+        else:
+            error_msg = stderr or f"Process exited with code {return_code}"
+            if "CLAUDE_API_KEY" not in os.environ:
+                return self._handle_auth_error(error_msg)
+            raise RuntimeError(f"Claude Code returned non-zero exit:\n{error_msg}")
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        output_path: str | None = None,
+        allowed_tools: list[str] | None = None,
+        output_format: str = "text",
+        timeout: int | None = None,
+        stream: bool = False,
+        exit_command: str | None = None,
+    ) -> str:
+        """Generate content using Claude Code with proper interrupt handling.
+
+        Args:
+            prompt: The prompt to send to the provider
+            output_path: Optional path to save output to (will be added to prompt)
+            allowed_tools: Optional list of allowed tools
+            output_format: Output format (text, json, stream-json)
+            timeout: Optional timeout in seconds
+            stream: Whether to stream output (for interactive use)
+            exit_command: Custom command to gracefully exit (e.g., "/exit" or "/quit")
+
+        Returns:
+            The generated content or confirmation message
+
+        Raises:
+            RuntimeError: If Claude Code CLI is not found or returns an error
+            KeyboardInterrupt: If the process is interrupted
+        """
+        # Check if Claude is available
+        if not self._BIN or self._BIN == "claude":
+            claude_path = shutil.which("claude")
+            if not claude_path:
+                raise RuntimeError(CLAUDE_CODE_NOT_FOUND_MSG)
+
+        # Prepare prompt and command
+        prepared_prompt = self._prepare_prompt(prompt, output_path)
+        cmd = self._build_command(prepared_prompt, output_format, allowed_tools)
+
         # Check authentication
         if "CLAUDE_API_KEY" not in os.environ:
             print("Note: CLAUDE_API_KEY environment variable not set.", file=sys.stderr)
@@ -94,8 +181,33 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
             print("      For Claude Code Max users this should work automatically.", file=sys.stderr)
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return result.stdout
+            # Use Popen instead of run for better control over the process
+            with subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,  # Line buffered
+            ) as proc:
+                output_lines = []
+                try:
+                    # Stream output if requested, otherwise collect all lines
+                    for line in stream_process_output(proc, timeout, exit_command if stream else None):
+                        if stream:
+                            print(line)
+                        output_lines.append(line)
+
+                except TimeoutError as e:
+                    terminate_process(proc)
+                    raise RuntimeError(f"Claude Code process timed out after {timeout} seconds") from e
+
+                # Wait for the process to complete and check return code
+                return_code = proc.wait()
+                stderr = proc.stderr.read()
+
+                # Handle return code and produce final output
+                return self._handle_process_result(return_code, output_lines, stderr)
+
         except FileNotFoundError as exc:
             raise RuntimeError(
                 f"Claude Code CLI not found. Install with:\n  {CLAUDE_CODE_INSTALL_CMD}"
@@ -146,6 +258,6 @@ Your stand-up report would typically appear here after authentication.
 
 def get_provider(name: str | None = None) -> Provider:
     """Factory - returns a Provider instance. Only 'claude' for now."""
-    if name and name.lower() not in {"claude", "anthropic"}:
+    if name and name.lower() != "claude":
         raise ValueError(f"Unknown provider '{name}'. Only 'claude' supported in POC.")
     return ClaudeProvider()
