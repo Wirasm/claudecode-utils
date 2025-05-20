@@ -44,7 +44,7 @@ COMMIT MESSAGE REQUIREMENTS:
 - Format: type(scope?): description
 - Type must be one of: feat, fix, docs, style, refactor, test, chore, build, ci, perf
 - Description: imperative mood, lowercase, no period, ≤72 chars
-- Include body if needed (what + why)
+- Include a short body with a bullet list of meaningful changes
 - Add "BREAKING CHANGE:" footer if applicable
 
 STEPS:
@@ -53,7 +53,7 @@ STEPS:
 3. Determine the primary type of change
 4. Identify the scope if clear
 5. Write a concise, meaningful description
-6. Add body if changes are complex
+6. Add a short body with a bullet list of meaningful changes
 7. Check for breaking changes
 
 RETURN: Only the formatted commit message, nothing else.
