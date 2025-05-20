@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.8] - 2025-05-20
+
+### Added
+- Branch management command scripts for git operations
+
+### Fixed
+- Improved message clarity in review CLI display
+- Enhanced mode display in release CLI
+
+### Changed
+- Updated commit message template to favor bullet lists
+- Simplified command options and standardized interfaces
+
 ## [0.6.7] - 2025-05-20
 
 ### Changed
