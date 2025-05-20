@@ -40,7 +40,7 @@ def run_claude_release(
     """
     # Default safe tools for release
     if allowed_tools is None:
-        allowed_tools = ["Read", "Write", "Edit", "Bash", "LS", "Glob"]
+        allowed_tools = ["Read", "Write", "Edit", "Bash", "LS", "Glob", "MultiEdit", "TodoRead", "TodoWrite"]
 
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/release_report.json" if output_format == "json" else "tmp/release_report.md"
@@ -55,10 +55,7 @@ def run_claude_release(
         provider = get_provider()
         try:
             result = provider.generate(
-                prompt,
-                output_path=output_file,
-                allowed_tools=allowed_tools,
-                output_format=output_format
+                prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
             )
             progress.update(task, completed=True)
             console.print("\n✅ Release process completed successfully")
@@ -77,7 +74,7 @@ def generate_release_prompt(
     dry_run: bool = False,
     no_git: bool = False,
     merge_strategy: str = "direct",
-    output_format: str = "text"
+    output_format: str = "text",
 ) -> str:
     """Generate a release prompt.
 
@@ -94,28 +91,46 @@ def generate_release_prompt(
     """
     extension = ".json" if output_format == "json" else ".md"
 
-    git_instructions = "" if no_git else f"""
+    git_instructions = (
+        ""
+        if no_git
+        else f"""
 6. GIT OPERATIONS:
    - Create commit: "release: version X.Y.Z"
-   {'- Create git tag: v{new_version}' if create_tag else '- Skip tag creation'}
+   {"- Create git tag: v{new_version}" if create_tag else "- Skip tag creation"}
 7. MERGE STRATEGY ({merge_strategy}):
-   {"- If on release branch (e.g., develop):" + '\n' +
-    "  * Commit changes on release branch" + '\n' +
-    "  * Push release branch" + '\n' +
-    "  * Merge release branch to production branch (main)" + '\n' +
-    "  * Tag on production branch if requested" + '\n' +
-    "  * Push production branch and tags" + '\n' +
-    "- If already on production branch (main):" + '\n' +
-    "  * Create tag if requested" + '\n' +
-    "  * Push branch and tags"
-    if merge_strategy == "direct" else
-    "- If on release branch (e.g., develop):" + '\n' +
-    "  * Commit changes on release branch" + '\n' +
-    "  * Push release branch" + '\n' +
-    "  * Create a pull request from release branch to production branch" + '\n' +
-    "  * Report PR URL"}
+   {
+            "- If on release branch (e.g., develop):"
+            + "\n"
+            + "  * Commit changes on release branch"
+            + "\n"
+            + "  * Push release branch"
+            + "\n"
+            + "  * Merge release branch to production branch (main)"
+            + "\n"
+            + "  * Tag on production branch if requested"
+            + "\n"
+            + "  * Push production branch and tags"
+            + "\n"
+            + "- If already on production branch (main):"
+            + "\n"
+            + "  * Create tag if requested"
+            + "\n"
+            + "  * Push branch and tags"
+            if merge_strategy == "direct"
+            else "- If on release branch (e.g., develop):"
+            + "\n"
+            + "  * Commit changes on release branch"
+            + "\n"
+            + "  * Push release branch"
+            + "\n"
+            + "  * Create a pull request from release branch to production branch"
+            + "\n"
+            + "  * Report PR URL"
+        }
    - Report git status after operations
 """
+    )
 
     dry_run_note = "**DRY RUN MODE: Show what would be done but don't make actual changes**\n\n" if dry_run else ""
 
@@ -161,9 +176,11 @@ CRITICAL STEPS - Use Bash and other tools to:
 3. VERSION CALCULATION:
    - Current version: X.Y.Z
    - {bump_type.capitalize()} bump: {
-        'increment Z' if bump_type == 'patch' else
-        'increment Y, reset Z to 0' if bump_type == 'minor' else
-        'increment X, reset Y and Z to 0'
+        "increment Z"
+        if bump_type == "patch"
+        else "increment Y, reset Z to 0"
+        if bump_type == "minor"
+        else "increment X, reset Y and Z to 0"
     }
    - Calculate new version accordingly
    - Validate version format (must be X.Y.Z)
@@ -172,7 +189,7 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Update version in the detected file
    - Preserve file formatting and structure
    - Use Edit tool for precise updates
-   {'- PREVIEW changes only' if dry_run else ''}
+   {"- PREVIEW changes only" if dry_run else ""}
 
 4. PR REPORT EXTRACTION:
    - Get current branch: git symbolic-ref --short HEAD
@@ -199,9 +216,9 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Otherwise:
      * Move all [Unreleased] content to new section
    - Keep [Unreleased] header for future changes
-   {'- PREVIEW changes only' if dry_run else ''}
+   {"- PREVIEW changes only" if dry_run else ""}
 
-{git_instructions if not no_git else ''}
+{git_instructions if not no_git else ""}
 
 8. REPORT GENERATION:
    - Document all actions taken
@@ -216,7 +233,7 @@ REMEMBER:
 - Use standard version formats (X.Y.Z)
 - Follow Keep a Changelog format
 - Report everything clearly
-{'- This is a DRY RUN - show changes but do not apply them' if dry_run else ''}
+{"- This is a DRY RUN - show changes but do not apply them" if dry_run else ""}
 
 Execute the complete release workflow now and save your report.
 """
