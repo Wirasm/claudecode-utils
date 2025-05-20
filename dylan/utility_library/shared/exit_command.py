@@ -4,8 +4,6 @@ This module provides utilities for displaying exit command information to users
 and handling exit command functionality consistently across the CLI.
 """
 
-import signal
-import sys
 import threading
 
 from rich.console import Console
@@ -83,7 +81,7 @@ def format_provider_options(options: dict) -> dict:
         options: Provider options dict
 
     Returns:
-        Updated options dict with exit_command 
+        Updated options dict with exit_command
     """
     # Clone the options
     updated_options = options.copy()
@@ -95,53 +93,36 @@ def format_provider_options(options: dict) -> dict:
     return updated_options
 
 
-def setup_exit_command_handler(process, exit_command: str = DEFAULT_EXIT_COMMAND) -> threading.Event:
+def setup_exit_command_handler(process, exit_command: str = None) -> threading.Event:
     """Sets up an exit command handler for any process.
-    
+
+    This simplified handler helps with process termination and tracking.
+    The user can press Ctrl+C to exit the process.
+
     Args:
         process: The subprocess.Popen process to send signals to
-        exit_command: The command that will trigger exit (defaults to "/exit")
-        
+        exit_command: Not used in simplified implementation
+
     Returns:
-        threading.Event that will be set when the exit command is detected
+        threading.Event that will be set when exit is triggered
     """
     exit_triggered = threading.Event()
 
-    def on_exit_command():
-        """Triggered when exit command is entered."""
-        exit_triggered.set()
-        print(f"\nExit command '{exit_command}' detected. Shutting down...", file=sys.stderr)
+    def process_monitor():
+        """Monitor for process termination."""
         try:
-            # Send interrupt signal to gracefully terminate the process
-            process.send_signal(signal.SIGINT)
+            # Wait for process to complete or be terminated
+            process.wait()
         except Exception:
             # Process might already be gone, ignore errors
-            pass
+            import sys
+            print("Process monitoring error", file=sys.stderr)
+        finally:
+            # Always set the exit triggered flag
+            exit_triggered.set()
 
-    def input_listener():
-        """Listen for user input in a separate thread."""
-        if exit_command:
-            # Start with a visible prompt for the exit command
-            print(f"[Streaming mode enabled] Type {exit_command} and press Enter to exit at any time", file=sys.stderr)
-
-            while not exit_triggered.is_set():
-                try:
-                    user_input = input()
-                    if user_input.strip() == exit_command:
-                        on_exit_command()
-                        break
-                    elif user_input.strip():
-                        # Make the command visible again after any non-empty input
-                        # that isn't the exit command
-                        print(f"[Streaming mode enabled] Type {exit_command} and press Enter to exit at any time", file=sys.stderr)
-                except (EOFError, KeyboardInterrupt):
-                    break
-                except Exception:
-                    # Ignore other errors in the input thread - don't crash the daemon thread
-                    pass
-
-    # Start input listener thread
-    input_thread = threading.Thread(target=input_listener, daemon=True)
-    input_thread.start()
+    # Start process monitor thread
+    monitor_thread = threading.Thread(target=process_monitor, daemon=True)
+    monitor_thread.start()
 
     return exit_triggered

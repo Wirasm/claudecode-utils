@@ -1,0 +1,13 @@
+# Test Output Report
+
+This is a simple test file created by Claude Code.
+
+## Test Results
+- Test 1: Passed
+- Test 2: Passed
+- Test 3: Passed
+
+## Summary
+All tests completed successfully.
+
+Generated on: May 20, 2025
