@@ -23,7 +23,11 @@ from typing import Literal
 from rich.console import Console
 
 from ..provider_clis.provider_claude_code import get_provider
+from ..shared.config import CLAUDE_CODE_NPM_PACKAGE, CLAUDE_CODE_REPO_URL, GITHUB_ISSUES_URL
 from ..shared.progress import create_dylan_progress, create_task_with_dylan
+from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
+
+console = Console()
 
 
 def run_claude_review(
@@ -47,8 +51,6 @@ def run_claude_review(
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/review_report.json" if output_format == "json" else "tmp/review_report.md"
 
-    console = Console()
-
     # Create progress bar
     with create_dylan_progress(console) as progress:
         task = create_task_with_dylan(progress, "Running code review...")
@@ -62,14 +64,41 @@ def run_claude_review(
                 allowed_tools=allowed_tools,
                 output_format=output_format
             )
+            # Update task to complete
             progress.update(task, completed=True)
-            console.print("\n✅ Review completed successfully")
-            console.print(f"📝 Report saved to: {output_file}")
-            if result:
+
+            # Success message with flair
+            console.print()
+            console.print(create_status("Code review completed successfully!", "success"))
+            console.print(f"[{COLORS['muted']}]Report saved to:[/] [{COLORS['accent']}]{output_file}[/]")
+            console.print()
+
+            # Show a nice completion message
+            console.print(f"[{COLORS['primary']}]{ARROW}[/] [bold]Review Summary[/bold] [{COLORS['accent']}]{SPARK}[/]")
+            console.print(f"[{COLORS['muted']}]Dylan has analyzed your code and provided a review.[/]")
+            console.print()
+
+            if result and "Mock" not in result:  # Don't show mock results
                 console.print(result)
+        except RuntimeError as e:
+            progress.update(task, completed=True)
+            console.print()
+            console.print(create_status(str(e), "error"))
+            sys.exit(1)
+        except FileNotFoundError:
+            progress.update(task, completed=True)
+            console.print()
+            console.print(create_status("Claude Code not found!", "error"))
+            console.print(f"\n[{COLORS['warning']}]Please install Claude Code:[/]")
+            console.print(f"[{COLORS['muted']}]  npm install -g {CLAUDE_CODE_NPM_PACKAGE}[/]")
+            console.print(f"\n[{COLORS['muted']}]For more info: {CLAUDE_CODE_REPO_URL}[/]")
+            sys.exit(1)
         except Exception as e:
             progress.update(task, completed=True)
-            console.print(f"\n❌ Error running review: {e}")
+            console.print()
+            console.print(create_status(f"Unexpected error: {e}", "error"))
+            console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
+            console.print(f"[{COLORS['primary']}]{GITHUB_ISSUES_URL}[/]")
             sys.exit(1)
 
 
