@@ -24,7 +24,6 @@ from rich.console import Console
 
 from ..provider_clis.provider_claude_code import get_provider
 from ..shared.config import CLAUDE_CODE_NPM_PACKAGE, CLAUDE_CODE_REPO_URL, GITHUB_ISSUES_URL
-from ..shared.exit_command import DEFAULT_EXIT_COMMAND, show_exit_command_message
 from ..shared.progress import create_dylan_progress, create_task_with_dylan
 from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
 
@@ -36,7 +35,6 @@ def run_claude_review(
     allowed_tools: list[str] | None = None,
     branch: str | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
-    stream: bool = False,
     debug: bool = False,
 ) -> None:
     """Run Claude code with a review prompt and specified tools.
@@ -46,7 +44,6 @@ def run_claude_review(
         allowed_tools: List of allowed tools (defaults to Read, Glob, Grep, LS, Bash, Write)
         branch: Optional branch to review (not used in this implementation)
         output_format: Output format (text, json, stream-json)
-        stream: Whether to stream output (default False)
         debug: Whether to print debug information (default False)
     """
     # Default safe tools for review
@@ -67,11 +64,6 @@ def run_claude_review(
     # Get provider and run the review
     provider = get_provider()
 
-    # Always show exit command message, but let the handler thread show its own prompt
-    if stream:
-        # For streaming mode, still show the prominent message
-        show_exit_command_message(console, DEFAULT_EXIT_COMMAND, style="prominent")
-
     with create_dylan_progress(console=console) as progress:
         # Start the review task
         task = create_task_with_dylan(progress, "Dylan is working on the code review...")
@@ -82,8 +74,6 @@ def run_claude_review(
                 output_path=output_file,
                 allowed_tools=allowed_tools,
                 output_format=output_format,
-                stream=stream,
-                exit_command=DEFAULT_EXIT_COMMAND if stream else None,
             )
 
             # Update task to complete

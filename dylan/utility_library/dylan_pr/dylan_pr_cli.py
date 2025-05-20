@@ -8,7 +8,6 @@ from ..shared.ui_theme import (
     create_box_header,
     create_header,
     format_boolean_option,
-    format_tool_count,
 )
 from .dylan_pr_runner import generate_pr_prompt, run_claude_pr
 
@@ -35,24 +34,10 @@ def pr(
         help="Skip generating suggested changelog updates in the PR and report",
         show_default=True,
     ),
-    tools: str = typer.Option(
-        "Read,Bash,Write,Glob,Grep",
-        "--tools",
-        help="Comma-separated list of allowed tools for Claude",
-        show_default=True,
-    ),
-    format: str = typer.Option(
-        "text",
-        "--format",
-        "-f",
-        help="Output format: text (markdown), json, or stream-json",
-        show_default=True,
-    ),
-    stream: bool = typer.Option(
+    dry_run: bool = typer.Option(
         False,
-        "--stream",
-        "-s",
-        help="Stream output in real-time (enables exit command)",
+        "--dry-run",
+        help="Preview changes without creating a PR or pushing commits",
         show_default=True,
     ),
     debug: bool = typer.Option(
@@ -69,7 +54,7 @@ def pr(
     Integrates with GitHub CLI to create actual PRs.
 
     Examples:
-        # Create PR from current branch to main
+        # Create PR from current branch to develop
         dylan pr
 
         # Create PR from feature branch to develop
@@ -78,11 +63,12 @@ def pr(
         # Skip changelog suggestions in PR
         dylan pr --no-changelog
 
-        # Create PR with custom target and tools
-        dylan pr --target develop --tools "Read,Bash"
+        # Preview PR creation without actually creating it
+        dylan pr --dry-run
     """
-    # Parse tools first
-    allowed_tools = [tool.strip() for tool in tools.split(",")]
+    # Default values
+    allowed_tools = ["Read", "Bash", "Write", "Glob", "Grep", "TodoRead", "TodoWrite"]
+    output_format = "text"
 
     # Show header with flair
     console.print()
@@ -94,9 +80,9 @@ def pr(
         "Source": branch or "current branch",
         "Target": target,
         "Changelog": format_boolean_option(not no_changelog, "✓ Enabled (default)", "✗ Disabled"),
-        "Tools": format_tool_count(allowed_tools),
-        "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
-        "Exit": format_boolean_option(stream, "/exit (type to quit at any time)", "Ctrl+C to interrupt")
+        "Mode": "🔍 Dry run" if dry_run else "🚀 Live run",
+        "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
+        "Exit": "Ctrl+C to interrupt"
     }))
     console.print()
 
@@ -105,11 +91,12 @@ def pr(
         branch=branch,
         target_branch=target,
         update_changelog=not no_changelog,
-        output_format=format
+        dry_run=dry_run,
+        output_format=output_format
     )
 
     # Run PR creation
-    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream, debug=debug)
+    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=output_format, debug=debug)
 
 
 # For backwards compatibility and standalone usage
