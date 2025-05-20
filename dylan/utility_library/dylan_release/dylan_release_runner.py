@@ -34,8 +34,7 @@ def run_claude_release(
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
 ) -> None:
-    """
-    Run Claude code with a release prompt and specified tools.
+    """Run Claude code with a release prompt and specified tools.
 
     Args:
         prompt: The release prompt to send to Claude
