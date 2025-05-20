@@ -109,7 +109,7 @@ def setup_exit_command_listener(
     return input_thread
 
 
-def stream_process_output(  # noqa: C901 - Complex but will be refactored later
+def stream_process_output(
     proc: subprocess.Popen,
     timeout: int | None = None,
     exit_command: str | None = None,
@@ -117,7 +117,7 @@ def stream_process_output(  # noqa: C901 - Complex but will be refactored later
     """Stream output from a subprocess line by line with optional timeout.
 
     Args:
-        proc: The subprocess.Popen process object (or any object with a stdout attribute)
+        proc: The subprocess.Popen process object
         timeout: Optional timeout in seconds for the entire process
         exit_command: Custom command to listen for to exit gracefully
 
@@ -137,44 +137,24 @@ def stream_process_output(  # noqa: C901 - Complex but will be refactored later
         if exit_command:
             def on_exit_command():
                 exit_triggered.set()
-                if hasattr(proc, 'send_signal'):
-                    proc.send_signal(get_interrupt_signal())
+                proc.send_signal(get_interrupt_signal())
 
             setup_exit_command_listener(exit_command, on_exit_command)
 
         # Main output streaming loop
-        # Gracefully handle different types of stdout
-        if hasattr(proc.stdout, '__iter__') and not hasattr(proc.stdout, 'readline'):
-            # If stdout is already an iterable (like a list in tests)
-            for line in proc.stdout:
-                if timeout and (time.time() - start_time > timeout):
-                    raise TimeoutError("Process exceeded timeout")
+        for line in proc.stdout:
+            if timeout and (time.time() - start_time > timeout):
+                raise TimeoutError("Process exceeded timeout")
 
-                # Check if exit was triggered
-                if exit_triggered.is_set():
-                    break
+            # Check if exit was triggered
+            if exit_triggered.is_set():
+                break
 
-                yield line.strip()
-        else:
-            # Normal subprocess stdout with readline
-            while True:
-                line = proc.stdout.readline()
-                if not line:  # EOF
-                    break
-
-                if timeout and (time.time() - start_time > timeout):
-                    raise TimeoutError("Process exceeded timeout")
-
-                # Check if exit was triggered
-                if exit_triggered.is_set():
-                    break
-
-                yield line.strip()
+            yield line.strip()
 
     except (KeyboardInterrupt, SystemExit) as e:
         print("\nProcess interrupted by user. Attempting graceful shutdown...", file=sys.stderr)
-        if hasattr(proc, 'send_signal'):  # Only try to terminate if it's a real process
-            terminate_process(proc)
+        terminate_process(proc)
         raise KeyboardInterrupt() from e
 
 

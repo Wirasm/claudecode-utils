@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""Manual test script for the provider - NOT a pytest file.
+"""Test the enhanced provider functionality."""
 
-This file is used for manual testing only and should NOT be run by pytest.
-"""
-
-from dylan.utility_library.provider_clis.provider_claude_code import get_provider
+from provider_claude_code import get_provider
 
 
-def run_provider_test():
-    """Run a manual test of provider functionality."""
+def test_provider_basic():
+    """Test basic provider functionality."""
     provider = get_provider()
 
     # Test with minimal arguments
@@ -25,4 +22,4 @@ def run_provider_test():
 
 
 if __name__ == "__main__":
-    run_provider_test()
+    test_provider_basic()

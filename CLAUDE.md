@@ -20,23 +20,25 @@ Minimal claude code wrappers with 0 to minimal validation.
 - Always remember to use uv run when we run scripts
 - We never write commit messages, we have a pre-commit hook for that so always commit with git commit nothing more
 
-## Example Claude Code Usage
+Example:
 
 ```bash
-# Simple prompt
 claude -p "make a hello.js script that prints hello" --allowedTools "Write" "Edit"
+```
 
-# Using in a script
+```python
 #!/usr/bin/env -S uv run --script
 
 import subprocess
 
 prompt = """
+
 GIT checkout a NEW branch.
 
 CREATE src/cc_todo/todo.py: a zero library CLI todo app with basic CRUD.
 
 THEN GIT stage, commit and SWITCH back to main.
+
 """
 
 command = ["claude", "-p", prompt, "--allowedTools", "Edit", "Bash", "Write"]
@@ -46,9 +48,9 @@ process = subprocess.run(command, check=True)
 print(f"Claude process exited with output: {process.stdout}")
 ```
 
-## Claude Code Tools Reference
-
-Claude Code has access to various tools. Here are the most commonly used ones:
+Claude code tools:
+Tools available to Claude
+Claude Code has access to a set of powerful tools that help it understand and modify your codebase:
 
 | Tool         | Description                                          | Permission Required |
 | ------------ | ---------------------------------------------------- | ------------------- |
@@ -69,6 +71,8 @@ Claude Code has access to various tools. Here are the most commonly used ones:
 | TodoWrite    | Writes to todo files                                 | Yes                 |
 
 Permission rules can be configured using /allowed-tools or in permission settings.
+
+So as you can see we can get claude code to do almost anything just using natural language and explicit prompting.
 
 ## Core Commands
 
@@ -107,6 +111,9 @@ uv run mypy .
 ```
 
 ### Running Core Components
+
+check
+dylan/
 
 #### Individual Components
 
@@ -181,67 +188,6 @@ dylan release --minor --dry-run
 
 # Release with specific merge strategy
 dylan release --minor --merge-strategy pr
-```
-
-## Graceful Claude Code Termination
-
-When working with Claude Code processes, use the improved provider implementation in Dylan for graceful termination:
-
-```python
-from dylan.utility_library.provider_clis.provider_claude_code import get_provider
-
-# Get the Claude Code provider
-provider = get_provider()
-
-# Generate content with graceful termination handling
-try:
-    result = provider.generate(
-        "Write a short story about a robot learning to garden",
-        timeout=60,  # 60 second timeout
-        stream=True,  # Enable streaming output
-    )
-    print(result)
-except KeyboardInterrupt:
-    print("Process was interrupted by user")
-```
-
-This implementation ensures proper subprocess management, including signal handling, custom exit commands, and real-time output streaming.
-
-## UV Package Management
-
-This project uses UV for Python package management. Key commands include:
-
-```bash
-# Create virtual environment
-uv venv
-
-# Install dependencies from pyproject.toml
-uv sync
-
-# Install a specific package
-uv add requests
-
-# Remove a package
-uv remove requests
-
-# Run a Python script or command
-uv run python script.py
-uv run pytest
-
-# Install editable packages
-uv pip install -e .
-```
-
-When running scripts or tools, always use `uv run` to ensure proper virtual environment activation:
-
-```bash
-# Preferred way to run commands
-uv run pytest
-uv run black .
-
-# Running tools without installing
-uvx black .
-uvx ruff check .
 ```
 
 ## Code Architecture
@@ -322,31 +268,15 @@ A tool for generating daily standup reports from git activity:
   - `simple_validator/`: Validator agent that checks if fixes are correct
   - `simple_pr/`: PR creation tool
   - `cc_PRP_flow/`: Product Requirement Prompt workflow
-  - `automated_bug_triage/`: GitHub issue analysis and categorization
 - `dylan/utility_library/`: Contains the utility implementations
   - `dylan_standup/`: Standup report generator
   - `dylan_review/`: Code review tool
   - `dylan_pr/`: Pull request creation and management
   - `dylan_release/`: Release management and changelog generation
-  - `provider_clis/`: Claude Code provider interfaces
-  - `shared/`: Shared utilities and UI components
 - `PRPs/`: Contains Product Requirement Prompt templates
 - `ai_docs/`: Documentation for AI tools and best practices
 
 ## BRANCHING STRATEGY
 
-This repository follows a develop → main branching strategy, where:
-
-- `main` is the production branch containing stable releases
-- `develop` is the integration branch where features are merged
-- Feature branches are created from `develop` for work in progress
-
-More details are available in BRANCHING_STRATEGY.md.
-
-When creating branches, follow these naming conventions:
-- Feature branches: `feature/descriptive-name`
-- Bug fix branches: `fix/issue-description`
-- Documentation branches: `docs/what-is-changing`
-- Refactoring branches: `refactor/what-is-changing`
-
-The branching strategy is configured in the `.branchingstrategy` file which is used by the Dylan tools to understand how to handle branches during release and PR processes.
+The branching strategy is defined in the .branchingstrategy file.
+more details in BRANCHING_STRATEGY.md

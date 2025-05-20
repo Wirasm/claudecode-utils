@@ -28,7 +28,6 @@ dev = [
     "black>=25.1.0",
     "mypy>=1.15.0",
     "pytest>=8.3.5",
-    "pytest-cov>=4.1.0",
     "ruff>=0.11.10",
 ]
 
@@ -92,32 +91,3 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
-
-[tool.pytest.ini_options]
-testpaths = ["dylan"]
-python_files = "test_*.py"
-python_functions = "test_*"
-addopts = [
-    "--import-mode=importlib",
-    "-v",
-    "--strict-markers",
-]
-norecursedirs = ["**/provider_clis/[!tests]*"]
-
-[tool.coverage.run]
-source = ["dylan"]
-omit = [
-    "*/__init__.py",
-    "*/tests/*",
-    "*/.venv/*",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "pass",
-    "raise ImportError",
-]
