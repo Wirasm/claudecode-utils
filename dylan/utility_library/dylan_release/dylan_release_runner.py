@@ -209,13 +209,36 @@ CHANGELOG MANAGEMENT:
    - NEWS.md
    - If not found, report clearly in the Steps Executed section
 
-2. When changelog is found:
+2. Analyze commit history and PR descriptions to generate changelog entries:
+   - Use `git log $RELEASE_BRANCH..HEAD --pretty=format:'%h %s'` to get all commits
+   - Categorize commits based on conventional commit prefixes:
+     * feat: → Added (new features)
+     * fix: → Fixed (bug fixes)
+     * docs: → Documentation (documentation only changes)
+     * style: → Changed (code style, formatting)
+     * refactor: → Changed (code refactoring, no functional change)
+     * perf: → Changed (performance improvements)
+     * test: → Changed (adding or refactoring tests)
+     * build: → Changed (build system, dependencies)
+     * ci: → Changed (CI configuration)
+     * chore: → Changed (maintenance tasks)
+   - Check for merged PRs: `gh pr list --state merged --base $RELEASE_BRANCH`
+   - For each PR, analyze its title and description for additional information
+   - IMPORTANT: Focus on commit messages and PR descriptions, NOT code changes
+   - Format each entry as a bullet point with a brief description
+   - Group entries by type (Added, Changed, Fixed, etc.)
+
+3. When changelog is found:
    - Read the entire file to understand the structure
    - Verify it follows the Keep a Changelog format (https://keepachangelog.com)
    - Look for [Unreleased] section (must be at the top)
    - If [Unreleased] section doesn't exist, create one
+   - If [Unreleased] section exists but is empty, populate it with entries from step 2
+   - If [Unreleased] section has content, verify it matches your analysis from step 2
+     * If there are discrepancies, report them but PREFER the existing content
+     * Only add missing entries from your analysis that aren't already there
 
-3. Create new version section:
+4. Create new version section:
    - Format: ## [NEW_VERSION] - YYYY-MM-DD (today's date)
    - Position: immediately after [Unreleased] section
    - Move all content from [Unreleased] to the new section
@@ -232,14 +255,15 @@ CHANGELOG MANAGEMENT:
      - Bug fix description
      ```
 
-4. Use the MultiEdit tool for this change to ensure atomic updates:
+5. Use the MultiEdit tool for this change to ensure atomic updates:
    - First edit: create the new version section header
    - Second edit: move content from Unreleased to new section
    - Third edit: ensure Unreleased section remains (empty if needed)
 
-5. Verify changes:
+6. Verify changes:
    - Re-read the changelog file to confirm structure is correct
-   - CRITICAL: Report the exact changes made to the changelog
+   - CRITICAL: Report the exact changes made to the changelog, showing before and after
+   - Include the complete list of commits and PRs that were analyzed
 """
 
     git_instructions = (
