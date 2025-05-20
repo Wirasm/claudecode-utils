@@ -69,7 +69,7 @@ def release(
         "Version Bump": bump_type.capitalize(),
         "Tag": format_boolean_option(tag, "✓ Create tag", "✗ No tag"),
         "Strategy": merge_strategy,
-        "Mode": "🔍 Dry run" if dry_run else "🚀 No git" if no_git else "🚀 Live run",
+        "Mode": "🔍 Dry run" if dry_run else "⚠️ No git" if no_git else "🚀 Live run",
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
