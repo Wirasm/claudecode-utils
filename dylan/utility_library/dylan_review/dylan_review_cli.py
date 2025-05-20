@@ -54,7 +54,7 @@ def review(
 
     # Show review configuration
     console.print(create_box_header("Review Configuration", {
-        "Branch": branch or "latest changes",
+        "Branch": branch or "current branch",
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
