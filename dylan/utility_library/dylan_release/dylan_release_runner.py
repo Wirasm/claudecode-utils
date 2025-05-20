@@ -24,6 +24,9 @@ from rich.console import Console
 
 from ..provider_clis.provider_claude_code import get_provider
 from ..shared.progress import create_dylan_progress, create_task_with_dylan
+from ..shared.ui_theme import ARROW, COLORS, SPARK, create_status
+
+console = Console()
 
 
 def run_claude_release(
@@ -31,11 +34,12 @@ def run_claude_release(
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
 ) -> None:
-    """Run Claude code with a release prompt and specified tools.
+    """
+    Run Claude code with a release prompt and specified tools.
 
     Args:
         prompt: The release prompt to send to Claude
-        allowed_tools: List of allowed tools (defaults to Read, Write, Edit, Bash)
+        allowed_tools: List of allowed tools (defaults to Read, Write, Edit, Bash, LS, Glob)
         output_format: Output format (text, json, stream-json)
     """
     # Default safe tools for release
@@ -45,26 +49,41 @@ def run_claude_release(
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/release_report.json" if output_format == "json" else "tmp/release_report.md"
 
-    console = Console()
+    # Get provider and run the release
+    provider = get_provider()
 
-    # Create progress bar
-    with create_dylan_progress(console) as progress:
-        task = create_task_with_dylan(progress, "Creating release...")
+    with create_dylan_progress(console=console) as progress:
+        # Start the release task
+        task = create_task_with_dylan(progress, "Dylan is creating your release...")
 
-        # Get provider and run the release
-        provider = get_provider()
         try:
             result = provider.generate(
-                prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
+                prompt,
+                output_path=output_file,
+                allowed_tools=allowed_tools,
+                output_format=output_format
             )
+            # Update task to complete
             progress.update(task, completed=True)
-            console.print("\n✅ Release process completed successfully")
-            console.print(f"📝 Report saved to: {output_file}")
-            if result:
+
+            # Success message with flair
+            console.print()
+            console.print(create_status("Release created successfully!", "success"))
+            console.print(f"[{COLORS['muted']}]Report saved to:[/] [{COLORS['accent']}]{output_file}[/]")
+            console.print()
+
+            # Show a nice completion message
+            message = f"[{COLORS['primary']}]{ARROW}[/] [bold]Release Summary[/bold] [{COLORS['accent']}]{SPARK}[/]"
+            console.print(message)
+            console.print(f"[{COLORS['muted']}]Dylan has prepared your release and updated version information.[/]")
+            console.print()
+
+            if result and "Mock" not in result:  # Don't show mock results
                 console.print(result)
         except Exception as e:
             progress.update(task, completed=True)
-            console.print(f"\n❌ Error running release: {e}")
+            console.print()
+            console.print(create_status(f"Error running release: {e}", "error"))
             sys.exit(1)
 
 
@@ -95,10 +114,10 @@ def generate_release_prompt(
         ""
         if no_git
         else f"""
-6. GIT OPERATIONS:
+5. GIT OPERATIONS:
    - Create commit: "release: version X.Y.Z"
-   {"- Create git tag: v{new_version}" if create_tag else "- Skip tag creation"}
-7. MERGE STRATEGY ({merge_strategy}):
+   {'- Create git tag: v{new_version}' if create_tag else '- Skip tag creation'}
+6. MERGE STRATEGY ({merge_strategy}):
    {
             "- If on release branch (e.g., develop):"
             + "\n"
@@ -191,36 +210,20 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Use Edit tool for precise updates
    {"- PREVIEW changes only" if dry_run else ""}
 
-4. PR REPORT EXTRACTION:
-   - Get current branch: git symbolic-ref --short HEAD
-   - Sanitize branch name (replace / with -)
-   - List PR reports matching branch: ls -1t tmp/pr_report_<branch>_*.md
-   - Find the most recent one by timestamp
-   - If found, read and extract:
-     * Branch name used for PR
-     * Target branch
-     * Changelog section content (if available)
-   - Use this information to enhance changelog entries
-   - If no PR report found, continue with standard changelog update
-
-5. CHANGELOG UPDATE:
+4. CHANGELOG UPDATE:
    - Look for changelog in this order:
      a. CHANGELOG.md
      b. HISTORY.md
      c. NEWS.md
    - Find [Unreleased] section
    - Create new section: [X.Y.Z] - YYYY-MM-DD
-   - If PR report found with changelog section:
-     * Use the pre-formatted entries from PR report
-     * Add these under appropriate sections (Added/Changed/Fixed/Removed)
-   - Otherwise:
-     * Move all [Unreleased] content to new section
+   - Move all [Unreleased] content to new section
    - Keep [Unreleased] header for future changes
    {"- PREVIEW changes only" if dry_run else ""}
 
-{git_instructions if not no_git else ""}
+{git_instructions if not no_git else ''}
 
-8. REPORT GENERATION:
+6. REPORT GENERATION:
    - Document all actions taken
    - Show before/after versions
    - List files modified

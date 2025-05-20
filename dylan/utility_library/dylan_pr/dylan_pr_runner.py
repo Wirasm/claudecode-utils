@@ -49,16 +49,21 @@ def run_claude_pr(
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/pr_report.json" if output_format == "json" else "tmp/pr_report.md"
 
-    # Create progress bar
-    with create_dylan_progress(console) as progress:
-        task = create_task_with_dylan(progress, "Creating pull request...")
+    # Get provider and run the PR creation
+    provider = get_provider()
 
-        # Get provider and run the PR creation
-        provider = get_provider()
+    with create_dylan_progress(console=console) as progress:
+        # Start the PR task
+        task = create_task_with_dylan(progress, "Dylan is creating your pull request...")
+
         try:
             result = provider.generate(
-                prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
+                prompt,
+                output_path=output_file,
+                allowed_tools=allowed_tools,
+                output_format=output_format
             )
+
             # Update task to complete
             progress.update(task, completed=True)
 
@@ -128,15 +133,10 @@ YOUR MISSION:
 
 IMPORTANT FILE HANDLING INSTRUCTIONS:
 - Save your report to the tmp/ directory
-- CRITICAL: Get current branch name and include it in filename
-- Base filename format: tmp/pr_report_<branch_name>_YYYYMMDD_HHMMSS{extension}
-- Replace slashes in branch name with dashes (e.g., feature/foo → feature-foo)
-- Check if file with same branch name exists: tmp/pr_report_<branch_name>_*{extension}
-- If exists, append to the existing file with separator:
-  * Add "\n\n---\n\n# PR Report Update - <timestamp>\n\n"
-  * Then add new content
-- If not exists, create new file with full timestamp
-- Use the Bash tool to check for existing files first
+- If tmp/pr_report{extension} already exists, create a new file with timestamp
+- Format: tmp/pr_report_YYYYMMDD_HHMMSS{extension}
+- Use the Bash tool to check if the file exists first
+- DO NOT modify or append to existing files
 
 CRITICAL STEPS - Use Bash and other tools to:
 
@@ -161,9 +161,7 @@ CRITICAL STEPS - Use Bash and other tools to:
 {
         "4. CHANGELOG SECTION FOR PR DESCRIPTION (if --changelog flag):"
         + "\n"
-        + "   - Analyze all commits since target branch: git log "
-        + target_branch
-        + "..HEAD --pretty=format:'%h %s'"
+        + "   - Analyze all commits since target branch: git log " + target_branch + "..HEAD --pretty=format:'%h %s'"
         + "\n"
         + "   - Parse commit messages and group by conventional types"
         + "\n"
@@ -177,25 +175,9 @@ CRITICAL STEPS - Use Bash and other tools to:
         + "\n"
         + "     * ### Removed - removed features"
         + "\n"
-        + "   - Format each entry: '- <description> (`<commit_hash>`)''"
+        + "   - Format each entry: '- <description> (`<commit_hash>`)'"
         + "\n"
         + "   - IMPORTANT: Add this as a separate '## Changelog' section in PR body"
-        + "\n"
-        + "   - Example format:"
-        + "\n"
-        + "     ## Changelog"
-        + "\n"
-        + "     ### Added"
-        + "\n"
-        + "     - New feature description (`abc123`)"
-        + "\n"
-        + "     ### Changed"
-        + "\n"
-        + "     - Updated component behavior (`def456`)"
-        + "\n"
-        + "     ### Fixed"
-        + "\n"
-        + "     - Resolved issue with validation (`ghi789`)"
         + "\n"
         + "   - DO NOT modify actual CHANGELOG.md file"
         + "\n"

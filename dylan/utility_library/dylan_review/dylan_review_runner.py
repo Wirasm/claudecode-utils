@@ -51,16 +51,21 @@ def run_claude_review(
     # Determine output file based on format - always in tmp directory
     output_file = "tmp/review_report.json" if output_format == "json" else "tmp/review_report.md"
 
-    # Create progress bar
-    with create_dylan_progress(console) as progress:
-        task = create_task_with_dylan(progress, "Running code review...")
+    # Get provider and run the review
+    provider = get_provider()
 
-        # Get provider and run the review
-        provider = get_provider()
+    with create_dylan_progress(console=console) as progress:
+        # Start the review task
+        task = create_task_with_dylan(progress, "Dylan is working on the code review...")
+
         try:
             result = provider.generate(
-                prompt, output_path=output_file, allowed_tools=allowed_tools, output_format=output_format
+                prompt,
+                output_path=output_file,
+                allowed_tools=allowed_tools,
+                output_format=output_format
             )
+
             # Update task to complete
             progress.update(task, completed=True)
 
@@ -72,7 +77,7 @@ def run_claude_review(
 
             # Show a nice completion message
             console.print(f"[{COLORS['primary']}]{ARROW}[/] [bold]Review Summary[/bold] [{COLORS['accent']}]{SPARK}[/]")
-            console.print(f"[{COLORS['muted']}]Dylan has analyzed your code and provided a review.[/]")
+            console.print(f"[{COLORS['muted']}]Dylan has analyzed your code and generated a detailed report.[/]")
             console.print()
 
             if result and "Mock" not in result:  # Don't show mock results
@@ -135,21 +140,19 @@ BRANCH STRATEGY DETECTION:
 
 IMPORTANT FILE HANDLING INSTRUCTIONS:
 - Save your report to the tmp/ directory
-- CRITICAL: Get current branch name and include it in filename
-- Base filename format: tmp/review_report_<branch_name>_YYYYMMDD_HHMMSS{extension}
-- Replace slashes in branch name with dashes (e.g., feature/foo → feature-foo)
+- If tmp/review_report{extension} already exists, create a new file with timestamp
+- Format: tmp/review_report_YYYYMMDD_HHMMSS{extension}
 - Use the Bash tool to check if the file exists first
-- Always create a new file with timestamp for each review
+- DO NOT modify or append to existing files
 
 Please:
-1. Get current branch name: git symbolic-ref --short HEAD
-2. Sanitize branch name for filename (replace / with -)
-3. Create filename: tmp/review_report_<sanitized_branch>_YYYYMMDD_HHMMSS{extension}
-4. Detect the correct base branch following the BRANCH STRATEGY DETECTION steps
-5. Use git diff to see the changes from the detected base branch
-6. Identify any issues, bugs, or improvements
-7. Provide specific feedback with file and line references
-8. Suggest concrete fixes where applicable
+1. Check if tmp/review_report{extension} exists using Bash
+2. If it exists, create a new filename with date/timestamp
+3. Detect the correct base branch following the BRANCH STRATEGY DETECTION steps
+4. Use git diff to see the changes from the detected base branch
+5. Identify any issues, bugs, or improvements
+6. Provide specific feedback with file and line references
+7. Suggest concrete fixes where applicable
 
 Provide your review with the following metadata:
 - Report metadata:
