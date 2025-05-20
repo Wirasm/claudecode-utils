@@ -33,6 +33,13 @@ def release(
         "Read,Write,Edit,Bash,LS,Glob", "--tools", help="Comma-separated list of allowed tools"
     ),
     format: str = typer.Option("text", "--format", help="Output format: text, json, stream-json"),
+    stream: bool = typer.Option(
+        False,
+        "--stream",
+        "-s",
+        help="Stream output in real-time (enables exit command)",
+        show_default=True,
+    ),
 ):
     """Create a new release with version bump and changelog update."""
     # Parse tools first
@@ -58,7 +65,9 @@ def release(
         "Strategy": merge_strategy,
         "Mode": "🔍 Dry run" if dry_run else "🚀 Live run",
         "Git Operations": format_boolean_option(not no_git, "✓ Enabled", "✗ Disabled"),
-        "Tools": format_tool_count(allowed_tools)
+        "Tools": format_tool_count(allowed_tools),
+        "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
+        "Exit": "/exit (type to quit at any time)"
     }))
     console.print()
 
@@ -73,7 +82,7 @@ def release(
     )
 
     # Run release
-    run_claude_release(prompt, allowed_tools=allowed_tools, output_format=format)
+    run_claude_release(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream)
 
 
 # For backwards compatibility and standalone usage

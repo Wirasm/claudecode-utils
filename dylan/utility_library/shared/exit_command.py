@@ -4,6 +4,10 @@ This module provides utilities for displaying exit command information to users
 and handling exit command functionality consistently across the CLI.
 """
 
+import signal
+import sys
+import threading
+
 from rich.console import Console
 from rich.panel import Panel
 
@@ -73,21 +77,63 @@ def show_exit_command_message(
 
 
 def format_provider_options(options: dict) -> dict:
-    """Add exit command to provider options if streaming is enabled.
+    """Add exit command to provider options.
 
     Args:
         options: Provider options dict
 
     Returns:
-        Updated options dict with exit_command if streaming is enabled
+        Updated options dict with exit_command 
     """
     # Clone the options
     updated_options = options.copy()
-
-    # If streaming is enabled, add exit command
-    if updated_options.get('stream', False):
-        # Only add if not already present
-        if 'exit_command' not in updated_options:
-            updated_options['exit_command'] = DEFAULT_EXIT_COMMAND
-
+    
+    # Always add exit command if not already present
+    if 'exit_command' not in updated_options:
+        updated_options['exit_command'] = DEFAULT_EXIT_COMMAND
+    
     return updated_options
+
+
+def setup_exit_command_handler(process, exit_command: str = DEFAULT_EXIT_COMMAND) -> threading.Event:
+    """Sets up an exit command handler for any process.
+    
+    Args:
+        process: The subprocess.Popen process to send signals to
+        exit_command: The command that will trigger exit (defaults to "/exit")
+        
+    Returns:
+        threading.Event that will be set when the exit command is detected
+    """
+    exit_triggered = threading.Event()
+    
+    def on_exit_command():
+        """Triggered when exit command is entered."""
+        exit_triggered.set()
+        print(f"\nExit command '{exit_command}' detected. Shutting down...", file=sys.stderr)
+        try:
+            # Send interrupt signal to gracefully terminate the process
+            process.send_signal(signal.SIGINT)
+        except Exception:
+            # Process might already be gone, ignore errors
+            pass
+    
+    def input_listener():
+        """Listen for user input in a separate thread."""
+        while not exit_triggered.is_set():
+            try:
+                user_input = input()
+                if user_input.strip() == exit_command:
+                    on_exit_command()
+                    break
+            except (EOFError, KeyboardInterrupt):
+                break
+            except Exception:
+                # Ignore other errors in the input thread - don't crash the daemon thread
+                pass
+    
+    # Start input listener thread
+    input_thread = threading.Thread(target=input_listener, daemon=True)
+    input_thread.start()
+    
+    return exit_triggered

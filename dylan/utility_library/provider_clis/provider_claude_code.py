@@ -198,15 +198,8 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
                 output_lines = []
                 # Set up exit command listener independently of streaming
                 # This way the exit command works even without streaming enabled
-                exit_triggered = threading.Event()
-                if exit_command:
-                    def on_exit_command():
-                        exit_triggered.set()
-                        print(f"\nExit command '{exit_command}' detected. Shutting down...", file=sys.stderr)
-                        proc.send_signal(signal.SIGINT)
-
-                    from .shared.subprocess_utils import setup_exit_command_listener
-                    setup_exit_command_listener(exit_command, on_exit_command)
+                from ..shared.exit_command import setup_exit_command_handler
+                exit_triggered = setup_exit_command_handler(proc, exit_command)
 
                 try:
                     # Stream output if requested, otherwise collect all lines

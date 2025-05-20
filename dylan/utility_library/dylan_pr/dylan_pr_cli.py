@@ -48,6 +48,13 @@ def pr(
         help="Output format: text (markdown), json, or stream-json",
         show_default=True,
     ),
+    stream: bool = typer.Option(
+        False,
+        "--stream",
+        "-s",
+        help="Stream output in real-time (enables exit command)",
+        show_default=True,
+    ),
 ):
     """Create pull requests with AI-generated descriptions.
 
@@ -80,7 +87,9 @@ def pr(
         "Source": branch or "current branch",
         "Target": target,
         "Changelog": format_boolean_option(changelog),
-        "Tools": format_tool_count(allowed_tools)
+        "Tools": format_tool_count(allowed_tools),
+        "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
+        "Exit": "/exit (type to quit at any time)"
     }))
     console.print()
 
@@ -93,7 +102,7 @@ def pr(
     )
 
     # Run PR creation
-    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format)
+    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=format, stream=stream)
 
 
 # For backwards compatibility and standalone usage
