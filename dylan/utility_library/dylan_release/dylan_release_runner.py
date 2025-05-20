@@ -84,7 +84,7 @@ def run_claude_release(
                 allowed_tools=allowed_tools,
                 output_format=output_format,
                 stream=stream,
-                exit_command=DEFAULT_EXIT_COMMAND
+                exit_command=DEFAULT_EXIT_COMMAND if stream else None
             )
             # Update task to complete
             progress.update(task, completed=True)
