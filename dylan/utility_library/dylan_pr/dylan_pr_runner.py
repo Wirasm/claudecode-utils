@@ -179,7 +179,7 @@ YOUR MISSION:
 1. Determine the branch to create PR from (current working branch)
 2. Determine the target branch (default: develop or from branching strategy)
 3. Analyze all commits in this branch vs target branch
-4. {"Update changelog if requested" if update_changelog else "Skip changelog update"}
+4. {"Generate changelog suggestions for PR description and report (DO NOT modify CHANGELOG.md directly)" if update_changelog else "Skip changelog suggestion generation"}
 5. Create a high-quality pull request
 
 {branching_instructions}
@@ -189,22 +189,25 @@ YOUR MISSION:
 CRITICAL STEPS - Use Bash and other tools to:
 
 1. BRANCH DETERMINATION:
-   - Current branch: git symbolic-ref --short HEAD
+   - Set CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
    - Verify branch exists: git rev-parse --verify HEAD
-   - Check if pushed: git ls-remote --heads origin $(git symbolic-ref --short HEAD)
+   - Check if pushed: git ls-remote --heads origin $CURRENT_BRANCH
    - If NOT pushed or some commits are not pushed:
      * CRITICAL: Display warning to push all commits first
-     * Run: git push origin $(git symbolic-ref --short HEAD)
+     * Run: git push origin $CURRENT_BRANCH
      * Ensure all commits are pushed before proceeding
-   - Apply BRANCH STRATEGY DETECTION to determine target branch
+   - Apply BRANCH STRATEGY DETECTION to determine TARGET_BRANCH
    - Override with "{target_branch}" if explicitly specified
+   - Create sanitized versions:
+     * CURRENT_BRANCH_SANITIZED=$(echo $CURRENT_BRANCH | sed 's/\\//-/g')
+     * TARGET_BRANCH_SANITIZED=$(echo $TARGET_BRANCH | sed 's/\\//-/g')
 
 2. PR PREPARATION:
-   - Check for existing PRs: gh pr list --head $(git symbolic-ref --short HEAD)
-   - Get all commits: git log [target]..HEAD --pretty=format:'%h %s'
-   - Analyze changes: git diff [target]...HEAD --stat
-   - Detailed diff: git diff [target]...HEAD
-   - Changed files: git diff [target]...HEAD --name-only
+   - Check for existing PRs: gh pr list --head $CURRENT_BRANCH
+   - Get all commits: git log $TARGET_BRANCH..HEAD --pretty=format:'%h %s'
+   - Analyze changes: git diff $TARGET_BRANCH...HEAD --stat
+   - Detailed diff: git diff $TARGET_BRANCH...HEAD
+   - Changed files: git diff $TARGET_BRANCH...HEAD --name-only
 
    If an existing PR is found:
    - Get the PR number and URL: gh pr view --json number,url
@@ -219,25 +222,87 @@ CRITICAL STEPS - Use Bash and other tools to:
         + "\n"
         + "   - IMPORTANT: DO NOT EDIT the CHANGELOG.md file directly"
         + "\n"
-        + "   - Analyze all commits since target branch: git log [target]..HEAD --pretty=format:'%h %s'"
+        + "   - Analyze all commits since target branch: git log $TARGET_BRANCH..HEAD --pretty=format:'%h %s'"
         + "\n"
-        + "   - Parse commit messages and group by conventional types"
+        + "   - Parse commit messages and group by conventional types using this mapping:"
+        + "\n"
+        + "     * feat: → Added (new features)"
+        + "\n"
+        + "     * fix: → Fixed (bug fixes)"
+        + "\n"
+        + "     * docs: → Documentation (documentation only changes)"
+        + "\n"
+        + "     * style: → Changed (code style, formatting)"
+        + "\n"
+        + "     * refactor: → Changed (code refactoring, no functional change)"
+        + "\n"
+        + "     * perf: → Changed (performance improvements)"
+        + "\n"
+        + "     * test: → Changed (adding or refactoring tests)"
+        + "\n"
+        + "     * build: → Changed (build system, dependencies)"
+        + "\n"
+        + "     * ci: → Changed (CI configuration)"
+        + "\n"
+        + "     * chore: → Changed (maintenance tasks)"
+        + "\n"
+        + "   - For commits without conventional prefixes, analyze commit message content to categorize appropriately"
         + "\n"
         + "   - Create a 'Suggested Changelog Updates' section with this structure:"
         + "\n"
-        + "     * ### Added - new features (commits starting with feat:)"
+        + "     * ### Added - new features (feat:)"
         + "\n"
-        + "     * ### Changed - updates (commits: refactor:, style:, perf:, chore:)"
+        + "     * ### Changed - code changes (refactor:, style:, perf:, chore:, build:, ci:)"
         + "\n"
-        + "     * ### Fixed - bug fixes (commits starting with fix:)"
+        + "     * ### Fixed - bug fixes (fix:)"
         + "\n"
-        + "     * ### Removed - removed features"
+        + "     * ### Documentation - documentation changes (docs:)"
+        + "\n"
+        + "     * ### Removed - removed features or deprecated code"
         + "\n"
         + "   - Format each entry: '- <description>'"
         + "\n"
         + "   - ONLY include this section in both:"
         + "\n"
         + "     * The PR description (in a collapsible section titled 'Suggested Changelog Updates')"
+        + "\n"
+        + "       Format the collapsible section using GitHub markdown:"
+        + "\n"
+        + "       ```"
+        + "\n"
+        + "       <details>"
+        + "\n"
+        + "       <summary>Suggested Changelog Updates</summary>"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Added"
+        + "\n"
+        + "       - Item 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Changed"
+        + "\n"
+        + "       - Item 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Fixed"
+        + "\n"
+        + "       - Bug fix 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       ### Documentation"
+        + "\n"
+        + "       - Doc update 1"
+        + "\n"
+        + "       "
+        + "\n"
+        + "       </details>"
+        + "\n"
+        + "       ```"
         + "\n"
         + "     * The report file under a heading 'Suggested Changelog Updates'"
         + "\n"
@@ -248,21 +313,50 @@ CRITICAL STEPS - Use Bash and other tools to:
     }
 4. PR CREATION/UPDATES:
    - When NO existing PR:
-     * Extract meaningful title from branch name or commits
-     * Generate comprehensive description:
-       + Summary of changes
-       + List of commits
-       + Files changed
-       + Testing notes
-       + Breaking changes (if any)
-       + Suggested Changelog Updates section (if enabled)
-     * Create PR: gh pr create --base [target] --head [current] --title "..." --body "..."
+     * Extract meaningful title using these rules in priority order:
+       1. If branch name follows conventional format (feature/xxx, fix/xxx, etc.), convert to title case:
+          - feature/add-dark-mode → "Add Dark Mode"
+          - fix/login-redirect → "Fix Login Redirect"
+       2. If not conventional, look for the most recent feat: or fix: commit and use its description
+       3. If no conventional commits found, use a descriptive title based on the most significant change
+     * Generate comprehensive description using this markdown structure:
+       ```
+       ## Summary
+       Brief description of what this PR accomplishes and why.
+
+       ## Changes
+       - Major change 1
+       - Major change 2
+       - Other important modifications
+
+       ## Commits
+       [LIST_OF_COMMITS_WITH_LINKS]
+
+       ## Files Changed
+       [LIST_OF_FILES_CATEGORIZED_BY_TYPE]
+
+       ## Testing Notes
+       Steps to verify the changes work as expected.
+
+       ## Breaking Changes
+       [BREAKING_CHANGES_IF_ANY_OR_NONE]
+
+       <details>
+       <summary>Suggested Changelog Updates</summary>
+       [CHANGELOG_CONTENT_IF_ENABLED]
+       </details>
+       ```
+     * Create PR: gh pr create --base $TARGET_BRANCH --head $CURRENT_BRANCH --title "..." --body "..."
 
    - When existing PR found WITH new commits:
      * Let GitHub automatically update the PR with new commits
      * Only update the PR description if significant changes are needed:
        + gh pr edit [PR_NUMBER] --body "..." (only if needed)
-     * Add PR comment about major updates if applicable
+     * Add PR comment about major updates if any of these conditions apply:
+       + New feature added (feat: commits) that weren't in the original PR
+       + Breaking changes introduced that weren't mentioned before
+       + Significant architecture changes
+       + New dependencies added
 
    - When existing PR found WITHOUT new commits:
      * Skip PR updates
@@ -284,7 +378,7 @@ CRITICAL STEPS - Use Bash and other tools to:
      * Any changelog suggestions made
      * Any issues encountered
    - Ensure report sections are clearly separated and formatted
-   - Save report to: tmp/dylan-pr-[current-branch]-to-[target].md with timestamp header
+   - Save report to: tmp/dylan-pr-$CURRENT_BRANCH_SANITIZED-to-$TARGET_BRANCH_SANITIZED.md with timestamp header
 
 REMEMBER:
 - Be completely autonomous in your decisions
