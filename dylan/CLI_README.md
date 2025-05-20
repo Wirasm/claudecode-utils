@@ -6,7 +6,7 @@ The main command-line interface for Dylan utilities.
 
 ```bash
 # Install globally with uv
-uv tool install -e /path/to/claudecode-utility
+uv tool install -e /path/to/dylan
 
 # Verify installation
 dylan --help
@@ -16,7 +16,7 @@ dylan --help
 
 ### `dylan review`
 
-Run AI-powered code reviews on git branches and commits. Automatically detects the appropriate base branch for comparison.
+Run AI-powered code reviews on git branches and commits.
 
 ```bash
 dylan review feature-branch
@@ -24,30 +24,6 @@ dylan review main --format json
 ```
 
 See [dylan_review README](utility_library/dylan_review/README.md) for detailed options.
-
-### `dylan pr`
-
-Create pull requests with autonomous PR description generation. Optionally includes changelog sections.
-
-```bash
-dylan pr                           # Create PR from current branch to develop
-dylan pr --target main            # Specify target branch
-dylan pr --changelog              # Include changelog section in PR
-```
-
-See [dylan_pr README](utility_library/dylan_pr/README.md) for detailed options.
-
-### `dylan release`
-
-Create project releases with version bumping, changelog updates, and automated merging.
-
-```bash
-dylan release                     # Patch release
-dylan release --minor --tag       # Minor release with tag
-dylan release --major --merge-strategy pr  # Major release via PR
-```
-
-See [dylan_release README](utility_library/dylan_release/README.md) for detailed options.
 
 ### `dylan standup`
 
@@ -61,6 +37,31 @@ dylan standup --out report.md
 
 See [dylan_standup README](utility_library/dylan_standup/README.md) for detailed options.
 
+### `dylan pr`
+
+Create and manage pull requests with AI-generated descriptions.
+
+```bash
+dylan pr                              # PR from current branch to main
+dylan pr feature-branch --target develop  # PR from specific branch
+dylan pr --changelog                  # Update changelog while creating PR
+```
+
+See [dylan_pr README](utility_library/dylan_pr/README.md) for detailed options.
+
+### `dylan release`
+
+Manage project releases with version bumping and changelog updates.
+
+```bash
+dylan release              # Create release with patch bump (default)
+dylan release --minor      # Minor version bump
+dylan release --major --tag # Major version bump with git tag
+dylan release --dry-run    # Preview changes without applying
+```
+
+See [dylan_release README](utility_library/dylan_release/README.md) for detailed options.
+
 ## Usage
 
 ```bash
@@ -70,31 +71,9 @@ dylan --help
 # Get help for a specific command
 dylan review --help
 dylan standup --help
+dylan pr --help
+dylan release --help
 ```
-
-## Branching Strategy Support
-
-All dylan commands are branch-aware and support modern branching strategies through a `.branchingstrategy` file:
-
-```
-release_branch: develop
-production_branch: main
-merge_strategy: direct
-```
-
-This enables:
-- Reviews to compare against the correct base branch
-- PRs to target the right integration branch
-- Releases to handle develop → main workflows
-
-## Report Management
-
-All commands generate reports in the `tmp/` directory with branch-aware naming:
-- Review reports: `tmp/review_report_<branch>_<timestamp>.md`
-- PR reports: `tmp/pr_report_<branch>_<timestamp>.md`
-- Release reports: `tmp/release_report_<timestamp>.md`
-
-PR reports support incremental updates, appending new information to existing reports.
 
 ## Development
 
@@ -102,7 +81,9 @@ The CLI is built using [Typer](https://typer.tiangolo.com/) and dispatches to mo
 
 - `dylan/cli.py` - Main CLI entry point
 - `dylan/utility_library/dylan_review/` - Code review implementation
-- `dylan/utility_library/dylan_pr/` - PR creation implementation
-- `dylan/utility_library/dylan_release/` - Release management implementation
 - `dylan/utility_library/dylan_standup/` - Standup report implementation
-- `dylan/utility_library/shared/` - Shared utilities for branch strategy
+
+Each utility can also be run standalone:
+
+- `dylan review` - Direct code review access
+- `dylan standup` - Direct standup report access

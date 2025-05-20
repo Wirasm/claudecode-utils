@@ -12,6 +12,11 @@ import sys
 from abc import ABC, abstractmethod
 from typing import Final
 
+from ..shared.config import (
+    CLAUDE_CODE_INSTALL_CMD,
+    CLAUDE_CODE_NOT_FOUND_MSG,
+)
+
 
 class Provider(ABC):
     """Minimal LLM provider interface."""
@@ -43,7 +48,7 @@ class Provider(ABC):
 class ClaudeProvider(Provider):
     _BIN: Final[str] = shutil.which("claude") or "claude"
 
-    def generate(
+    def generate(  # noqa: C901
         self,
         prompt: str,
         *,
@@ -52,6 +57,12 @@ class ClaudeProvider(Provider):
         output_format: str = "text",
     ) -> str:
         """Generate content using Claude Code."""
+        # Check if Claude is available
+        if not self._BIN or self._BIN == "claude":
+            claude_path = shutil.which("claude")
+            if not claude_path:
+                raise RuntimeError(CLAUDE_CODE_NOT_FOUND_MSG)
+
         # Modify prompt if output path is specified
         if output_path:
             file_extension = os.path.splitext(output_path)[1].lower()
@@ -87,7 +98,7 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
             return result.stdout
         except FileNotFoundError as exc:
             raise RuntimeError(
-                "Claude Code CLI not found. Install with:\n  npm i -g @anthropic-ai/claude-code"
+                f"Claude Code CLI not found. Install with:\n  {CLAUDE_CODE_INSTALL_CMD}"
             ) from exc
         except subprocess.CalledProcessError as exc:
             error_msg = exc.stderr or str(exc)

@@ -1,6 +1,6 @@
-# Claude Code Utility Library
+# Dylan
 
-A collection of CLI utilities and experimental concepts for enhancing development workflows with Claude Code. This project serves as both a production-ready CLI application and a concept exploration library.
+AI-powered development utilities using Claude Code. This project combines production-ready CLI tools with an experimental concept library for enhancing development workflows.
 
 ## Core Application
 
@@ -35,11 +35,31 @@ Generates formatted standup reports from:
 dylan standup --since yesterday --open
 ```
 
+#### `dylan pr` - Pull Request Management
+Creates and manages pull requests with:
+- Automated PR title and description generation
+- Branch management and tracking
+- GitHub CLI integration
+
+```bash
+dylan pr feature-branch --target develop
+```
+
+#### `dylan release` - Release Management
+Manages project releases with:
+- Version bumping and changelog updates
+- Release notes generation
+- Git tag management
+
+```bash
+dylan release --minor --tag
+```
+
 ## Installation
 
 ```bash
 # Install as a development tool
-uv tool install -e /path/to/claudecode-utility
+uv tool install -e /path/to/dylan
 
 # Use anywhere
 dylan --help
@@ -68,22 +88,26 @@ The `concept_library/` directory contains experimental ideas and proof-of-concep
 ## Project Structure
 
 ```
-claudecode-utility/
-├── src/                    # Production CLI and utilities
-│   ├── cli.py             # Main CLI entry point
-│   └── utility_library/    
-│       ├── cc_review/     # Code review utility
-│       └── cc_standup/    # Standup report generator
-├── concept_library/       # Experimental concepts
-└── PRPs/                  # Product Requirement Prompts
+dylan/
+├── dylan/                 # Production CLI and utilities
+│   ├── cli.py            # Main CLI entry point
+│   └── utility_library/  # Core utility modules
+│       ├── dylan_review/ # Code review utility
+│       ├── dylan_pr/     # Pull request creation
+│       ├── dylan_release/# Release management
+│       ├── dylan_standup/# Standup report generator
+│       ├── provider_clis/# Claude Code provider interfaces
+│       └── shared/       # Shared utilities and UI components
+├── concept_library/      # Experimental concepts
+└── PRPs/                 # Product Requirement Prompts
 ```
 
 ## Development
 
 ```bash
 # Setup
-git clone https://github.com/yourusername/claudecode-utility.git
-cd claudecode-utility
+git clone https://github.com/Wirasm/dylan.git
+cd dylan
 uv venv
 source .venv/bin/activate
 
@@ -95,6 +119,9 @@ uv run pytest
 
 # Format code
 uv run black .
+
+# Clean build artifacts (removes old egg-info, pycache, etc.)
+./scripts/clean_build_artifacts.sh
 ```
 
 ## Philosophy

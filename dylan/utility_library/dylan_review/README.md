@@ -1,16 +1,15 @@
-# Claude Code Review Runner
+# Dylan Review
 
 A simple utility that runs code reviews using Claude Code on git branches and commits.
 
 ## Overview
 
-The dylan_review tool helps developers get AI-powered code reviews by:
+The Dylan Review tool helps developers get AI-powered code reviews by:
 
-1. Detecting the appropriate base branch to compare against
-2. Analyzing git diffs between branches or commits
-3. Identifying issues, bugs, and potential improvements
-4. Providing specific feedback with file and line references
-5. Generating branch-aware review reports in markdown or JSON format
+1. Analyzing git diffs between branches or commits
+2. Identifying issues, bugs, and potential improvements
+3. Providing specific feedback with file and line references
+4. Generating structured review reports in markdown or JSON format
 
 **Required Claude Code Tools**: Read, Glob, Grep, LS, Bash, Write (configurable via --allowed-tools)
 
@@ -96,23 +95,21 @@ run_claude_review(prompt, output_format="json")
 
 ### Markdown (default)
 
-Creates a `tmp/review_report_<branch>_<timestamp>.md` file with:
+Creates a `tmp/review_[branch_name]_[timestamp].md` file (or `tmp/review_report.md` if no name collision) with:
 
-- Report metadata (branch, base branch, commits, file changes)
+- Report metadata (branch, commits, file changes)
 - Issues ranked by severity
 - Specific file/line references
 - Suggested fixes
-- Branch name is sanitized (slashes replaced with dashes)
 
 ### JSON
 
-Creates a `tmp/review_report_<branch>_<timestamp>.json` file with structured data:
+Creates a `tmp/review_[branch_name]_[timestamp].json` file (or `tmp/review_report.json` if no name collision) with structured data:
 
 - Report metadata
 - Issue metadata
 - Detailed issue list with severity, type, and fixes
 - Summary of critical issues
-- Branch name is sanitized (slashes replaced with dashes)
 
 ## Customization
 
@@ -142,22 +139,13 @@ Issue types:
 4. **JSON escape issues**: Use the `--pretty-print` option to fix common escape problems
 5. **Branch not found**: Ensure the branch name is spelled correctly
 
-## Branch Strategy Detection
-
-The review tool automatically detects the appropriate base branch to compare against:
-
-1. Checks for `.branchingstrategy` file with configured `release_branch`
-2. Falls back to common development branches (develop, development, dev) 
-3. Defaults to main/master if no development branch is found
-
-This ensures reviews compare feature branches against the correct integration branch.
-
 ## Architecture
 
-The dylan_review tool is split into modular components:
+The Dylan Review tool is split into modular components:
 
-- `dylan_review_runner.py`: Core review functionality with branch detection
-- `dylan_review_cli.py`: Typer-based CLI interface  
+- `dylan_review_runner.py`: Core review functionality
+- `dylan_review_cli.py`: Typer-based CLI interface
+- `dylan_review_utils.py`: Utility functions (pretty-printing)
 - `__init__.py`: Module exports
 
 ## License
