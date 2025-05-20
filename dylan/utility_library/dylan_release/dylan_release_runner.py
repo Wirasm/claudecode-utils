@@ -89,11 +89,11 @@ def run_claude_release(
             # Update task to complete
             progress.update(task, completed=True)
 
-            # Success message with flair  
+            # Success message with flair
             console.print()
             console.print(create_status("Release created successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory with format:[/]")
-            console.print(f"[{COLORS['muted']}]dylan-release-vX.Y.Z-from-[branch].md[/]")
+            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
+            console.print(f"[{COLORS['muted']}]Format: dylan-release-v<version>-from-<branch>.md[/]")
             console.print()
 
             # Show a nice completion message

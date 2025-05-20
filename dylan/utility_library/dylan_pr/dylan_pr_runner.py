@@ -94,8 +94,8 @@ def run_claude_pr(
             # Success message with flair
             console.print()
             console.print(create_status("Pull request created successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory with format:[/]")
-            console.print(f"[{COLORS['muted']}]dylan-pr-[current-branch]-to-[target].md[/]")
+            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
+            console.print(f"[{COLORS['muted']}]Format: dylan-pr-<branch>-to-<target>.md[/]")
             console.print()
 
             # Show a nice completion message
@@ -201,13 +201,17 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Changed files: git diff [target]...HEAD --name-only
 
 {
-        "3. CHANGELOG SECTION FOR PR DESCRIPTION (if --changelog flag):"
+        "3. CHANGELOG UPDATE (default unless --no-changelog flag):"
+        + "\n"
+        + "   - Find CHANGELOG.md file in repository root"
+        + "\n"
+        + "   - Find [Unreleased] section in the file"
         + "\n"
         + "   - Analyze all commits since target branch: git log [target]..HEAD --pretty=format:'%h %s'"
         + "\n"
         + "   - Parse commit messages and group by conventional types"
         + "\n"
-        + "   - Create a dedicated 'Changelog' section with subsections:"
+        + "   - Add entries to [Unreleased] section with following structure:"
         + "\n"
         + "     * ### Added - new features (commits starting with feat:)"
         + "\n"
@@ -217,18 +221,18 @@ CRITICAL STEPS - Use Bash and other tools to:
         + "\n"
         + "     * ### Removed - removed features"
         + "\n"
-        + "   - Format each entry: '- <description> (`<commit_hash>`)'"
+        + "   - Format each entry: '- <description>'"
         + "\n"
-        + "   - IMPORTANT: Add this as a separate '## Changelog' section in PR body"
+        + "   - Use Edit or MultiEdit tool to update CHANGELOG.md"
         + "\n"
-        + "   - DO NOT modify actual CHANGELOG.md file"
+        + "   - Commit your changes to CHANGELOG.md before creating PR"
         + "\n"
-        + "   - Include changelog content in report for future reference"
+        + "   - Also add the changelog section to the PR description"
         + "\n"
         if update_changelog
-        else ""
+        else "3. CHANGELOG UPDATE:\n   - Skip changelog updates (--no-changelog flag specified)\n   - Proceed directly to PR creation without modifying CHANGELOG.md\n"
     }
-{"4. PR CREATION:" if update_changelog else "3. PR CREATION:"}
+4. PR CREATION:
    - Extract meaningful title from branch name or commits
    - Generate comprehensive description:
      * Summary of changes
@@ -238,7 +242,7 @@ CRITICAL STEPS - Use Bash and other tools to:
      * Breaking changes (if any)
    - Create PR: gh pr create --base [target] --head [current] --title "..." --body "..."
 
-{"5. REPORT GENERATION:" if update_changelog else "4. REPORT GENERATION:"}
+5. REPORT GENERATION:
    - Document PR URL if created
    - Summarize what was done
    - Include in report:

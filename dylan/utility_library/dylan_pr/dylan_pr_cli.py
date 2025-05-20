@@ -28,11 +28,11 @@ def pr(
         help="Target branch for PR (defaults to develop, falls back to main if develop doesn't exist)",
         show_default=True,
     ),
-    changelog: bool = typer.Option(
+    no_changelog: bool = typer.Option(
         False,
-        "--changelog",
-        "-c",
-        help="Update [Unreleased] section in CHANGELOG.md",
+        "--no-changelog",
+        "-n",
+        help="Skip updating the [Unreleased] section in CHANGELOG.md",
         show_default=True,
     ),
     tools: str = typer.Option(
@@ -93,18 +93,18 @@ def pr(
     console.print(create_box_header("PR Configuration", {
         "Source": branch or "current branch",
         "Target": target,
-        "Changelog": format_boolean_option(changelog),
+        "Changelog": format_boolean_option(not no_changelog, "✓ Enabled (default)", "✗ Disabled"),
         "Tools": format_tool_count(allowed_tools),
         "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
         "Exit": format_boolean_option(stream, "/exit (type to quit at any time)", "Ctrl+C to interrupt")
     }))
     console.print()
 
-    # Generate prompt
+    # Generate prompt - changelog is now enabled by default unless --no-changelog is specified
     prompt = generate_pr_prompt(
         branch=branch,
         target_branch=target,
-        update_changelog=changelog,
+        update_changelog=not no_changelog,
         output_format=format
     )
 

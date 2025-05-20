@@ -96,8 +96,8 @@ def run_claude_review(
             # Success message with flair
             console.print()
             console.print(create_status("Code review completed successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory with format:[/]")
-            console.print(f"[{COLORS['muted']}]dylan-review-compare-[branch]-to-[target].md[/]")
+            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
+            console.print(f"[{COLORS['muted']}]Format: dylan-review-compare-<branch>-to-<target>.md[/]")
             console.print()
 
             # Show a nice completion message
