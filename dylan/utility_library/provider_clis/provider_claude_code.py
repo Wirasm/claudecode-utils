@@ -63,9 +63,15 @@ class ClaudeProvider(Provider):
         Returns:
             The prepared prompt
         """
+        # If no output path is specified, trust the prompt to handle file saving
         if not output_path:
-            return prompt
+            # Ensure the tmp directory exists
+            tmp_directive = """
+IMPORTANT: Make sure to create the tmp/ directory if it doesn't exist: mkdir -p tmp
+"""
+            return prompt + tmp_directive
 
+        # If an output path is specified, add it to the prompt
         file_extension = os.path.splitext(output_path)[1].lower()
         if file_extension == ".json":
             file_directive = f"""

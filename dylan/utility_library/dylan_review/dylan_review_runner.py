@@ -59,8 +59,10 @@ def run_claude_review(
         print(prompt)
         print("\n========================\n")
 
-    # Determine output file based on format - always in tmp directory
-    output_file = "tmp/review_report.json" if output_format == "json" else "tmp/review_report.md"
+    # We no longer provide a fixed output file - Claude will determine the correct filename
+    # based on the current branch and target branch using the format:
+    # tmp/dylan-review-compare-[current-branch]-to-[target].<extension>
+    output_file = None
 
     # Get provider and run the review
     provider = get_provider()
@@ -94,7 +96,8 @@ def run_claude_review(
             # Success message with flair
             console.print()
             console.print(create_status("Code review completed successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to:[/] [{COLORS['accent']}]{output_file}[/]")
+            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory with format:[/]")
+            console.print(f"[{COLORS['muted']}]dylan-review-compare-[branch]-to-[target].md[/]")
             console.print()
 
             # Show a nice completion message
@@ -136,52 +139,61 @@ def generate_review_prompt(branch: str | None = None, output_format: str = "text
     Returns:
         The review prompt string
     """
-    if branch:
-        base_prompt = f"Review the changes in branch '{branch}' compared to develop (or main if develop doesn't exist)."
-    else:
-        base_prompt = (
-            "Review the latest changes in this repository compared to develop (or main if develop doesn't exist)."
-        )
-
     # Determine file extension based on format
     extension = ".json" if output_format == "json" else ".md"
-
+    
     branching_instructions = """
 BRANCH STRATEGY DETECTION:
-1. Check for .branchingstrategy file in repository root
-2. If found, parse release_branch (typically: develop) and use as base for comparison
-3. If not found, check for common development branches (develop, development, dev)
-4. If none found, fall back to main/master
-5. Report which base branch was selected
+1. First, determine the current branch using: git symbolic-ref --short HEAD
+2. Check for .branchingstrategy file in repository root
+3. If found, parse release_branch (typically: develop) and use as target for comparison
+4. If not found, check for common development branches (develop, development, dev)
+5. If none found, fall back to main/master as the target branch
+6. Report both the current branch and target branch in the metadata
+"""
+
+    file_handling_instructions = f"""
+FILE HANDLING INSTRUCTIONS:
+1. Create the tmp/ directory if it doesn't exist: mkdir -p tmp
+2. Determine the current branch: git symbolic-ref --short HEAD
+3. Determine the target branch from the BRANCH STRATEGY DETECTION steps
+4. Create a filename in this format: tmp/dylan-review-compare-[current-branch]-to-[target]{extension}
+   - Replace any slashes in branch names with hyphens (e.g., feature/foo becomes feature-foo)
+5. If the file already exists, APPEND your new review to the file with a clear separator
+   - Add a timestamp header: ## Review [DATE] [TIME]
+   - This allows tracking multiple reviews over time in the same file
+"""
+
+    review_steps = """
+REVIEW STEPS:
+1. Determine current branch and target branch following the strategy detection
+2. Create the properly formatted output filename as specified in FILE HANDLING
+3. Use git diff to analyze the changes from the current branch to the target branch
+   - git diff [target]...[current] for detailed changes
+   - git diff --stat [target]...[current] for change statistics
+   - git log [target]...[current] for commit history
+4. Identify issues, bugs, or improvements in the code
+5. Provide specific feedback with file and line references
+6. Suggest concrete fixes for each issue
+7. Format the report according to the metadata requirements
+8. Save the report to the determined filename
 """
 
     return f"""
-{base_prompt}
+Review the changes in the current branch compared to the target branch (develop or main).
 
 {branching_instructions}
 
-IMPORTANT FILE HANDLING INSTRUCTIONS:
-- Save your report to the tmp/ directory
-- If tmp/review_report{extension} already exists, create a new file with timestamp
-- Format: tmp/review_report_YYYYMMDD_HHMMSS{extension}
-- Use the Bash tool to check if the file exists first
-- DO NOT modify or append to existing files
+{file_handling_instructions}
 
-Please:
-1. Check if tmp/review_report{extension} exists using Bash
-2. If it exists, create a new filename with date/timestamp
-3. Detect the correct base branch following the BRANCH STRATEGY DETECTION steps
-4. Use git diff to see the changes from the detected base branch
-5. Identify any issues, bugs, or improvements
-6. Provide specific feedback with file and line references
-7. Suggest concrete fixes where applicable
+{review_steps}
 
 Provide your review with the following metadata:
 - Report metadata:
-    - Report file name
-    - Report relative path
-    - Branch name
-    - Base branch used for comparison
+    - Report file name (dylan-review-compare-[current-branch]-to-[target]{extension})
+    - Report relative path (tmp/dylan-review-compare-[current-branch]-to-[target]{extension})
+    - Current branch name
+    - Target branch used for comparison
     - List of changed files
     - Date range
     - Number of commits
@@ -205,5 +217,5 @@ For each issue, provide:
 - A list of affected lines
 - A list of suggested fixes
 
-**ENSURE YOU ALWAYS RETURN THE FILE NAME AND RELATIVE PATH AS PART OF THE REPORT METADATA**
+**IMPORTANT: Append your review to the file if it already exists, with a timestamp header separating reviews**
 """
