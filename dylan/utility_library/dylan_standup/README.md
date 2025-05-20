@@ -1,10 +1,10 @@
-# Claude Code Standup Report Generator
+# Dylan Standup Report Generator
 
 A simple utility that generates stand-up reports using Claude Code, git commits, and GitHub PRs.
 
 ## Overview
 
-The dylan_standup tool helps developers generate daily stand-up reports by:
+The Dylan Standup tool helps developers generate daily stand-up reports by:
 
 1. Collecting your recent git commits (since yesterday by default)
 2. Gathering your GitHub pull requests (if configured)
@@ -121,7 +121,7 @@ The report format can be customized by editing the prompt template in `report.py
 
 ## Architecture
 
-The dylan_standup tool is split into modular components:
+The Dylan Standup tool is split into modular components:
 
 - `standup_cli.py`: Main CLI logic using argparse
 - `standup_typer.py`: Typer wrapper for integration with main CLI
