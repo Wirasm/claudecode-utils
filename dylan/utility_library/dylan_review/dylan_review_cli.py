@@ -74,7 +74,8 @@ def review(
         "Branch": branch or "latest changes",
         "Format": format,
         "Tools": format_tool_count(allowed_tools),
-        "Stream": format_boolean_option(stream, "✓ Enabled (/exit to quit)", "✗ Disabled")
+        "Stream": format_boolean_option(stream, "✓ Enabled", "✗ Disabled"),
+        "Exit": "/exit (type to quit at any time)"
     }))
     console.print()
 

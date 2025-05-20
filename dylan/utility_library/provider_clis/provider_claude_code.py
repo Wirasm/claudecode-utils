@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import os
 import shutil
+import signal
 import subprocess
 import sys
+import threading
 from abc import ABC, abstractmethod
 from typing import Final
 
@@ -16,6 +18,7 @@ from ..shared.config import (
     CLAUDE_CODE_INSTALL_CMD,
     CLAUDE_CODE_NOT_FOUND_MSG,
 )
+from ..shared.exit_command import DEFAULT_EXIT_COMMAND
 from .shared.subprocess_utils import (
     stream_process_output,
     terminate_process,
@@ -144,7 +147,7 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
         output_format: str = "text",
         timeout: int | None = None,
         stream: bool = False,
-        exit_command: str | None = None,
+        exit_command: str | None = DEFAULT_EXIT_COMMAND,
     ) -> str:
         """Generate content using Claude Code with proper interrupt handling.
 
@@ -193,12 +196,33 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
                 bufsize=1,  # Line buffered
             ) as proc:
                 output_lines = []
+                # Set up exit command listener independently of streaming
+                # This way the exit command works even without streaming enabled
+                exit_triggered = threading.Event()
+                if exit_command:
+                    def on_exit_command():
+                        exit_triggered.set()
+                        print(f"\nExit command '{exit_command}' detected. Shutting down...", file=sys.stderr)
+                        proc.send_signal(signal.SIGINT)
+
+                    from .shared.subprocess_utils import setup_exit_command_listener
+                    setup_exit_command_listener(exit_command, on_exit_command)
+
                 try:
                     # Stream output if requested, otherwise collect all lines
-                    for line in stream_process_output(proc, timeout, exit_command if stream else None):
-                        if stream:
+                    if stream:
+                        for line in stream_process_output(proc, timeout, None):  # No exit command here, already set up
                             print(line)
-                        output_lines.append(line)
+                            output_lines.append(line)
+                            if exit_triggered.is_set():
+                                break
+                    else:
+                        # For non-streaming mode, still use a loop to check exit_triggered
+                        if proc.stdout:
+                            for line in proc.stdout:
+                                output_lines.append(line.strip())
+                                if exit_triggered.is_set():
+                                    break
 
                 except TimeoutError as e:
                     terminate_process(proc)
