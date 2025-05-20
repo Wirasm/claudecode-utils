@@ -107,19 +107,21 @@ BRANCH STRATEGY DETECTION:
 
 IMPORTANT FILE HANDLING INSTRUCTIONS:
 - Save your report to the tmp/ directory
-- If tmp/review_report{extension} already exists, create a new file with timestamp
-- Format: tmp/review_report_YYYYMMDD_HHMMSS{extension}
+- CRITICAL: Get current branch name and include it in filename
+- Base filename format: tmp/review_report_<branch_name>_YYYYMMDD_HHMMSS{extension}
+- Replace slashes in branch name with dashes (e.g., feature/foo → feature-foo)
 - Use the Bash tool to check if the file exists first
-- DO NOT modify or append to existing files
+- Always create a new file with timestamp for each review
 
 Please:
-1. Check if tmp/review_report{extension} exists using Bash
-2. If it exists, create a new filename with date/timestamp
-3. Detect the correct base branch following the BRANCH STRATEGY DETECTION steps
-4. Use git diff to see the changes from the detected base branch
-5. Identify any issues, bugs, or improvements
-6. Provide specific feedback with file and line references
-7. Suggest concrete fixes where applicable
+1. Get current branch name: git symbolic-ref --short HEAD
+2. Sanitize branch name for filename (replace / with -)
+3. Create filename: tmp/review_report_<sanitized_branch>_YYYYMMDD_HHMMSS{extension}
+4. Detect the correct base branch following the BRANCH STRATEGY DETECTION steps
+5. Use git diff to see the changes from the detected base branch
+6. Identify any issues, bugs, or improvements
+7. Provide specific feedback with file and line references
+8. Suggest concrete fixes where applicable
 
 Provide your review with the following metadata:
 - Report metadata:

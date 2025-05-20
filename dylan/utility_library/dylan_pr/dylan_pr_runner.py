@@ -99,10 +99,15 @@ YOUR MISSION:
 
 IMPORTANT FILE HANDLING INSTRUCTIONS:
 - Save your report to the tmp/ directory
-- If tmp/pr_report{extension} already exists, create a new file with timestamp
-- Format: tmp/pr_report_YYYYMMDD_HHMMSS{extension}
-- Use the Bash tool to check if the file exists first
-- DO NOT modify or append to existing files
+- CRITICAL: Get current branch name and include it in filename
+- Base filename format: tmp/pr_report_<branch_name>_YYYYMMDD_HHMMSS{extension}
+- Replace slashes in branch name with dashes (e.g., feature/foo → feature-foo)
+- Check if file with same branch name exists: tmp/pr_report_<branch_name>_*{extension}
+- If exists, append to the existing file with separator:
+  * Add "\n\n---\n\n# PR Report Update - <timestamp>\n\n"
+  * Then add new content
+- If not exists, create new file with full timestamp
+- Use the Bash tool to check for existing files first
 
 CRITICAL STEPS - Use Bash and other tools to:
 
@@ -125,29 +130,45 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Changed files: git diff {target_branch}...{branch or "HEAD"} --name-only
 
 {
-        "4. CHANGELOG UPDATE (if --changelog flag):"
+        "4. CHANGELOG SECTION FOR PR DESCRIPTION (if --changelog flag):"
         + "\n"
-        + "   - Find CHANGELOG.md (or HISTORY.md, NEWS.md)"
+        + "   - Analyze all commits since target branch: git log " + target_branch + "..HEAD --pretty=format:'%h %s'"
         + "\n"
-        + "   - Locate [Unreleased] section"
+        + "   - Parse commit messages and group by conventional types"
         + "\n"
-        + "   - Analyze commits and group by type:"
+        + "   - Create a dedicated 'Changelog' section with subsections:"
         + "\n"
-        + "     * Added: new features (feat:)"
+        + "     * ### Added - new features (commits starting with feat:)"
         + "\n"
-        + "     * Changed: updates to existing features"
+        + "     * ### Changed - updates (commits: refactor:, style:, perf:, chore:)"
         + "\n"
-        + "     * Fixed: bug fixes (fix:)"
+        + "     * ### Fixed - bug fixes (commits starting with fix:)"
         + "\n"
-        + "     * Removed: removed features"
+        + "     * ### Removed - removed features"
         + "\n"
-        + "   - Add commit entries to appropriate sections"
+        + "   - Format each entry: '- <description> (`<commit_hash>`)''"
         + "\n"
-        + '   - Format: "- Description of change (`commit_hash`)"'
+        + "   - IMPORTANT: Add this as a separate '## Changelog' section in PR body"
         + "\n"
-        + "   - Use Edit tool to update changelog"
+        + "   - Example format:"
         + "\n"
-        + '   - Stage and commit: git add CHANGELOG.md && git commit -m "docs: update unreleased section"'
+        + "     ## Changelog"
+        + "\n"
+        + "     ### Added"
+        + "\n"
+        + "     - New feature description (`abc123`)"
+        + "\n"
+        + "     ### Changed"
+        + "\n"
+        + "     - Updated component behavior (`def456`)"
+        + "\n"
+        + "     ### Fixed"
+        + "\n"
+        + "     - Resolved issue with validation (`ghi789`)"
+        + "\n"
+        + "   - DO NOT modify actual CHANGELOG.md file"
+        + "\n"
+        + "   - Include changelog content in report for future reference"
         + "\n"
         if update_changelog
         else ""
@@ -169,7 +190,15 @@ CRITICAL STEPS - Use Bash and other tools to:
    - Document PR URL if created
    - Summarize what was done
    - Note any issues encountered
-   - Save to appropriate filename in tmp/
+   - Include branch info in filename: tmp/pr_report_<safe_branch_name>_YYYYMMDD_HHMMSS{extension}
+   - If file already exists for this branch, append new section with separator
+   - Include in report:
+     * PR URL
+     * Branch name (feature branch)
+     * Target branch
+     {"* Changelog section content" if update_changelog else ""}
+     * Timestamp
+   - IMPORTANT: Save using the branch-specific naming pattern
 
 REMEMBER:
 - Be autonomous - make all decisions yourself
