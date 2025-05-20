@@ -46,29 +46,58 @@ This will:
 
 ### 3. Code Review and Merge
 
-After code review and approval, merge your feature branch into `develop`.
+After creating a PR, the following steps should be followed:
 
----
-
-(WIP) below
-
-### 4. Release Process
-
-When you're ready to create a release from `develop` to `main`, use the dylan release command:
+1. **Code Review**: Request reviews from team members
+2. **Address Feedback**: Make necessary changes based on review feedback
+3. **CI/CD Checks**: Ensure all automated tests and checks pass
+4. **Approval**: Get approval from required reviewers
+5. **Merge**: Merge the feature branch into `develop` using the GitHub UI or command line:
 
 ```bash
 git checkout develop
-git pull  # ensure you have the latest changes
-dylan release --minor --tag
+git merge --no-ff feature/my-feature
+git push origin develop
 ```
 
-This will:
+The `--no-ff` flag creates a merge commit even if a fast-forward merge is possible, which helps maintain a clear history of feature integrations.
 
-1. Create a version bump and update the changelog
-2. Commit changes on develop
-3. Merge develop → main
-4. Tag the release on main
-5. Push both branches and tags
+### 4. Release Process
+
+When you're ready to create a release from `develop` to `main`, follow these steps:
+
+```bash
+# 1. Create a release branch from develop
+git checkout develop
+git pull  # ensure you have the latest changes
+git checkout -b release/x.y.z  # where x.y.z is the new version number
+
+# 2. Update version and changelog
+# Edit pyproject.toml and CHANGELOG.md
+
+# 3. Commit and push the release branch
+git add pyproject.toml CHANGELOG.md
+git commit -m "build(release): bump version to x.y.z"
+git push -u origin release/x.y.z
+
+# 4. Create a PR from the release branch to main
+# Merge the PR after review
+
+# 5. After the PR is merged, sync develop with main
+git checkout develop
+git merge main
+git push origin develop
+```
+
+Alternatively, you can use the dylan release command which automates this process:
+
+```bash
+dylan release --patch  # for patch releases
+# or
+dylan release --minor  # for minor releases
+# or
+dylan release --major  # for major releases
+```
 
 ## Branch Naming Conventions
 
