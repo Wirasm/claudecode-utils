@@ -6,7 +6,7 @@ The main command-line interface for Dylan utilities.
 
 ```bash
 # Install globally with uv
-uv tool install -e /path/to/dylan
+uv tool install -e /path/to/claudecode-utility
 
 # Verify installation
 dylan --help

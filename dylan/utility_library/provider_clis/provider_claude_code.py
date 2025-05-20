@@ -43,7 +43,7 @@ class Provider(ABC):
 class ClaudeProvider(Provider):
     _BIN: Final[str] = shutil.which("claude") or "claude"
 
-    def generate(  # noqa: C901
+    def generate(
         self,
         prompt: str,
         *,
@@ -52,18 +52,6 @@ class ClaudeProvider(Provider):
         output_format: str = "text",
     ) -> str:
         """Generate content using Claude Code."""
-        # Check if Claude is available
-        if not self._BIN or self._BIN == "claude":
-            claude_path = shutil.which("claude")
-            if not claude_path:
-                raise RuntimeError(
-                    "🔴 Claude Code not found!\n"
-                    "Please install Claude Code first:\n"
-                    "  npm install -g @anthropic-ai/claude-code\n"
-                    "  \n"
-                    "For more info: https://github.com/anthropics/claude-code"
-                )
-
         # Modify prompt if output path is specified
         if output_path:
             file_extension = os.path.splitext(output_path)[1].lower()

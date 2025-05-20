@@ -5,8 +5,7 @@
       "Bash(grep:*)",
       "Bash(mv:*)",
       "Bash(chmod:*)",
-      "Bash(git checkout:*)",
-      "Bash(git fetch:*)"
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

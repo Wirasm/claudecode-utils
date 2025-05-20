@@ -170,7 +170,7 @@ standup --open
 
 ## Code Architecture
 
-Dylan is a modular CLI for AI-powered development utilities using Claude Code. The project explores three core concepts:
+The dylan is a modular library for code review and development using Claude. The project explores three core concepts:
 
 ### 1. Automated Review Flow
 

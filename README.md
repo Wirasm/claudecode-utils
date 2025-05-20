@@ -1,6 +1,6 @@
-# Dylan
+# Claude Code Utility Library
 
-AI-powered development utilities using Claude Code. This project combines production-ready CLI tools with an experimental concept library for enhancing development workflows.
+A collection of CLI utilities and experimental concepts for enhancing development workflows with Claude Code. This project serves as both a production-ready CLI application and a concept exploration library.
 
 ## Core Application
 
@@ -39,7 +39,7 @@ dylan standup --since yesterday --open
 
 ```bash
 # Install as a development tool
-uv tool install -e /path/to/dylan
+uv tool install -e /path/to/claudecode-utility
 
 # Use anywhere
 dylan --help
@@ -68,24 +68,22 @@ The `concept_library/` directory contains experimental ideas and proof-of-concep
 ## Project Structure
 
 ```
-dylan/
-├── dylan/                 # Production CLI and utilities
-│   ├── cli.py            # Main CLI entry point
-│   └── utility_library/  # Core utility modules
-│       ├── dylan_review/ # Code review utility
-│       ├── dylan_pr/     # Pull request creation
-│       ├── dylan_release/# Release management
-│       └── dylan_standup/# Standup report generator
-├── concept_library/      # Experimental concepts
-└── PRPs/                 # Product Requirement Prompts
+claudecode-utility/
+├── src/                    # Production CLI and utilities
+│   ├── cli.py             # Main CLI entry point
+│   └── utility_library/    
+│       ├── cc_review/     # Code review utility
+│       └── cc_standup/    # Standup report generator
+├── concept_library/       # Experimental concepts
+└── PRPs/                  # Product Requirement Prompts
 ```
 
 ## Development
 
 ```bash
 # Setup
-git clone https://github.com/yourusername/dylan.git
-cd dylan
+git clone https://github.com/yourusername/claudecode-utility.git
+cd claudecode-utility
 uv venv
 source .venv/bin/activate
 
