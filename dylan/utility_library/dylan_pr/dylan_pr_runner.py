@@ -57,8 +57,10 @@ def run_claude_pr(
         print(prompt)
         print("\n========================\n")
 
-    # Determine output file based on format - always in tmp directory
-    output_file = "tmp/pr_report.json" if output_format == "json" else "tmp/pr_report.md"
+    # We no longer provide a fixed output file - Claude will determine the correct filename
+    # based on the current branch and target branch using the format:
+    # tmp/dylan-pr-[current-branch]-to-[target].<extension>
+    output_file = None
 
     # Get provider and run the PR creation
     provider = get_provider()
@@ -92,7 +94,8 @@ def run_claude_pr(
             # Success message with flair
             console.print()
             console.print(create_status("Pull request created successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to:[/] [{COLORS['accent']}]{output_file}[/]")
+            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory with format:[/]")
+            console.print(f"[{COLORS['muted']}]dylan-pr-[current-branch]-to-[target].md[/]")
             console.print()
 
             # Show a nice completion message
@@ -141,49 +144,66 @@ def generate_pr_prompt(
     Returns:
         The PR creation prompt string
     """
-    branch_instruction = f"'{branch}'" if branch else "the current branch"
     extension = ".json" if output_format == "json" else ".md"
+    
+    branching_instructions = """
+BRANCH STRATEGY DETECTION:
+1. First, determine the current branch using: git symbolic-ref --short HEAD
+2. Check for .branchingstrategy file in repository root
+3. If found, parse release_branch (typically: develop) and use as target for PR
+4. If not found, check for common development branches (develop, development, dev)
+5. If none found, fall back to main/master as the target branch
+6. IMPORTANT: Use the specified target branch if one was explicitly provided
+7. Report both the current branch and target branch in the metadata
+"""
+
+    file_handling_instructions = f"""
+FILE HANDLING INSTRUCTIONS:
+1. Create the tmp/ directory if it doesn't exist: mkdir -p tmp
+2. Determine the current branch: git symbolic-ref --short HEAD
+3. Determine the target branch from the BRANCH STRATEGY DETECTION steps
+4. Create a filename in this format: tmp/dylan-pr-[current-branch]-to-[target]{extension}
+   - Replace any slashes in branch names with hyphens (e.g., feature/foo becomes feature-foo)
+5. If the file already exists, APPEND your new PR report to the file with a clear separator
+   - Add a timestamp header: ## PR Created [DATE] [TIME]
+   - This allows tracking multiple PR attempts over time in the same file
+"""
 
     return f"""
 You are a PR creator with COMPLETE AUTONOMY to analyze commits and create pull requests.
 
 YOUR MISSION:
-1. Determine the branch to create PR from ({branch_instruction})
-2. Analyze all commits in this branch vs {target_branch}
-3. {"Update changelog if requested" if update_changelog else "Skip changelog update"}
-4. Create a high-quality pull request
+1. Determine the branch to create PR from (current working branch)
+2. Determine the target branch (default: develop or from branching strategy)
+3. Analyze all commits in this branch vs target branch
+4. {"Update changelog if requested" if update_changelog else "Skip changelog update"}
+5. Create a high-quality pull request
 
-IMPORTANT FILE HANDLING INSTRUCTIONS:
-- Save your report to the tmp/ directory
-- If tmp/pr_report{extension} already exists, create a new file with timestamp
-- Format: tmp/pr_report_YYYYMMDD_HHMMSS{extension}
-- Use the Bash tool to check if the file exists first
-- DO NOT modify or append to existing files
+{branching_instructions}
+
+{file_handling_instructions}
 
 CRITICAL STEPS - Use Bash and other tools to:
 
-1. FILE HANDLING:
-   - Check if tmp/pr_report{extension} exists
-   - If it exists, create new filename with timestamp
-   - Ensure tmp/ directory exists: mkdir -p tmp
-
-2. GIT CONTEXT DISCOVERY:
+1. BRANCH DETERMINATION:
    - Current branch: git symbolic-ref --short HEAD
-   - Verify branch exists: git rev-parse --verify {branch or "HEAD"}
-   - Check if pushed: git ls-remote --heads origin {branch or "$(git symbolic-ref --short HEAD)"}
-   - Get default branch: git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
-   - List existing PRs: gh pr list --head {branch or "$(git symbolic-ref --short HEAD)"}
+   - Verify branch exists: git rev-parse --verify HEAD
+   - Check if pushed: git ls-remote --heads origin $(git symbolic-ref --short HEAD)
+   - Apply BRANCH STRATEGY DETECTION to determine target branch
+   - Override with "{target_branch}" if explicitly specified
 
-3. COMMIT ANALYSIS:
-   - Get all commits: git log {target_branch}..{branch or "HEAD"} --pretty=format:'%h %s'
-   - Analyze changes: git diff {target_branch}...{branch or "HEAD"} --stat
-   - Detailed diff: git diff {target_branch}...{branch or "HEAD"}
-   - Changed files: git diff {target_branch}...{branch or "HEAD"} --name-only
+2. PR PREPARATION:
+   - Check for existing PRs: gh pr list --head $(git symbolic-ref --short HEAD)
+   - Skip creation if PR already exists
+   - Get all commits: git log [target]..HEAD --pretty=format:'%h %s'
+   - Analyze changes: git diff [target]...HEAD --stat
+   - Detailed diff: git diff [target]...HEAD
+   - Changed files: git diff [target]...HEAD --name-only
 
 {
-        "4. CHANGELOG SECTION FOR PR DESCRIPTION (if --changelog flag):"
+        "3. CHANGELOG SECTION FOR PR DESCRIPTION (if --changelog flag):"
         + "\n"
-        + "   - Analyze all commits since target branch: git log " + target_branch + "..HEAD --pretty=format:'%h %s'"
+        + "   - Analyze all commits since target branch: git log [target]..HEAD --pretty=format:'%h %s'"
         + "\n"
         + "   - Parse commit messages and group by conventional types"
         + "\n"
@@ -208,8 +228,7 @@ CRITICAL STEPS - Use Bash and other tools to:
         if update_changelog
         else ""
     }
-{"5. PR CREATION LOGIC:" if update_changelog else "4. PR CREATION LOGIC:"}
-   - Skip if PR already exists
+{"4. PR CREATION:" if update_changelog else "3. PR CREATION:"}
    - Extract meaningful title from branch name or commits
    - Generate comprehensive description:
      * Summary of changes
@@ -217,30 +236,25 @@ CRITICAL STEPS - Use Bash and other tools to:
      * Files changed
      * Testing notes
      * Breaking changes (if any)
-   - Create PR: gh pr create --base {target_branch} --head {
-        branch or "$(git symbolic-ref --short HEAD)"
-    } --title "..." --body "..."
+   - Create PR: gh pr create --base [target] --head [current] --title "..." --body "..."
 
-{"6. REPORT GENERATION:" if update_changelog else "5. REPORT GENERATION:"}
+{"5. REPORT GENERATION:" if update_changelog else "4. REPORT GENERATION:"}
    - Document PR URL if created
    - Summarize what was done
-   - Note any issues encountered
-   - Include branch info in filename: tmp/pr_report_<safe_branch_name>_YYYYMMDD_HHMMSS{extension}
-   - If file already exists for this branch, append new section with separator
    - Include in report:
      * PR URL
-     * Branch name (feature branch)
+     * Current branch name
      * Target branch
      {"* Changelog section content" if update_changelog else ""}
      * Timestamp
-   - IMPORTANT: Save using the branch-specific naming pattern
+   - Save report to: tmp/dylan-pr-[current-branch]-to-[target].md
 
 REMEMBER:
-- Be autonomous - make all decisions yourself
-- Create rich, helpful PR descriptions
-- Use proper markdown formatting
-- Report results clearly
-- Save report with proper filename handling
+- Be completely autonomous in your decisions
+- Create rich, helpful PR descriptions with proper markdown formatting
+- Skip PR creation if one already exists for this branch
+- Report results clearly and save to the properly named file
+- Use develop as target branch when no explicit target is provided
 
 Execute the complete PR creation workflow now and save your report to the appropriate file.
 """

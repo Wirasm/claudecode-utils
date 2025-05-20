@@ -22,10 +22,10 @@ def pr(
         metavar="BRANCH",
     ),
     target: str = typer.Option(
-        "main",
+        "develop",
         "--target",
         "-t",
-        help="Target branch for PR (develop/main)",
+        help="Target branch for PR (defaults to develop, falls back to main if develop doesn't exist)",
         show_default=True,
     ),
     changelog: bool = typer.Option(
