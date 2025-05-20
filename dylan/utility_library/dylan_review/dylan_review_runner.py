@@ -59,8 +59,7 @@ def run_claude_review(
 
     # Show exit command message if streaming is enabled
     if stream:
-        console.print()
-        show_exit_command_message(console, DEFAULT_EXIT_COMMAND)
+        show_exit_command_message(console, DEFAULT_EXIT_COMMAND, style="prominent")
 
     with create_dylan_progress(console=console) as progress:
         # Start the review task

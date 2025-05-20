@@ -164,21 +164,24 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
             RuntimeError: If Claude Code CLI is not found or returns an error
             KeyboardInterrupt: If the process is interrupted
         """
-        # Check if Claude is available
+        # Check if Claude is available and display appropriate message
         if not self._BIN or self._BIN == "claude":
             claude_path = shutil.which("claude")
             if not claude_path:
                 raise RuntimeError(CLAUDE_CODE_NOT_FOUND_MSG)
 
+        # Determine authentication method
+        is_using_api_key = "CLAUDE_API_KEY" in os.environ
+
         # Prepare prompt and command
         prepared_prompt = self._prepare_prompt(prompt, output_path)
         cmd = self._build_command(prepared_prompt, output_format, allowed_tools)
 
-        # Check authentication
-        if "CLAUDE_API_KEY" not in os.environ:
-            print("Note: CLAUDE_API_KEY environment variable not set.", file=sys.stderr)
-            print("      Using existing Claude Code authentication if available.", file=sys.stderr)
-            print("      For Claude Code Max users this should work automatically.", file=sys.stderr)
+        # Show authentication method in use
+        if is_using_api_key:
+            print("Using Claude API key for authentication...", file=sys.stderr)
+        else:
+            print("Using Claude Code Max subscription...", file=sys.stderr)
 
         try:
             # Use Popen instead of run for better control over the process
@@ -203,7 +206,7 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
 
                 # Wait for the process to complete and check return code
                 return_code = proc.wait()
-                stderr = proc.stderr.read()
+                stderr = proc.stderr.read() if proc.stderr else ""
 
                 # Handle return code and produce final output
                 return self._handle_process_result(return_code, output_lines, stderr)
@@ -222,11 +225,11 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
         """Handle authentication errors with helpful suggestions."""
         auth_error = (
             "Authentication failed. You need to either:\n"
-            "1. Set the CLAUDE_API_KEY environment variable, or\n"
-            "2. Make sure you're logged in with 'claude /login' if using Claude Code Max.\n\n"
-            "For Claude Max subscribers: In a separate terminal, run 'claude' and complete\n"
+            "1. Have an active Claude Code Max subscription, or\n"
+            "2. Set the CLAUDE_API_KEY environment variable\n\n"
+            "For Claude Max subscribers: Run 'claude /login' in a terminal and complete\n"
             "the authentication process before running this tool again.\n\n"
-            "For API users: Export your key with: export CLAUDE_API_KEY=your_key_here"
+            "For API users: Add your key to .env file or export with: export CLAUDE_API_KEY=your_key_here"
         )
 
         # If authentication failed, we return a Markdown formatted report

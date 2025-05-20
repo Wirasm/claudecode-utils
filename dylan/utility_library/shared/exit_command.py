@@ -39,6 +39,7 @@ def show_exit_command_message(
     console: Console,
     exit_command: str = DEFAULT_EXIT_COMMAND,
     show_panel: bool = False,
+    style: str = "tip",
 ) -> None:
     """Display exit command information to the user.
 
@@ -46,11 +47,25 @@ def show_exit_command_message(
         console: Rich console instance for display
         exit_command: The exit command to display (defaults to "/exit")
         show_panel: Whether to show as a panel (True) or simple message (False)
+        style: Style of message - "tip" (subtle), "standard" (normal), or "prominent" (highlighted)
     """
     if show_panel:
         panel = create_exit_command_panel(exit_command)
         console.print(panel)
-    else:
+    elif style == "prominent":
+        console.print()
+        console.print(
+            f"[bold {COLORS['warning']}]⚠️  Type [{COLORS['secondary']}]"
+            f"{exit_command}[/][bold {COLORS['warning']}] at any time to exit gracefully ⚠️[/]",
+            highlight=False
+        )
+        console.print()
+    elif style == "standard":
+        console.print(
+            f"[{COLORS['primary']}]Type [{COLORS['secondary']}]"
+            f"{exit_command}[/][{COLORS['primary']}] at any time to exit.[/]"
+        )
+    else:  # "tip" style (default)
         console.print(
             f"[{COLORS['muted']}]Tip: Type [{COLORS['secondary']}]"
             f"{exit_command}[/][{COLORS['muted']}] at any time to exit.[/]"
