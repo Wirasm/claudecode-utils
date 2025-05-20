@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dylan"
-version = "0.6.4"
+version = "0.6.5"
 description = "AI-powered development utilities using Claude Code"
 readme = "README.md"
 requires-python = ">=3.12"
