@@ -56,8 +56,10 @@ def run_claude_release(
         print(prompt)
         print("\n========================\n")
 
-    # Determine output file based on format - always in tmp directory
-    output_file = "tmp/release_report.json" if output_format == "json" else "tmp/release_report.md"
+    # We no longer provide a fixed output file - Claude will determine the correct filename
+    # based on version and branch information using the format:
+    # tmp/dylan-release-vX.Y.Z-from-[branch].<extension>
+    output_file = None
 
     # Get provider and run the release
     provider = get_provider()
@@ -87,10 +89,11 @@ def run_claude_release(
             # Update task to complete
             progress.update(task, completed=True)
 
-            # Success message with flair
+            # Success message with flair  
             console.print()
             console.print(create_status("Release created successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to:[/] [{COLORS['accent']}]{output_file}[/]")
+            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory with format:[/]")
+            console.print(f"[{COLORS['muted']}]dylan-release-vX.Y.Z-from-[branch].md[/]")
             console.print()
 
             # Show a nice completion message
@@ -130,91 +133,41 @@ def generate_release_prompt(
         The release prompt string
     """
     extension = ".json" if output_format == "json" else ".md"
-
-    git_instructions = (
-        ""
-        if no_git
-        else f"""
-5. GIT OPERATIONS:
-   - Create commit: "release: version X.Y.Z"
-   {'- Create git tag: v{new_version}' if create_tag else '- Skip tag creation'}
-6. MERGE STRATEGY ({merge_strategy}):
-   {
-            "- If on release branch (e.g., develop):"
-            + "\n"
-            + "  * Commit changes on release branch"
-            + "\n"
-            + "  * Push release branch"
-            + "\n"
-            + "  * Merge release branch to production branch (main)"
-            + "\n"
-            + "  * Tag on production branch if requested"
-            + "\n"
-            + "  * Push production branch and tags"
-            + "\n"
-            + "- If already on production branch (main):"
-            + "\n"
-            + "  * Create tag if requested"
-            + "\n"
-            + "  * Push branch and tags"
-            if merge_strategy == "direct"
-            else "- If on release branch (e.g., develop):"
-            + "\n"
-            + "  * Commit changes on release branch"
-            + "\n"
-            + "  * Push release branch"
-            + "\n"
-            + "  * Create a pull request from release branch to production branch"
-            + "\n"
-            + "  * Report PR URL"
-        }
-   - Report git status after operations
+    
+    branch_check_instructions = """
+BRANCH VERIFICATION:
+1. First, determine the current branch: git symbolic-ref --short HEAD
+2. Check if user is on develop branch (or equivalent release branch):
+   - Check for .branchingstrategy file to determine release_branch
+   - If no .branchingstrategy file, assume 'develop' is the release branch
+3. CRITICAL: If NOT on release branch (develop), exit with clear error:
+   - "ERROR: Please switch to develop branch before creating a release"
+   - "Current branch: [current] - Expected: develop"
+   - Exit with non-zero status
+4. If on correct branch, proceed with release
 """
-    )
 
-    dry_run_note = "**DRY RUN MODE: Show what would be done but don't make actual changes**\n\n" if dry_run else ""
+    file_handling_instructions = f"""
+FILE HANDLING INSTRUCTIONS:
+1. Create the tmp/ directory if it doesn't exist: mkdir -p tmp  
+2. Determine the current version from VERSION DETECTION section
+3. Calculate the next version based on bump type
+4. Create a filename in this format: tmp/dylan-release-vX.Y.Z-from-[branch]{extension}
+   - Replace any slashes in branch names with hyphens
+   - Include the new version number in the filename
+5. If the file already exists, APPEND your new release report with a clear separator
+   - Add a timestamp header: ## Release [DATE] [TIME]
+   - This allows tracking multiple release attempts over time
+"""
 
-    return f"""
-You are a release manager with COMPLETE AUTONOMY to create project releases.
-
-{dry_run_note}YOUR MISSION:
-1. Detect current branch and branching strategy
-2. Apply {bump_type} version bump on the appropriate release branch
-3. Update changelog appropriately
-4. Create release commit and optionally tag
-5. Handle merging based on merge strategy: {merge_strategy}
-
-IMPORTANT FILE HANDLING INSTRUCTIONS:
-- Save your report to the tmp/ directory
-- If tmp/release_report{extension} already exists, create a new file with timestamp
-- Format: tmp/release_report_YYYYMMDD_HHMMSS{extension}
-- Use the Bash tool to check if the file exists first
-- DO NOT modify or append to existing files
-
-CRITICAL STEPS - Use Bash and other tools to:
-
-1. BRANCH DETECTION AND STRATEGY:
-   - Detect current branch: git symbolic-ref --short HEAD
-   - Check for .branchingstrategy file and parse it if exists
-   - If on 'main' and .branchingstrategy exists:
-     * Read release_branch from .branchingstrategy file
-     * Switch to the release branch (e.g., develop)
-   - If no .branchingstrategy file, check for common release branches:
-     * develop, development, staging, release
-     * If found, use the first matching branch as release branch
-   - If no strategy found, proceed on current branch
-
-2. VERSION DETECTION:
-   - Look for version in this order:
-     a. pyproject.toml (version = "X.Y.Z")
-     b. package.json ("version": "X.Y.Z")
-     c. Cargo.toml (version = "X.Y.Z")
-     d. version.txt or VERSION (just X.Y.Z)
-   - Extract current version using appropriate method
+    version_bump_instructions = f"""
+VERSION BUMP INSTRUCTIONS:
+1. Detect current version:
+   - Look for version in: pyproject.toml, package.json, Cargo.toml, version.txt
+   - Extract current version (X.Y.Z format)
    - Report which file contains the version
-
-3. VERSION CALCULATION:
-   - Current version: X.Y.Z
+   
+2. Calculate new version:
    - {bump_type.capitalize()} bump: {
         "increment Z"
         if bump_type == "patch"
@@ -222,41 +175,90 @@ CRITICAL STEPS - Use Bash and other tools to:
         if bump_type == "minor"
         else "increment X, reset Y and Z to 0"
     }
-   - Calculate new version accordingly
-   - Validate version format (must be X.Y.Z)
+   - Validate new version format (must be X.Y.Z)
+   
+3. Update version file:
+   - Use Edit tool to update the version precisely
+   - Preserve file formatting and indentation
+   {"- PREVIEW changes only (don't actually apply)" if dry_run else ""}
+"""
 
-3. VERSION UPDATE:
-   - Update version in the detected file
-   - Preserve file formatting and structure
-   - Use Edit tool for precise updates
-   {"- PREVIEW changes only" if dry_run else ""}
+    changelog_instructions = """
+CHANGELOG INSTRUCTIONS:
+1. Look for changelog in this order:
+   - CHANGELOG.md
+   - HISTORY.md
+   - NEWS.md
+2. Parse the file to find [Unreleased] section
+3. Create new version section with date:
+   - Format: [X.Y.Z] - YYYY-MM-DD
+4. Move all content from [Unreleased] to new section
+5. Keep empty [Unreleased] header for future changes
+6. Use MultiEdit or Edit tool for this change
+"""
 
-4. CHANGELOG UPDATE:
-   - Look for changelog in this order:
-     a. CHANGELOG.md
-     b. HISTORY.md
-     c. NEWS.md
-   - Find [Unreleased] section
-   - Create new section: [X.Y.Z] - YYYY-MM-DD
-   - Move all [Unreleased] content to new section
-   - Keep [Unreleased] header for future changes
-   {"- PREVIEW changes only" if dry_run else ""}
+    git_instructions = (
+        ""
+        if no_git
+        else f"""
+GIT OPERATIONS:
+1. Commit the version and changelog changes:
+   - git add the changed files
+   - Commit with message: "release: version vX.Y.Z"
+   
+2. Create tag if requested:
+   {"- Create an annotated tag: git tag -a vX.Y.Z -m 'Version X.Y.Z'" if create_tag else "- Skip tag creation"}
+   
+3. Apply merge strategy ({merge_strategy}):
+   {
+       "- Push changes to develop branch" + "\n"
+       + "- Merge develop into main: git checkout main && git merge develop" + "\n"
+       + "- Push main branch and tags" + "\n"
+       + "- Return to develop branch: git checkout develop"
+       if merge_strategy == "direct"
+       else "- Push changes to develop branch" + "\n"
+       + "- Create PR from develop to main: gh pr create --base main --head develop" + "\n"
+       + "- Report PR URL in output"
+   }
+   
+4. Report final git status
+"""
+    )
+
+    dry_run_note = "**DRY RUN MODE: Show what would be done but don't make actual changes**\n\n" if dry_run else ""
+
+    return f"""
+You are a release manager with COMPLETE AUTONOMY to create project releases from develop to main.
+
+{dry_run_note}YOUR MISSION:
+1. Verify user is on the develop branch (or equivalent release branch)
+2. Apply {bump_type} version bump on the develop branch
+3. Update changelog with the new version
+4. Create release commit and optionally tag
+5. Merge or PR from develop to main branch
+
+{branch_check_instructions}
+
+{file_handling_instructions}
+
+{version_bump_instructions}
+
+{changelog_instructions}
 
 {git_instructions if not no_git else ''}
 
-6. REPORT GENERATION:
-   - Document all actions taken
-   - Show before/after versions
-   - List files modified
-   - Include any error messages
-   - Save to appropriate filename in tmp/
+REPORT GENERATION:
+1. Document all actions taken or planned (if dry run)
+2. Show before/after versions
+3. List all files modified
+4. Include any error messages or warnings
+5. Save report to: tmp/dylan-release-vX.Y.Z-from-[branch]{extension}
 
 REMEMBER:
-- Be completely autonomous
-- Work with any project structure
-- Use standard version formats (X.Y.Z)
+- Releases must always start from develop branch
+- Follow semantic versioning strictly
 - Follow Keep a Changelog format
-- Report everything clearly
+- Provide clear error messages if prerequisites aren't met
 {"- This is a DRY RUN - show changes but do not apply them" if dry_run else ""}
 
 Execute the complete release workflow now and save your report.
