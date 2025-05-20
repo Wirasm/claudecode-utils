@@ -4,7 +4,12 @@
 import typer
 from rich.console import Console
 
-from ..shared.ui_theme import create_box_header, create_header, format_tool_count
+from ..shared.ui_theme import (
+    create_box_header,
+    create_header,
+    format_boolean_option,
+    format_tool_count,
+)
 from .dylan_review_runner import generate_review_prompt, run_claude_review
 
 console = Console()
@@ -28,6 +33,13 @@ def review(
         "--format",
         "-f",
         help="Output format: text (markdown), json, or stream-json",
+        show_default=True,
+    ),
+    stream: bool = typer.Option(
+        False,
+        "--stream",
+        "-s",
+        help="Stream output in real-time (enables exit command)",
         show_default=True,
     ),
 ):
@@ -61,7 +73,8 @@ def review(
     console.print(create_box_header("Review Configuration", {
         "Branch": branch or "latest changes",
         "Format": format,
-        "Tools": format_tool_count(allowed_tools)
+        "Tools": format_tool_count(allowed_tools),
+        "Stream": format_boolean_option(stream, "✓ Enabled (/exit to quit)", "✗ Disabled")
     }))
     console.print()
 
@@ -69,7 +82,12 @@ def review(
     prompt = generate_review_prompt(branch=branch, output_format=format)
 
     # Run review
-    run_claude_review(prompt, allowed_tools=allowed_tools, output_format=format)
+    run_claude_review(
+        prompt,
+        allowed_tools=allowed_tools,
+        output_format=format,
+        stream=stream
+    )
 
 
 # For backwards compatibility and standalone usage
