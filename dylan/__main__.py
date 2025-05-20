@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entry point for claudecode-utility-library."""
+"""CLI entry point for Dylan."""
 
 from dylan.main import main
 
