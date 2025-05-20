@@ -183,30 +183,6 @@ dylan release --minor --dry-run
 dylan release --minor --merge-strategy pr
 ```
 
-## Graceful Claude Code Termination
-
-When working with Claude Code processes, use the improved provider implementation in Dylan for graceful termination:
-
-```python
-from dylan.utility_library.provider_clis.provider_claude_code import get_provider
-
-# Get the Claude Code provider
-provider = get_provider()
-
-# Generate content with graceful termination handling
-try:
-    result = provider.generate(
-        "Write a short story about a robot learning to garden",
-        timeout=60,  # 60 second timeout
-        stream=True,  # Enable streaming output
-    )
-    print(result)
-except KeyboardInterrupt:
-    print("Process was interrupted by user")
-```
-
-This implementation ensures proper subprocess management, including signal handling, custom exit commands, and real-time output streaming.
-
 ## UV Package Management
 
 This project uses UV for Python package management. Key commands include:
@@ -344,6 +320,7 @@ This repository follows a develop → main branching strategy, where:
 More details are available in BRANCHING_STRATEGY.md.
 
 When creating branches, follow these naming conventions:
+
 - Feature branches: `feature/descriptive-name`
 - Bug fix branches: `fix/issue-description`
 - Documentation branches: `docs/what-is-changing`
