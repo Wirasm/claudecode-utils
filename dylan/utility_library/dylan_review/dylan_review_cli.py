@@ -62,8 +62,8 @@ def review(
     # Show review configuration
     console.print(create_box_header("Review Configuration", {
         "Branch": branch or "current branch",
-        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
+        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
     console.print()

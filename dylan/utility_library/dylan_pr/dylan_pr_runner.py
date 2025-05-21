@@ -65,48 +65,16 @@ def run_claude_pr(
     provider = get_provider()
 
     if interactive:
-        # Interactive mode - direct interaction, no progress spinner, different output handling
-        console.print(f"[{COLORS['info']}]Entering interactive PR session with Claude...[/]")
-        console.print(f"[{COLORS['muted']}]The generated PR prompt will be sent as initial input.[/]")
-        console.print(f"[{COLORS['muted']}]Type your messages directly to Claude below.[/]")
-        console.print(f"[{COLORS['muted']}]Use Claude's exit command or Ctrl+D to end the session.[/]")
-        console.print() # Add a newline for readability before Claude starts
-
-        try:
-            # In interactive mode, output_path is ignored by the provider.
-            # output_format might also be less relevant, but pass it along.
-            result = provider.generate(
-                prompt=prompt,
-                allowed_tools=allowed_tools,
-                output_format=output_format, # Less relevant for interactive but passed
-                interactive=True
-            )
-            # Result from interactive mode is typically a simple confirmation message.
-            console.print() # Add a newline after Claude session ends
-            console.print(create_status(result, "info")) # e.g., "Interactive session ended."
-            console.print(f"[{COLORS['muted']}]Interactive PR session concluded.[/]")
-
-        except KeyboardInterrupt:
-            console.print() # Newline after ^C
-            console.print(create_status("Interactive PR session terminated by user.", "warning"))
-            # No sys.exit(1) here, as user interruption is not necessarily an error state for the CLI itself.
-        except RuntimeError as e:
-            console.print()
-            console.print(create_status(str(e), "error"))
-            sys.exit(1)
-        except FileNotFoundError: # Should be caught by provider, but as a fallback
-            console.print()
-            console.print(create_status("Claude Code not found!", "error"))
-            console.print(f"\n[{COLORS['warning']}]Please install Claude Code:[/]")
-            console.print(f"[{COLORS['muted']}]  npm install -g {CLAUDE_CODE_NPM_PACKAGE}[/]")
-            console.print(f"\n[{COLORS['muted']}]For more info: {CLAUDE_CODE_REPO_URL}[/]")
-            sys.exit(1)
-        except Exception as e:
-            console.print()
-            console.print(create_status(f"Unexpected error during interactive session: {e}", "error"))
-            console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
-            console.print(f"[{COLORS['primary']}]{GITHUB_ISSUES_URL}[/]")
-            sys.exit(1)
+        # Use shared interactive session utility for consistent behavior
+        from ..shared.interactive.utils import run_interactive_session
+        result = run_interactive_session(
+            provider=provider,
+            prompt=prompt,
+            allowed_tools=allowed_tools,
+            output_format=output_format,
+            context_name="PR",
+            console=console
+        )
     else:
         # Non-interactive mode - use progress display and existing output handling
         with create_dylan_progress(console=console) as progress:

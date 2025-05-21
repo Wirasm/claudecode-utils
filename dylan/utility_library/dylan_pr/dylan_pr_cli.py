@@ -51,7 +51,7 @@ def pr(
         False,
         "--interactive",
         "-i",
-        help="Run in interactive chat mode with Claude.",
+        help="Run in interactive chat mode with Claude for PR creation.",
         show_default=True,
     )
 ):
@@ -88,8 +88,8 @@ def pr(
         "Target": target,
         "Changelog": format_boolean_option(not no_changelog, "✓ Enabled (default)", "✗ Disabled"),
         "Mode": "🔍 Dry run" if dry_run else "🚀 Live run",
-        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
+        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
     console.print()

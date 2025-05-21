@@ -77,8 +77,8 @@ def release(
         "Tag": format_boolean_option(tag, "✓ Create tag", "✗ No tag"),
         "Strategy": merge_strategy,
         "Mode": "🔍 Dry run" if dry_run else "⚠️ No git" if no_git else "🚀 Live run",
-        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
+        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
     console.print()

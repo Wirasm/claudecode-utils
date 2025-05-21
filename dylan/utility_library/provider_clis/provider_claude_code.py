@@ -102,25 +102,27 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
             Command as list of strings
         """
         if interactive:
+            # Interactive mode - simpler command without prompt parameter
             cmd = [self._BIN]
             if allowed_tools:
                 cmd.extend(["--allowedTools"] + allowed_tools)
             return cmd
+        else:
+            # Non-interactive mode - requires prompt and handles output format
+            if prompt is None:
+                raise ValueError("Prompt cannot be None for non-interactive mode.")
 
-        # Non-interactive mode
-        if prompt is None:
-            raise ValueError("Prompt cannot be None for non-interactive mode.")
-        cmd = [self._BIN, "-p", prompt]
+            cmd = [self._BIN, "-p", prompt]
 
-        # Add output format if not text
-        if output_format != "text":
-            cmd.extend(["--output-format", output_format])
+            # Add output format if not text
+            if output_format != "text":
+                cmd.extend(["--output-format", output_format])
 
-        # Add allowed tools if specified
-        if allowed_tools:
-            cmd.extend(["--allowedTools"] + allowed_tools)
+            # Add allowed tools if specified
+            if allowed_tools:
+                cmd.extend(["--allowedTools"] + allowed_tools)
 
-        return cmd
+            return cmd
 
     def _handle_process_result(
         self,
@@ -204,7 +206,7 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
                 # For interactive mode, claude takes over stdin/stdout/stderr
                 # We send the initial prompt (if any) via stdin.
                 result = subprocess.run(cmd, input=process_input) # No check=True, handle return code manually
-                
+
                 if result.returncode != 0:
                     # Users can exit claude with Ctrl+D (EOF) which might result in a non-zero code.
                     # Or they might use a command like /quit.
@@ -214,10 +216,10 @@ IMPORTANT: Generate the full report and save it directly to the file {output_pat
                     print(f"Claude interactive session exited with code {result.returncode}.", file=sys.stderr)
                 return "Interactive session ended."
             except KeyboardInterrupt:
-                # subprocess.run handles SIGINT by terminating the child and then re-raising.
+                # subprocess.run handles SIGINT by terminating the child.
                 print("\nInteractive Claude session terminated by user.", file=sys.stderr)
-                # No need to manually terminate proc, subprocess.run does this.
-                raise # Re-raise KeyboardInterrupt
+                # Return a message rather than re-raising
+                return "Interactive session terminated by user."
             except FileNotFoundError as exc: # Should be caught by the check above, but as a safeguard
                 raise RuntimeError(
                     f"Claude Code CLI not found. Install with:\n  {CLAUDE_CODE_INSTALL_CMD}"
