@@ -40,6 +40,7 @@ def run_claude_review(
     branch: str | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
     debug: bool = False,
+    interactive: bool = False,
 ) -> None:
     """Run Claude code with a review prompt and specified tools.
 
@@ -49,6 +50,7 @@ def run_claude_review(
         branch: Optional branch to review (not used in this implementation)
         output_format: Output format (text, json, stream-json)
         debug: Whether to print debug information (default False)
+        interactive: Whether to run in interactive mode (default False)
     """
     # Default safe tools for review
     if allowed_tools is None:
@@ -65,58 +67,67 @@ def run_claude_review(
     # tmp/dylan-review-compare-[current-branch]-to-[target].<extension>
     output_file = None
 
-    # Get provider and run the review
+    # Get provider
     provider = get_provider()
 
-    with create_dylan_progress(console=console) as progress:
-        # Start the review task
-        task = create_task_with_dylan(progress, "Dylan is working on the code review...")
+    if interactive:
+        # Use shared interactive session utility for consistent behavior
+        from ..shared.interactive.utils import run_interactive_session
+        result = run_interactive_session(
+            provider=provider,
+            prompt=prompt,
+            allowed_tools=allowed_tools,
+            output_format=output_format,
+            context_name="review",
+            console=console
+        )
+    else:
+        # Non-interactive mode - use progress display and existing output handling
+        with create_dylan_progress(console=console) as progress:
+            task = create_task_with_dylan(progress, "Dylan is working on the code review...")
+            try:
+                result = provider.generate(
+                    prompt,
+                    output_path=output_file, # output_file is None, provider handles filename
+                    allowed_tools=allowed_tools,
+                    output_format=output_format,
+                    interactive=False # Explicitly false
+                )
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status("Code review completed successfully!", "success"))
+                console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
+                console.print(f"[{COLORS['muted']}]Format: dylan-review-compare-<branch>-to-<target>.md (or .json)[/]")
+                console.print()
+                console.print(f"[{COLORS['primary']}]{ARROW}[/] [bold]Review Summary[/bold] [{COLORS['accent']}]{SPARK}[/]")
+                console.print(f"[{COLORS['muted']}]Dylan has analyzed your code and generated a detailed report.[/]")
+                console.print()
+                if result and "Mock" not in result and "Authentication Error" not in result:
+                    console.print(result) # Display the report content if not a mock or auth error
+                elif "Authentication Error" in result:
+                     # The auth error from the provider is already well-formatted Markdown.
+                    console.print(result)
 
-        try:
-            result = provider.generate(
-                prompt,
-                output_path=output_file,
-                allowed_tools=allowed_tools,
-                output_format=output_format,
-            )
-
-            # Update task to complete
-            progress.update(task, completed=True)
-
-            # Success message with flair
-            console.print()
-            console.print(create_status("Code review completed successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
-            console.print(f"[{COLORS['muted']}]Format: dylan-review-compare-<branch>-to-<target>.md[/]")
-            console.print()
-
-            # Show a nice completion message
-            console.print(f"[{COLORS['primary']}]{ARROW}[/] [bold]Review Summary[/bold] [{COLORS['accent']}]{SPARK}[/]")
-            console.print(f"[{COLORS['muted']}]Dylan has analyzed your code and generated a detailed report.[/]")
-            console.print()
-
-            if result and "Mock" not in result:  # Don't show mock results
-                console.print(result)
-        except RuntimeError as e:
-            progress.update(task, completed=True)
-            console.print()
-            console.print(create_status(str(e), "error"))
-            sys.exit(1)
-        except FileNotFoundError:
-            progress.update(task, completed=True)
-            console.print()
-            console.print(create_status("Claude Code not found!", "error"))
-            console.print(f"\n[{COLORS['warning']}]Please install Claude Code:[/]")
-            console.print(f"[{COLORS['muted']}]  npm install -g {CLAUDE_CODE_NPM_PACKAGE}[/]")
-            console.print(f"\n[{COLORS['muted']}]For more info: {CLAUDE_CODE_REPO_URL}[/]")
-            sys.exit(1)
-        except Exception as e:
-            progress.update(task, completed=True)
-            console.print()
-            console.print(create_status(f"Unexpected error: {e}", "error"))
-            console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
-            console.print(f"[{COLORS['primary']}]{GITHUB_ISSUES_URL}[/]")
-            sys.exit(1)
+            except RuntimeError as e:
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status(str(e), "error"))
+                sys.exit(1)
+            except FileNotFoundError:
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status("Claude Code not found!", "error"))
+                console.print(f"\n[{COLORS['warning']}]Please install Claude Code:[/]")
+                console.print(f"[{COLORS['muted']}]  npm install -g {CLAUDE_CODE_NPM_PACKAGE}[/]")
+                console.print(f"\n[{COLORS['muted']}]For more info: {CLAUDE_CODE_REPO_URL}[/]")
+                sys.exit(1)
+            except Exception as e:
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status(f"Unexpected error: {e}", "error"))
+                console.print(f"\n[{COLORS['muted']}]Please report this issue at:[/]")
+                console.print(f"[{COLORS['primary']}]{GITHUB_ISSUES_URL}[/]")
+                sys.exit(1)
 
 
 def generate_review_prompt(branch: str | None = None, output_format: str = "text") -> str:

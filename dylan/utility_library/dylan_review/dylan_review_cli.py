@@ -27,6 +27,13 @@ def review(
         help="Print debug information (including the full prompt)",
         show_default=True,
     ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        "-i",
+        help="Run in interactive chat mode with Claude for code review.",
+        show_default=True,
+    )
 ):
     """Run AI-powered code review using Claude Code.
 
@@ -56,19 +63,23 @@ def review(
     console.print(create_box_header("Review Configuration", {
         "Branch": branch or "current branch",
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
+        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
     console.print()
 
     # Generate prompt
+    # For interactive mode, this will be the initial prompt sent to Claude.
     prompt = generate_review_prompt(branch=branch, output_format=output_format)
 
     # Run review
     run_claude_review(
         prompt,
         allowed_tools=allowed_tools,
+        branch=branch, # Pass branch along, though runner might not use it directly with provider
         output_format=output_format,
-        debug=debug
+        debug=debug,
+        interactive=interactive
     )
 
 
