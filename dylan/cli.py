@@ -1,12 +1,13 @@
 """Root Typer application that dispatches to vertical slices.
 
-Includes 'standup', 'review', 'pr', and 'release' commands.
+Includes 'standup', 'review', 'dev', 'pr', and 'release' commands.
 """
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
+from .utility_library.dylan_dev.dylan_dev_cli import dev
 from .utility_library.dylan_pr.dylan_pr_cli import pr
 from .utility_library.dylan_release.dylan_release_cli import release_app
 from .utility_library.dylan_review.dylan_review_cli import review
@@ -25,6 +26,7 @@ app = typer.Typer(
 app.add_typer(standup_app, name="standup", help="Generate daily standup reports from git activity")
 app.add_typer(release_app, name="release", help="Create and manage project releases")
 app.command(name="review", help="Run AI-powered code reviews on git branches")(review)
+app.command(name="dev", help="Implement fixes from code reviews")(dev)
 app.command(name="pr", help="Create pull requests with AI-generated descriptions")(pr)
 
 
@@ -58,6 +60,11 @@ def _main(ctx: typer.Context) -> None:
             "review",
             "Run code reviews on branches",
             "dylan review feature-branch"
+        )
+        table.add_row(
+            "dev",
+            "Implement fixes from reviews",
+            "dylan dev tmp/review.md"
         )
         table.add_row(
             "pr",
