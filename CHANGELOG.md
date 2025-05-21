@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.10] - 2025-05-21
+
+### Added
+- Feature: Interactive mode for CLI verticals with shared utility functions
+- Documentation: Added PRPs and GitHub Action documentation
+
+### Changed
+- Refactor: Created shared utility for interactive Claude sessions
+
 ## [0.6.9] - 2025-05-20
 
 ### Changed
