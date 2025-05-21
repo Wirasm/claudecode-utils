@@ -44,6 +44,13 @@ def release(
         help="Print debug information (including the full prompt)",
         show_default=True,
     ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        "-i",
+        help="Run in interactive chat mode with Claude for release management.",
+        show_default=True,
+    )
 ):
     """Create a new release with version bump and changelog update."""
     # Default values
@@ -70,12 +77,14 @@ def release(
         "Tag": format_boolean_option(tag, "✓ Create tag", "✗ No tag"),
         "Strategy": merge_strategy,
         "Mode": "🔍 Dry run" if dry_run else "⚠️ No git" if no_git else "🚀 Live run",
+        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
     console.print()
 
     # Generate prompt
+    # For interactive mode, this will be the initial prompt sent to Claude.
     prompt = generate_release_prompt(
         bump_type=bump_type,
         create_tag=tag,
@@ -86,7 +95,13 @@ def release(
     )
 
     # Run release
-    run_claude_release(prompt, allowed_tools=allowed_tools, output_format=output_format, debug=debug)
+    run_claude_release(
+        prompt,
+        allowed_tools=allowed_tools,
+        output_format=output_format,
+        debug=debug,
+        interactive=interactive
+    )
 
 
 # For backwards compatibility and standalone usage

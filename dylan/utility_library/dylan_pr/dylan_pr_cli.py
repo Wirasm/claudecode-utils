@@ -47,6 +47,13 @@ def pr(
         help="Print debug information (including the full prompt)",
         show_default=True,
     ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        "-i",
+        help="Run in interactive chat mode with Claude.",
+        show_default=True,
+    )
 ):
     """Create pull requests with AI-generated descriptions.
 
@@ -81,12 +88,14 @@ def pr(
         "Target": target,
         "Changelog": format_boolean_option(not no_changelog, "✓ Enabled (default)", "✗ Disabled"),
         "Mode": "🔍 Dry run" if dry_run else "🚀 Live run",
+        "Interactive Mode": format_boolean_option(interactive, "✓ Enabled", "✗ Disabled"),
         "Debug": format_boolean_option(debug, "✓ Enabled", "✗ Disabled"),
         "Exit": "Ctrl+C to interrupt"
     }))
     console.print()
 
     # Generate prompt - changelog is now enabled by default unless --no-changelog is specified
+    # For interactive mode, this will be the initial prompt sent to Claude.
     prompt = generate_pr_prompt(
         branch=branch,
         target_branch=target,
@@ -96,7 +105,13 @@ def pr(
     )
 
     # Run PR creation
-    run_claude_pr(prompt, allowed_tools=allowed_tools, output_format=output_format, debug=debug)
+    run_claude_pr(
+        prompt,
+        allowed_tools=allowed_tools,
+        output_format=output_format,
+        debug=debug,
+        interactive=interactive
+    )
 
 
 # For backwards compatibility and standalone usage

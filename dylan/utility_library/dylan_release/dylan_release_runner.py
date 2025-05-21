@@ -34,6 +34,7 @@ def run_claude_release(
     allowed_tools: list[str] | None = None,
     output_format: Literal["text", "json", "stream-json"] = "text",
     debug: bool = False,
+    interactive: bool = False,
 ) -> None:
     """Run Claude code with a release prompt and specified tools.
 
@@ -42,6 +43,7 @@ def run_claude_release(
         allowed_tools: List of allowed tools (defaults to Read, Write, Edit, Bash, LS, Glob)
         output_format: Output format (text, json, stream-json)
         debug: Whether to print debug information (default False)
+        interactive: Whether to run in interactive mode (default False)
     """
     # Default safe tools for release
     if allowed_tools is None:
@@ -58,43 +60,91 @@ def run_claude_release(
     # tmp/dylan-release-vX.Y.Z-from-[branch].<extension>
     output_file = None
 
-    # Get provider and run the release
+    # Get provider
     provider = get_provider()
 
-    with create_dylan_progress(console=console) as progress:
-        # Start the release task
-        task = create_task_with_dylan(progress, "Dylan is creating your release...")
+    if interactive:
+        # Interactive mode - direct interaction, no progress spinner, different output handling
+        console.print(f"[{COLORS['info']}]Entering interactive release management session with Claude...[/]")
+        console.print(f"[{COLORS['muted']}]The generated release prompt will be sent as initial input.[/]")
+        console.print(f"[{COLORS['muted']}]Type your messages directly to Claude below.[/]")
+        console.print(f"[{COLORS['muted']}]Use Claude's exit command or Ctrl+D to end the session.[/]")
+        console.print() # Add a newline for readability before Claude starts
 
         try:
+            # In interactive mode, output_path is ignored by the provider.
             result = provider.generate(
-                prompt,
-                output_path=output_file,
+                prompt=prompt,
                 allowed_tools=allowed_tools,
-                output_format=output_format
+                output_format=output_format, # Less relevant for interactive but passed
+                interactive=True
             )
-            # Update task to complete
-            progress.update(task, completed=True)
+            # Result from interactive mode is typically a simple confirmation message.
+            console.print() # Add a newline after Claude session ends
+            console.print(create_status(result, "info")) # e.g., "Interactive session ended."
+            console.print(f"[{COLORS['muted']}]Interactive release management session concluded.[/]")
 
-            # Success message with flair
+        except KeyboardInterrupt:
+            console.print() # Newline after ^C
+            console.print(create_status("Interactive release session terminated by user.", "warning"))
+            # No sys.exit(1) here, as user interruption is not necessarily an error state for the CLI itself.
+        except RuntimeError as e: # Catch errors from provider.generate()
             console.print()
-            console.print(create_status("Release created successfully!", "success"))
-            console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
-            console.print(f"[{COLORS['muted']}]Format: dylan-release-v<version>-from-<branch>.md[/]")
-            console.print()
-
-            # Show a nice completion message
-            message = f"[{COLORS['primary']}]{ARROW}[/] [bold]Release Summary[/bold] [{COLORS['accent']}]{SPARK}[/]"
-            console.print(message)
-            console.print(f"[{COLORS['muted']}]Dylan has prepared your release and updated version information.[/]")
-            console.print()
-
-            if result and "Mock" not in result:  # Don't show mock results
-                console.print(result)
-        except Exception as e:
-            progress.update(task, completed=True)
-            console.print()
-            console.print(create_status(f"Error running release: {e}", "error"))
+            console.print(create_status(str(e), "error"))
             sys.exit(1)
+        except FileNotFoundError: # Should be caught by provider, but as a fallback
+            console.print()
+            console.print(create_status("Claude Code not found!", "error")) # Match provider's message
+            # Consider adding CLAUDE_CODE_NPM_PACKAGE and CLAUDE_CODE_REPO_URL here if they are available
+            sys.exit(1)
+        except Exception as e: # Catch any other unexpected errors
+            console.print()
+            console.print(create_status(f"Unexpected error during interactive session: {e}", "error"))
+            # Consider adding GITHUB_ISSUES_URL here if available
+            sys.exit(1)
+    else:
+        # Non-interactive mode - use progress display and existing output handling
+        with create_dylan_progress(console=console) as progress:
+            task = create_task_with_dylan(progress, "Dylan is creating your release...")
+            try:
+                result = provider.generate(
+                    prompt,
+                    output_path=output_file, # output_file is None, provider handles filename
+                    allowed_tools=allowed_tools,
+                    output_format=output_format,
+                    interactive=False # Explicitly false
+                )
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status("Release process completed successfully!", "success"))
+                console.print(f"[{COLORS['muted']}]Report saved to tmp/ directory[/]")
+                console.print(f"[{COLORS['muted']}]Format: dylan-release-v<version>-from-<branch>.md (or .json)[/]")
+                console.print()
+                message = f"[{COLORS['primary']}]{ARROW}[/] [bold]Release Summary[/bold] [{COLORS['accent']}]{SPARK}[/]"
+                console.print(message)
+                console.print(f"[{COLORS['muted']}]Dylan has prepared your release and updated version information.[/]")
+                console.print()
+                if result and "Mock" not in result and "Authentication Error" not in result:
+                    console.print(result) # Display the report content
+                elif "Authentication Error" in result:
+                    # The auth error from the provider is already well-formatted Markdown.
+                    console.print(result)
+
+            except RuntimeError as e: # Catch errors from provider.generate()
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status(str(e), "error"))
+                sys.exit(1)
+            except FileNotFoundError: # Should be caught by provider
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status("Claude Code not found!", "error"))
+                sys.exit(1)
+            except Exception as e: # Catch any other unexpected errors
+                progress.update(task, completed=True)
+                console.print()
+                console.print(create_status(f"Error running release: {e}", "error"))
+                sys.exit(1)
 
 
 def generate_release_prompt(
