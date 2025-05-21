@@ -122,7 +122,7 @@ def dev(
         review_file=review_file,
         branch=branch,
         output_file=output,
-        issue_numbers=issue.split(",") if issue else None,
+        issue_numbers=issue.split(",") if issue is not None else None,
         severity_levels=severity.split(",") if severity else ["critical", "high"],
         dry_run=dry_run,
     )

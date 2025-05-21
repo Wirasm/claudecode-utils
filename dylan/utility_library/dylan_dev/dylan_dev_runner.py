@@ -46,10 +46,10 @@ def run_claude_dev(
     Args:
         prompt: The development prompt to send to Claude
         allowed_tools: List of allowed tools (defaults to Read, Glob, Grep, LS, Bash, Write, Edit, MultiEdit)
-        branch: Optional branch to apply fixes to (not used in this implementation)
+        branch: Optional branch to apply fixes to (reserved for future implementation)
         output_format: Output format (text, json, stream-json)
         debug: Whether to print debug information (default False)
-        interactive: Whether to run in interactive mode (default False)
+        interactive: Whether to run in interactive mode (enables conversational interaction, default False)
     """
     # Default safe tools for development
     if allowed_tools is None:
