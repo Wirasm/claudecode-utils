@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.11] - 2025-05-21
+
+### Added
+- Feature: Implemented dev command for automated fixes
+- Feature: Added fix-pr command for GitHub PR feedback automation
+
+### Fixed
+- Fixed handling of empty issue string and improved docstrings in dylan-dev
+
 ## [0.6.10] - 2025-05-21
 
 ### Added
